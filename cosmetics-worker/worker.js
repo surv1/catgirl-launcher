@@ -120,8 +120,16 @@ export default {
         if (!(await checkNonce(env.NONCE_SECRET, body.nonce))) return json({ error: 'That code expired. Try again.' }, 400);
         const used = `n:${body.nonce}`;
         if (await env.COSMETICS.get(used)) return json({ error: 'That code was already used. Try again.' }, 400);
-        const check = await fetch(`https://sessionserver.mojang.com/session/minecraft/hasJoined?username=${encodeURIComponent(body.username)}&serverId=${await serverIdFor(body.nonce)}`);
-        if (check.status !== 200) return json({ error: "Couldn't confirm you own that Minecraft account." }, 403);
+        // Ask Mojang if this player really "joined" our one-time code. Try a few times: Mojang can
+        // take a moment to see the join.
+        const joinedUrl = `https://sessionserver.mojang.com/session/minecraft/hasJoined?username=${encodeURIComponent(body.username)}&serverId=${await serverIdFor(body.nonce)}`;
+        let check = null;
+        for (let attempt = 0; attempt < 4; attempt++) {
+          if (attempt) await new Promise((r) => setTimeout(r, 600 * attempt));
+          check = await fetch(joinedUrl, { headers: { 'User-Agent': 'CatgirlClient-Cosmetics/1.0 (+https://catgirlclient.lol)', Accept: 'application/json' } });
+          if (check.status === 200) break;
+        }
+        if (check.status !== 200) return json({ error: `Couldn't confirm you own that Minecraft account (Mojang said ${check.status}).` }, 403);
         const profile = await check.json();
         const uuid = normUuid(profile.id);
         await env.COSMETICS.put(used, '1', { expirationTtl: 300 });
