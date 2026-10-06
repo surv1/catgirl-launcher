@@ -59,6 +59,8 @@ contextBridge.exposeInMainWorld('cat', {
   cosmetics: {
     get: () => call('cosmetics:get'),
     save: (items) => call('cosmetics:save', items),
+    pickCapeFile: () => call('cosmetics:pickCapeFile'),
+    saveCapePicture: (d) => call('cosmetics:saveCapePicture', d),
   },
   update: {
     check: () => call('update:check'),

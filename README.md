@@ -41,7 +41,7 @@ Play any version, add mods in one click, and make the whole launcher your own. N
 **🐱 Inside Minecraft**
 - A **CatGirl title screen** with "CatGirl Launcher" in the corner and a quick menu (screenshots, mods folder, resource packs, wardrobe, settings).
 - **Wardrobe:** search skins on The Skindex, NameMC or Planet Minecraft in a little Catgirl window, click Download on one you like and wear it in one click. Every skin you've worn is kept under **Old skins used**, so you can always switch back. You can also paste a skin link, pick a file, or copy a player's skin.
-- **Free cosmetics:** cat ears, a swishy tail, a hair bow, angel or demon wings, a glowing halo, devil horns, capes with a paw or heart, and a little angel buddy that floats next to you, in any colours you like (or one click to match your hair). **Everyone playing with Catgirl Client sees them on you.**
+- **Free cosmetics:** cat ears, a swishy tail, a hair bow, angel or demon wings, a glowing halo, devil horns, capes (with a paw, heart or cat face, or **your own picture or GIF**), and a little angel buddy that floats next to you, in any colours you like (or one click to match your hair). **Everyone playing with Catgirl Client sees them on you.**
 - **Catgirl fun facts** in the yellow splash text. Over 90 of them!
 - The game window is called **CatGirl Client**.
 - **Discord status:** your friends see *Catgirl Launcher – Playing on (server)*, with a timer and a download button.

@@ -27,9 +27,41 @@ function normalize(input) {
     out[k] = { on: !!v.on, color: hexColor(v.color, DEFAULTS[k].color) };
     if (k === 'ears') out[k].inner = hexColor(v.inner, DEFAULTS.ears.inner);
     if (k === 'wings') out[k].style = ['angel', 'demon'].includes(v.style) ? v.style : 'angel';
-    if (k === 'cape') { out[k].trim = hexColor(v.trim, '#ffffff'); out[k].style = ['plain', 'paw', 'heart', 'meow'].includes(v.style) ? v.style : 'paw'; }
+    if (k === 'cape') {
+      out[k].trim = hexColor(v.trim, '#ffffff');
+      out[k].style = ['plain', 'paw', 'heart', 'meow'].includes(v.style) ? v.style : 'paw';
+      const c = v.custom;
+      if (c && /^[0-9a-f]{64}$/.test(c.sha || '')) out[k].custom = { sha: c.sha, frames: clampInt(c.frames, 1, MAX_FRAMES, 1), delay: clampInt(c.delay, 20, 2000, 100) };
+    }
   }
   return out;
+}
+
+// ---------- your own cape picture ----------
+// Stored as a PNG "film strip": frames of 60×96 stacked top to bottom (the launcher page builds it).
+const CAPE_W = 60, CAPE_H = 96, MAX_FRAMES = 32, MAX_PNG = 1536 * 1024;
+function clampInt(n, lo, hi, d) { n = Math.round(Number(n)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; }
+const capeDir = () => path.join(paths.dirs().base, 'capes');
+const capeFile = (sha) => path.join(capeDir(), `${sha}.png`);
+
+function checkStrip(buf, frames) {
+  if (buf.length > MAX_PNG) throw new Error('That cape picture is too big. Try a shorter GIF.');
+  if (buf.length < 33 || buf.readUInt32BE(0) !== 0x89504e47) throw new Error("That isn't a picture we can use.");
+  if (buf.readUInt32BE(16) !== CAPE_W || buf.readUInt32BE(20) !== CAPE_H * frames) throw new Error('That cape picture is the wrong size.');
+}
+
+function saveCapePicture(pngBase64, frames, delay) {
+  frames = clampInt(frames, 1, MAX_FRAMES, 1);
+  const buf = Buffer.from(String(pngBase64 || ''), 'base64');
+  checkStrip(buf, frames);
+  const sha = crypto.createHash('sha256').update(buf).digest('hex');
+  fs.mkdirSync(capeDir(), { recursive: true });
+  fs.writeFileSync(capeFile(sha), buf);
+  return { sha, frames, delay: clampInt(delay, 20, 2000, 100) };
+}
+
+function capePictureDataUrl(custom) {
+  try { return custom ? `data:image/png;base64,${fs.readFileSync(capeFile(custom.sha)).toString('base64')}` : null; } catch { return null; }
 }
 
 const file = () => path.join(paths.dirs().base, 'cosmetics.json');
@@ -75,11 +107,16 @@ async function upload(api, account, items) {
   const put = await fetch(`${base}/v1/me`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'User-Agent': UA },
-    body: JSON.stringify({ username: account.name, nonce: ch.nonce, cosmetics: normalize(items) }),
+    body: JSON.stringify({ username: account.name, nonce: ch.nonce, cosmetics: normalize(items), capeImage: capeUpload(normalize(items).cape.custom) }),
   });
   const body = await asJson(put);
   if (!put.ok) throw new Error(body?.error || `The cosmetics service said no (${put.status}).`);
   return body;
+}
+
+function capeUpload(custom) {
+  if (!custom) return null;
+  try { return { png: fs.readFileSync(capeFile(custom.sha)).toString('base64'), frames: custom.frames, delay: custom.delay }; } catch { return null; }
 }
 
 // Save locally first (so you always see them yourself), then try to share them online.
@@ -103,11 +140,15 @@ async function retryIfNeeded(api, account) {
 
 // What the in-game mod reads: <game>/config/catgirl-cosmetics.json. The mod watches this file,
 // so changes show up while you're playing.
-function writeForGame(gameDir, api, account) {
+function writeForGame(gameDir, api, account, { showCapePictures = true } = {}) {
   const f = path.join(gameDir, 'config', 'catgirl-cosmetics.json');
   fs.mkdirSync(path.dirname(f), { recursive: true });
   const uuid = account ? String(account.uuid).replace(/-/g, '').toLowerCase() : '';
-  fs.writeFileSync(f, JSON.stringify({ api: api || '', uuid, items: uuid ? get(account.uuid).items : normalize({}) }, null, 2));
+  const items = uuid ? get(account.uuid).items : normalize({});
+  // The game reads your own cape picture straight from this PC, so it shows even before it's online.
+  const c = items.cape.custom;
+  if (c) { Object.assign(items.cape, { image: c.sha, frames: c.frames, delay: c.delay, file: capeFile(c.sha) }); delete items.cape.custom; }
+  fs.writeFileSync(f, JSON.stringify({ api: api || '', uuid, showCapePictures: showCapePictures !== false, items }, null, 2));
 }
 
-module.exports = { ITEMS, DEFAULTS, normalize, get, save, upload, saveAndSync, retryIfNeeded, writeForGame, serverIdFor };
+module.exports = { ITEMS, DEFAULTS, normalize, get, save, upload, saveAndSync, retryIfNeeded, writeForGame, serverIdFor, saveCapePicture, capePictureDataUrl, CAPE_W, CAPE_H, MAX_FRAMES };

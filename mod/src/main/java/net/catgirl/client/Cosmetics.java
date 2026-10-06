@@ -31,9 +31,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class Cosmetics {
     public record Item(boolean on, int color) {}
     public record Look(Item ears, int earsInner, Item tail, Item bow, Item wings, boolean demonWings, Item halo, Item horns, Item pet,
-                       Item cape, int capeTrim, int capeStyle) {
+                       Item cape, int capeTrim, int capeStyle, CapePicture capePicture) {
         boolean any() { return ears.on || tail.on || bow.on || wings.on || halo.on || horns.on || pet.on || cape.on; }
     }
+    /** A custom cape picture: sha256 of the PNG, how many frames, ms per frame, and (for you) the local file. */
+    public record CapePicture(String sha, int frames, int delay, String file) {}
     private record Cached(Look look, long at) {}
 
     private static final long REFRESH_MS = 5 * 60 * 1000;
@@ -50,6 +52,9 @@ public final class Cosmetics {
     private static volatile String api = "";
     private static volatile UUID mine = null;
     private static volatile Look myLook = null;
+    private static volatile boolean showOthersPictures = true;
+
+    static String api() { return api; }
 
     private Cosmetics() {}
 
@@ -75,7 +80,12 @@ public final class Cosmetics {
         if (id.equals(mine)) return myLook;
         Cached c = CACHE.get(id);
         if (c == null || System.currentTimeMillis() - c.at > REFRESH_MS) WANTED.add(id);
-        return c == null ? null : c.look;
+        if (c == null || c.look == null) return null;
+        if (!showOthersPictures && c.look.capePicture() != null) {
+            Look l = c.look;
+            return new Look(l.ears(), l.earsInner(), l.tail(), l.bow(), l.wings(), l.demonWings(), l.halo(), l.horns(), l.pet(), l.cape(), l.capeTrim(), l.capeStyle(), null);
+        }
+        return c.look;
     }
 
     // ------------------------------------------------------------------ your own
@@ -89,6 +99,7 @@ public final class Cosmetics {
             JsonObject o = JsonParser.parseString(Files.readString(file.toPath(), StandardCharsets.UTF_8)).getAsJsonObject();
             api = str(o, "api").replaceAll("/+$", "");
             mine = parseUuid(str(o, "uuid"));
+            showOthersPictures = !o.has("showCapePictures") || !o.get("showCapePictures").isJsonPrimitive() || o.get("showCapePictures").getAsBoolean();
             Look l = parseLook(o.get("items"));
             myLook = l != null && l.any() ? l : null;
         } catch (Exception ex) {
@@ -142,7 +153,17 @@ public final class Cosmetics {
             item(o, "tail", 0x3b2a2a), item(o, "bow", 0xff7eb6),
             item(o, "wings", 0xffffff), wings != null && "demon".equals(str(wings, "style")),
             item(o, "halo", 0xffd34d), item(o, "horns", 0x5a1a1a), item(o, "pet", 0xffb3d9),
-            item(o, "cape", 0xff7eb6), color(cape, "trim", 0xffffff), cape == null ? 1 : switch (str(cape, "style")) { case "plain" -> 0; case "heart" -> 2; case "meow" -> 3; default -> 1; });
+            item(o, "cape", 0xff7eb6), color(cape, "trim", 0xffffff), cape == null ? 1 : switch (str(cape, "style")) { case "plain" -> 0; case "heart" -> 2; case "meow" -> 3; default -> 1; },
+            picture(cape));
+    }
+
+    private static CapePicture picture(JsonObject cape) {
+        if (cape == null) return null;
+        String sha = str(cape, "image");
+        if (!sha.matches("[0-9a-f]{64}")) return null;
+        int frames = cape.has("frames") && cape.get("frames").isJsonPrimitive() ? cape.get("frames").getAsInt() : 1;
+        int delay = cape.has("delay") && cape.get("delay").isJsonPrimitive() ? cape.get("delay").getAsInt() : 100;
+        return new CapePicture(sha, Math.max(1, Math.min(32, frames)), Math.max(20, Math.min(2000, delay)), str(cape, "file"));
     }
 
     private static Item item(JsonObject o, String key, int def) {

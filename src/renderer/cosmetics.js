@@ -193,8 +193,9 @@ const rz = (a) => [[Math.cos(a), -Math.sin(a), 0], [Math.sin(a), Math.cos(a), 0]
 
 // Collects coloured faces in model space.
 class Faces {
-  constructor() { this.list = []; this.p = new Pose(); }
-  face(color, pts, glow = false) { this.list.push({ color, pts: pts.map((q) => this.p.apply(q)), glow }); }
+  constructor() { this.list = []; this.p = new Pose(); this.bend = null; }
+  face(color, pts, glow = false) { this.list.push({ color, pts: pts.map((q) => this.p.apply(this.bend ? this.bend(q) : q)), glow }); }
+  boxY(color, x0, y0, z0, x1, y1, z1, n) { for (let i = 0; i < n; i++) this.box(color, x0, y0 + ((y1 - y0) * i) / n, z0, x1, y0 + ((y1 - y0) * (i + 1)) / n, z1); }
   box(color, x0, y0, z0, x1, y1, z1, glow) {
     const c = (x, y, z) => [x, y, z];
     const [a, b, cc, d, e, f, g, h] = [c(x0, y0, z0), c(x1, y0, z0), c(x1, y1, z0), c(x0, y1, z0), c(x0, y0, z1), c(x1, y0, z1), c(x1, y1, z1), c(x0, y1, z1)];
@@ -304,15 +305,41 @@ function emblemBoxes(F, color, rows, cell, top, z) {
     }
   });
 }
+// Cloth bend for the cape: curls back more towards the bottom, with a soft ripple (same as the mod).
+function makeBend(amount, t) {
+  const STEP = 0.5, n = 34, th = [], cy = [0], cz = [0];
+  for (let k = 0; k < n; k++) {
+    const y = k * STEP, f = Math.min(1, y / 16);
+    th[k] = amount * f * f + 0.06 * f * Math.sin(t * 0.15 - y * 0.45);
+    if (k > 0) { const mid = (th[k] + th[k - 1]) / 2; cy[k] = cy[k - 1] + STEP * Math.cos(mid); cz[k] = cz[k - 1] + STEP * Math.sin(mid); }
+  }
+  return ([x, y, z]) => {
+    const k = Math.max(0, Math.min(n - 1.001, y / STEP)), i = Math.floor(k), f = k - i;
+    const a = th[i] + (th[i + 1] - th[i]) * f, by = cy[i] + (cy[i + 1] - cy[i]) * f, bz = cz[i] + (cz[i + 1] - cz[i]) * f;
+    return [x, by - z * Math.sin(a), bz + z * Math.cos(a)];
+  };
+}
+const CAPE_SLICES = 16;
 const capeSwing = (t) => (6 + Math.sin(t * 0.05) * 3) * Math.PI / 180;
 function capeFaces(F, it, t) {
   const saved = F.p.copy();
   F.p.translate(0, 0, 2.1).rotate(rx(capeSwing(t)));
-  F.box(it.color, -5, 0, 0, 5, 16, 1);
-  F.box(it.trim, -5, 0, 1, -4.2, 16, 1.1);
-  F.box(it.trim, 4.2, 0, 1, 5, 16, 1.1);
+  F.bend = makeBend(0.25, t);
+  F.boxY(it.color, -5, 0, 0, 5, 16, 1, CAPE_SLICES);
+  if (it.custom && cos.capeSheet) {
+    for (let i = 0; i < CAPE_SLICES; i++) {
+      const ya = (16 * i) / CAPE_SLICES, yb = (16 * (i + 1)) / CAPE_SLICES;
+      F.list.push({ pic: true, v0: i / CAPE_SLICES, v1: (i + 1) / CAPE_SLICES, color: it.color, pts: [[5, ya, 1.02], [-5, ya, 1.02], [-5, yb, 1.02], [5, yb, 1.02]].map((q) => F.p.apply(F.bend(q))) });
+    }
+    F.bend = null;
+    F.p = saved;
+    return;
+  }
+  F.boxY(it.trim, -5, 0, 1, -4.2, 16, 1.1, CAPE_SLICES);
+  F.boxY(it.trim, 4.2, 0, 1, 5, 16, 1.1, CAPE_SLICES);
   F.box(it.trim, -5, 15.2, 1, 5, 16, 1.1);
   if (EMBLEMS[it.style]) emblemBoxes(F, it.trim, EMBLEMS[it.style], Math.min(0.75, 7.6 / EMBLEMS[it.style][0].length), 4.5, 1);
+  F.bend = null;
   F.p = saved;
 }
 
@@ -333,11 +360,105 @@ function drawFaces(ctx, faces, view, behind) {
   const far = (f) => Math.max(...f.pts.map((p) => (view === 'side' ? p[0] : view === 'back' ? -p[2] : p[2])));
   const list = faces.filter((f) => (depth(f) > (view === 'side' ? 0.5 : 1.5)) === behind).sort((a, b) => far(b) - far(a));
   for (const f of list) {
+    if (f.pic) { drawCapePicture(ctx, view, f); continue; }
     const [a, b, c] = f.pts;
     const n = [(b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1]), (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]), (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])];
     const len = Math.hypot(...n) || 1;
     const facing = Math.abs((view === 'side' ? n[0] : n[2]) / len);
     poly(ctx, view, f.pts, f.glow ? f.color : shade(f.color, 0.72 + 0.28 * facing));
+  }
+}
+
+// Your cape picture, stretched onto the back of the cape (only visible from behind).
+function drawCapePicture(ctx, view, f) {
+  if (view !== 'back' || !cos.capeSheet) return;
+  const c = cos.items.cape.custom;
+  const [p0, p1, , p3] = f.pts.map((p) => VIEW[view].at(p).map((v) => v * S));
+  const frame = Math.floor(performance.now() / c.delay) % c.frames;
+  const sy = frame * CAPE_H + f.v0 * CAPE_H, sh = (f.v1 - f.v0) * CAPE_H;
+  ctx.save();
+  ctx.setTransform((p1[0] - p0[0]) / CAPE_W, (p1[1] - p0[1]) / CAPE_W, (p3[0] - p0[0]) / sh, (p3[1] - p0[1]) / sh, p0[0], p0[1]);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(cos.capeSheet, 0, sy, CAPE_W, sh, 0, 0, CAPE_W, sh + 0.35); // a hair of overlap hides seams
+  ctx.restore();
+}
+
+/* ---------- your own cape picture or GIF ---------- */
+const CAPE_W = 60, CAPE_H = 96, CAPE_MAX_FRAMES = 32, CAPE_MAX_PNG = 1536 * 1024;
+
+// Decodes every frame of a picture or (animated) GIF/WebP/PNG. Returns [{ img, ms }], closing nothing.
+async function decodeFrames(bytes, type, base64) {
+  if (type === 'image/gif') {
+    const g = decodeGif(bytes);
+    return g.frames.map((f) => {
+      const c = document.createElement('canvas');
+      c.width = g.width; c.height = g.height;
+      c.getContext('2d').putImageData(new ImageData(f.rgba, g.width, g.height), 0, 0);
+      return { img: c, ms: f.ms };
+    });
+  }
+  if ('ImageDecoder' in window && (await ImageDecoder.isTypeSupported(type))) {
+    const dec = new ImageDecoder({ data: bytes, type });
+    await dec.completed;
+    const count = dec.tracks.selectedTrack?.frameCount || 1;
+    const out = [];
+    for (let i = 0; i < count; i++) {
+      const { image } = await dec.decode({ frameIndex: i });
+      out.push({ img: image, ms: (image.duration || 100000) / 1000 });
+    }
+    dec.close();
+    return out;
+  }
+  const img = await loadImg(`data:${type};base64,${base64}`);
+  return [{ img, ms: 100 }];
+}
+
+// Crops each frame to the cape's shape (like "cover") and stacks them into one PNG strip.
+function buildStrip(frames, maxFrames) {
+  const step = Math.max(1, frames.length / maxFrames);
+  const picked = [];
+  for (let i = 0; i < frames.length && picked.length < maxFrames; i += step) picked.push(Math.floor(i));
+  const totalMs = frames.reduce((a, f) => a + f.ms, 0);
+  const delay = Math.max(20, Math.min(2000, Math.round(totalMs / picked.length)));
+  const cv = document.createElement('canvas');
+  cv.width = CAPE_W; cv.height = CAPE_H * picked.length;
+  const ctx = cv.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  picked.forEach((idx, n) => {
+    const im = frames[idx].img;
+    const w = im.displayWidth || im.naturalWidth || im.width, h = im.displayHeight || im.naturalHeight || im.height;
+    const scale = Math.max(CAPE_W / w, CAPE_H / h);
+    const sw = CAPE_W / scale, sh = CAPE_H / scale;
+    ctx.drawImage(im, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, n * CAPE_H, CAPE_W, CAPE_H);
+  });
+  return { dataUrl: cv.toDataURL('image/png'), frames: picked.length, delay };
+}
+
+async function pickCapePicture() {
+  const file = await safe(() => window.cat.cosmetics.pickCapeFile());
+  if (!file) return;
+  $('#cosStatus').textContent = 'Making your cape…';
+  try {
+    const bytes = Uint8Array.from(atob(file.base64), (c) => c.charCodeAt(0));
+    const frames = await decodeFrames(bytes, file.type, file.base64);
+    let strip, max = CAPE_MAX_FRAMES;
+    for (;;) {
+      strip = buildStrip(frames, max);
+      if ((strip.dataUrl.length * 3) / 4 <= CAPE_MAX_PNG || max <= 1) break;
+      max = Math.max(1, Math.floor(max / 2)); // too big: use fewer frames
+    }
+    frames.forEach((f) => f.img.close?.());
+    const meta = await window.cat.cosmetics.saveCapePicture({ png: strip.dataUrl.split(',')[1], frames: strip.frames, delay: strip.delay });
+    cos.capeSheet = await loadImg(strip.dataUrl);
+    cos.items.cape.custom = meta;
+    setCos('cape', 'on', true);
+    renderCosItems();
+    if (cos.view2 !== 'back') $('#cosView2 [data-v="back"]').click();
+    $('#cosStatus').textContent = 'Not saved yet';
+    toast(meta.frames > 1 ? `Cape GIF ready (${meta.frames} frames)! Click Save to wear it.` : 'Cape picture ready! Click Save to wear it.', 'ok');
+  } catch (e) {
+    $('#cosStatus').textContent = '';
+    toast(`Couldn't use that picture: ${e.message}`, 'err');
   }
 }
 
@@ -382,7 +503,13 @@ function renderCosItems() {
       <div class="colors">${d.styles ? `<div class="seg cos-style">${d.styles.map(([k, l]) => `<button data-style="${d.id}" data-v="${k}" class="${v.style === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}${d.colors.map(([key, label]) => `
         <div class="cos-color"><span>${label}</span><input type="color" data-color="${d.id}.${key}" value="${esc(v[key])}" />
           <div class="presets-dots">${presetsFor(d.id, key).map((c) => `<button style="background:${c}" data-preset="${d.id}.${key}" data-c="${c}" title="${c}"></button>`).join('')}</div></div>`).join('')}
-      </div></div>`;
+
+      </div>
+        ${d.id === 'cape' ? `<div class="cos-pic">
+          <button class="ghost small" data-act="cape-pick">🖼️ ${v.custom ? 'Change picture' : 'Use my own picture or GIF…'}</button>
+          ${v.custom ? `<button class="ghost small" data-act="cape-clear">Remove picture</button>` : ''}
+          <small class="muted">${v.custom ? `Your picture is on the back${v.custom.frames > 1 ? ` (${v.custom.frames}-frame GIF)` : ''}. Colours above are for the edges.` : 'PNG, JPG, GIF or WebP. Everyone sees it, so keep it friendly.'}</small>
+        </div>` : ''}</div>`;
   }).join('');
 }
 
@@ -399,6 +526,9 @@ $('#cosItems').addEventListener('input', (e) => { const c = e.target.closest('[d
 $('#cosItems').addEventListener('click', (e) => {
   const p = e.target.closest('[data-preset]');
   if (p) { const [i, k] = p.dataset.preset.split('.'); setCos(i, k, p.dataset.c); }
+  const act = e.target.closest('[data-act]');
+  if (act?.dataset.act === 'cape-pick') pickCapePicture();
+  if (act?.dataset.act === 'cape-clear') { delete cos.items.cape.custom; cos.capeSheet = null; setCos('cape', 'on', cos.items.cape.on); renderCosItems(); }
   const st = e.target.closest('[data-style]');
   if (st) {
     const item = st.dataset.style, old = cos.items[item].style;
@@ -468,6 +598,7 @@ async function renderCosmetics() {
   cos.items = structuredClone(COS_DEFAULTS);
   for (const k of Object.keys(COS_DEFAULTS)) Object.assign(cos.items[k], data.items?.[k] || {});
   cos.variant = data.skin?.variant || 'classic';
+  cos.capeSheet = data.capePicture ? await loadImg(data.capePicture).catch(() => null) : null;
   cos.skin = data.skin ? await loadImg(data.skin.dataUrl).catch(() => null) : null;
   cos.loaded = true;
   renderCosItems();

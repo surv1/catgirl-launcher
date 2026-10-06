@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS = {
   font: 'default', fontName: '',
   background: 'none', bgDim: 55, bgBlur: 0, navPosition: 'left', navIcons: false,
   menuPosition: 'right', menuIconsOnly: false, splashes: true, accentHex: '#ff7eb6',
-  discordPresence: true, discordShowServer: true, shareOptions: true, shareServers: true,
+  discordPresence: true, discordShowServer: true, shareOptions: true, shareServers: true, showCapePictures: true,
 };
 
 let win = null;
@@ -219,7 +219,7 @@ function registerIpc() {
       launcherCommand: launcherCommand(),
     }, (line) => send('launch:log', { instId: id, line }));
     if (inst.loader === 'fabric' && s.catgirlMenu) {
-      try { cosmetics.writeForGame(instances.gameDir(id), config.cosmeticsApi, account); } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't write cosmetics: ${e.message}` }); }
+      try { cosmetics.writeForGame(instances.gameDir(id), config.cosmeticsApi, account, { showCapePictures: s.showCapePictures }); } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't write cosmetics: ${e.message}` }); }
       cosmetics.retryIfNeeded(config.cosmeticsApi, account);
     }
     await launcher.launch(id, account, s, {
@@ -268,17 +268,28 @@ function registerIpc() {
     const acc = await auth.getLaunchAccount();
     let skin = null;
     try { const cur = await skins.currentSkin(acc.mcToken); if (cur) skin = { dataUrl: skins.toDataUrl(cur.buf), variant: cur.variant }; } catch {}
-    return { account: { uuid: acc.uuid, name: acc.name }, ...cosmetics.get(acc.uuid), skin, online: !!config.cosmeticsApi };
+    const cur = cosmetics.get(acc.uuid);
+    return { account: { uuid: acc.uuid, name: acc.name }, ...cur, capePicture: cosmetics.capePictureDataUrl(cur.items.cape.custom), skin, online: !!config.cosmeticsApi };
   });
   handle('cosmetics:save', async (items) => {
     const acc = await auth.getLaunchAccount();
     const r = await cosmetics.saveAndSync(config.cosmeticsApi, acc, items);
     // Show them straight away in any game that's already running.
     for (const id of launcher.runningIds()) {
-      try { cosmetics.writeForGame(instances.gameDir(id), config.cosmeticsApi, acc); } catch {}
+      try { cosmetics.writeForGame(instances.gameDir(id), config.cosmeticsApi, acc, { showCapePictures: settings().showCapePictures }); } catch {}
     }
     return r;
   });
+  handle('cosmetics:pickCapeFile', async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Choose a picture or GIF for your cape', properties: ['openFile'], filters: [{ name: 'Pictures and GIFs', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }] });
+    if (r.canceled) return null;
+    const f = r.filePaths[0];
+    if (fs.statSync(f).size > 25 * 1024 * 1024) throw new Error('That file is too big (25 MB max).');
+    const ext = path.extname(f).slice(1).toLowerCase();
+    const type = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+    return { name: path.basename(f), type, base64: fs.readFileSync(f).toString('base64') };
+  });
+  handle('cosmetics:saveCapePicture', ({ png, frames, delay }) => cosmetics.saveCapePicture(png, frames, delay));
   handle('skins:fromUrl', (url) => skins.fromUrl(url));
   handle('skins:fromPlayer', (name) => skins.fromPlayer(name));
   handle('skins:pickFile', async () => {

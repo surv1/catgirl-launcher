@@ -55,9 +55,19 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         if (look.cape().on() && model.body.visible) {
             float swingDeg = 6F + s.capeLean / 2F + s.capeFlap;
             float sideDeg = s.capeLean2 / 2F;
+            float bend = 0.2F + Math.min(0.6F, Math.max(0F, s.capeFlap) * 0.02F);
+            float ct = t + (seed % 30);
             poses.pushPose();
             model.body.translateAndRotate(poses);
-            out.submitCustomGeometry(poses, TYPE, (pose, vc) -> cape(new Mesh(pose, vc, light, overlay), look.cape().color(), look.capeTrim(), look.capeStyle(), swingDeg, sideDeg));
+            Cosmetics.CapePicture pic = look.capePicture();
+            Identifier tex = pic == null ? null : CapeTextures.get(pic.sha(), pic.file(), Cosmetics.api());
+            boolean picture = tex != null;
+            out.submitCustomGeometry(poses, TYPE, (pose, vc) -> cape(new Mesh(pose, vc, light, overlay), look.cape().color(), look.capeTrim(), look.capeStyle(), swingDeg, sideDeg, picture, bend, ct));
+            if (picture) {
+                int frames = pic.frames();
+                int frame = (int) ((System.currentTimeMillis() / pic.delay()) % frames);
+                out.submitCustomGeometry(poses, RenderTypes.entityCutoutNoCull(tex), (pose, vc) -> capePicture(new Mesh(pose, vc, light, overlay), swingDeg, sideDeg, frame, frames, bend, ct));
+            }
             poses.popPose();
         }
         if (look.wings().on() && model.body.visible) {
@@ -257,14 +267,36 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         {"X.........X", "XX.......XX", "XXX.....XXX", "XXXXXXXXXXX", "XX..XXX..XX", "XX..XXX..XX", "XXXXX.XXXXX", "XXXX.X.XXXX", ".XXXXXXXXX."},
     };
 
-    private static void cape(Mesh m, int color, int trim, int style, float swingDeg, float sideDeg) {
+    private static final int CAPE_SLICES = 16;
+
+    private static void capePose(Mesh m, float swingDeg, float sideDeg, float bend, float t) {
+        m.bendCape(bend, t);
         m.p.translate(0F, 0F, 2.1F);
         m.p.rotate(Axis.XP.rotationDegrees(swingDeg));
         m.p.rotate(Axis.ZP.rotationDegrees(sideDeg));
-        m.box(color, -5F, 0F, 0F, 5F, 16F, 1F);
-        m.box(shade(color, 0.72F), -4.8F, 0.2F, -0.08F, 4.8F, 15.8F, 0F); // lining
-        m.box(trim, -5F, 0F, 1F, -4.2F, 16F, 1.1F);
-        m.box(trim, 4.2F, 0F, 1F, 5F, 16F, 1.1F);
+    }
+
+    /** Your own picture or GIF on the back of the cape (and, a little darker, on the inside). */
+    private static void capePicture(Mesh m, float swingDeg, float sideDeg, int frame, int frames, float bend, float t) {
+        capePose(m, swingDeg, sideDeg, bend, t);
+        float v0 = frame / (float) frames, v1 = (frame + 1) / (float) frames;
+        // Cut into slices so the picture bends with the cloth. Seen from behind, the picture's
+        // left edge is on the player's left (+x).
+        for (int i = 0; i < CAPE_SLICES; i++) {
+            float ya = 16F * i / CAPE_SLICES, yb = 16F * (i + 1) / CAPE_SLICES;
+            float va = v0 + (v1 - v0) * i / CAPE_SLICES, vb = v0 + (v1 - v0) * (i + 1) / CAPE_SLICES;
+            m.texQuad(0xFFFFFFFF, new float[]{5F, ya, 1.02F}, new float[]{-5F, ya, 1.02F}, new float[]{-5F, yb, 1.02F}, new float[]{5F, yb, 1.02F}, 0F, va, 1F, vb, 0F, ya, 0F);
+            m.texQuad(0xFFB8B8B8, new float[]{-4.8F, ya, -0.1F}, new float[]{4.8F, ya, -0.1F}, new float[]{4.8F, yb, -0.1F}, new float[]{-4.8F, yb, -0.1F}, 0F, va, 1F, vb, 0F, ya, 1F);
+        }
+    }
+
+    private static void cape(Mesh m, int color, int trim, int style, float swingDeg, float sideDeg, boolean picture, float bend, float t) {
+        capePose(m, swingDeg, sideDeg, bend, t);
+        m.boxY(color, -5F, 0F, 0F, 5F, 16F, 1F, CAPE_SLICES);
+        if (picture) return; // the picture covers the back and the inside
+        m.boxY(shade(color, 0.72F), -4.8F, 0.2F, -0.08F, 4.8F, 15.8F, 0F, CAPE_SLICES); // lining
+        m.boxY(trim, -5F, 0F, 1F, -4.2F, 16F, 1.1F, CAPE_SLICES);
+        m.boxY(trim, 4.2F, 0F, 1F, 5F, 16F, 1.1F, CAPE_SLICES);
         m.box(trim, -5F, 15.2F, 1F, 5F, 16F, 1.1F);
         String[] rows = EMBLEMS[Math.max(0, Math.min(EMBLEMS.length - 1, style))];
         float cell = rows.length == 0 ? 0.75F : Math.min(0.75F, 7.6F / rows[0].length()), top = 4.5F;
@@ -294,6 +326,30 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         private final VertexConsumer vc;
         private final int light;
         private final int overlay;
+
+        // Optional cloth bend (used by the cape): local y runs down the cloth, and the cloth curls
+        // backwards more and more towards the bottom, with a soft ripple travelling down it.
+        private float[] bendY, bendZ, bendTh;
+        private static final float BEND_STEP = 0.5F;
+
+        void bendCape(float amount, float t) {
+            int n = 34;
+            bendY = new float[n]; bendZ = new float[n]; bendTh = new float[n];
+            for (int k = 0; k < n; k++) {
+                float y = k * BEND_STEP, f = Math.min(1F, y / 16F);
+                bendTh[k] = amount * f * f + 0.06F * f * (float) Math.sin(t * 0.15F - y * 0.45F);
+                if (k > 0) {
+                    float mid = (bendTh[k] + bendTh[k - 1]) / 2F;
+                    bendY[k] = bendY[k - 1] + BEND_STEP * (float) Math.cos(mid);
+                    bendZ[k] = bendZ[k - 1] + BEND_STEP * (float) Math.sin(mid);
+                }
+            }
+        }
+
+        /** A box cut into n slices down its height, so it can bend. */
+        void boxY(int color, float x0, float y0, float z0, float x1, float y1, float z1, int n) {
+            for (int i = 0; i < n; i++) box(color, x0, y0 + (y1 - y0) * i / n, z0, x1, y0 + (y1 - y0) * (i + 1) / n, z1);
+        }
 
         Mesh(PoseStack.Pose base, VertexConsumer vc, int light, int overlay) {
             this.p = base.copy();
@@ -371,8 +427,37 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             }
         }
 
+        /** A quad with its own texture corners: a→(u0,v0), b→(u1,v0), c→(u1,v1), d→(u0,v1). */
+        void texQuad(int color, float[] a, float[] b, float[] c, float[] d, float u0, float v0, float u1, float v1, float ix, float iy, float iz) {
+            float ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+            float vx = d[0] - a[0], vy = d[1] - a[1], vz = d[2] - a[2];
+            float nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+            float len = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+            if (len < 1e-6F) return;
+            nx /= len; ny /= len; nz /= len;
+            float mx = (a[0] + c[0]) / 2 - ix, my = (a[1] + c[1]) / 2 - iy, mz = (a[2] + c[2]) / 2 - iz;
+            if (mx * nx + my * ny + mz * nz < 0) { nx = -nx; ny = -ny; nz = -nz; }
+            vertex(a, color, u0, v0, nx, ny, nz);
+            vertex(b, color, u1, v0, nx, ny, nz);
+            vertex(c, color, u1, v1, nx, ny, nz);
+            vertex(d, color, u0, v1, nx, ny, nz);
+        }
+
         private void vertex(float[] v, int color, float u, float w, float nx, float ny, float nz) {
-            vc.addVertex(p, v[0], v[1], v[2]).setColor(color).setUv(u, w).setOverlay(overlay).setLight(light).setNormal(p, nx, ny, nz);
+            float x = v[0], y = v[1], z = v[2];
+            if (bendTh != null) {
+                float k = Math.max(0F, Math.min(bendTh.length - 1.001F, y / BEND_STEP));
+                int i = (int) k;
+                float f = k - i;
+                float th = bendTh[i] + (bendTh[i + 1] - bendTh[i]) * f;
+                float cy = bendY[i] + (bendY[i + 1] - bendY[i]) * f, cz = bendZ[i] + (bendZ[i + 1] - bendZ[i]) * f;
+                float c = (float) Math.cos(th), sn = (float) Math.sin(th);
+                y = cy - z * sn;
+                z = cz + z * c;
+                float ny2 = ny * c - nz * sn, nz2 = ny * sn + nz * c;
+                ny = ny2; nz = nz2;
+            }
+            vc.addVertex(p, x, y, z).setColor(color).setUv(u, w).setOverlay(overlay).setLight(light).setNormal(p, nx, ny, nz);
         }
     }
 }

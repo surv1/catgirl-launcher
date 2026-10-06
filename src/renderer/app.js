@@ -723,6 +723,7 @@ function syncLookControls() {
   $$('#menuPos button').forEach((b) => b.classList.toggle('on', b.dataset.v === (l.menuPosition || 'right')));
   $('#menuIcons').checked = !!l.menuIconsOnly;
   $('#setSplashes').checked = l.splashes !== false;
+  $('#setCapePictures').checked = l.showCapePictures !== false;
   $('#setShareOptions').checked = l.shareOptions !== false;
   $('#setShareServers').checked = l.shareServers !== false;
   $('#setShareServers').disabled = l.shareOptions === false;
@@ -814,6 +815,7 @@ $('#setCatgirlMenu').addEventListener('change', (e) => setLook({ catgirlMenu: e.
 $('#setShareOptions').addEventListener('change', (e) => setLook({ shareOptions: e.target.checked }));
 $('#setShareServers').addEventListener('change', (e) => setLook({ shareServers: e.target.checked }));
 $('#setSplashes').addEventListener('change', (e) => setLook({ splashes: e.target.checked }));
+$('#setCapePictures').addEventListener('change', (e) => setLook({ showCapePictures: e.target.checked }));
 $('#setDiscord').addEventListener('change', (e) => setLook({ discordPresence: e.target.checked }));
 $('#setDiscordServer').addEventListener('change', (e) => setLook({ discordShowServer: e.target.checked }));
 

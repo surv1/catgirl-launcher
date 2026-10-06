@@ -455,3 +455,5 @@ body.nav-top.nav-icons .sidebar, body.nav-bottom.nav-icons .sidebar { width: aut
 @media (max-width: 1050px) { .cos-wrap { grid-template-columns: 1fr; } }
 .cos-view { display: inline-flex; padding: 2px; }
 .cos-view button { padding: 3px 12px; font-size: 11px; letter-spacing: .08em; }
+.cos-pic { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 2px; }
+.cos-pic small { flex-basis: 100%; }

@@ -37,8 +37,9 @@ const cosmetics = require('../src/main/cosmetics');
   const env = {
     NONCE_SECRET: SECRET,
     COSMETICS: {
-      get: async (k, type) => (kv.has(k) ? (type === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null),
+      get: async (k, type) => (kv.has(k) ? (type === 'json' ? JSON.parse(kv.get(k)) : type === 'arrayBuffer' ? kv.get(k).buffer.slice(kv.get(k).byteOffset, kv.get(k).byteOffset + kv.get(k).byteLength) : kv.get(k)) : null),
       put: async (k, v) => { kv.set(k, v); },
+      delete: async (k) => { kv.delete(k); },
     },
   };
   global.caches = { default: { match: async () => undefined, put: async () => {} } };
@@ -118,6 +119,52 @@ const cosmetics = require('../src/main/cosmetics');
   assert.strictEqual(forGame.api, API);
   assert.strictEqual(forGame.uuid, acc.uuid);
   assert.strictEqual(forGame.items.ears.on, true);
+
+  // ---- cape pictures: saved on this PC, uploaded with the cosmetics, served to everyone
+  const zlib = require('zlib');
+  const png = (w, h) => {
+    const crc = (buf) => { let c = ~0; for (const b of buf) { c ^= b; for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1)); } return ~c >>> 0; };
+    const chunk = (t, d) => { const l = Buffer.alloc(4); l.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t), d]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([l, td, c]); };
+    const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 6;
+    const raw = Buffer.alloc((w * 4 + 1) * h, 0x7f);
+    for (let y = 0; y < h; y++) raw[y * (w * 4 + 1)] = 0;
+    return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+  };
+  assert.throws(() => cosmetics.saveCapePicture(png(64, 64).toString('base64'), 1, 100), /wrong size/);
+  const strip = png(60, 96 * 3);
+  const custom = cosmetics.saveCapePicture(strip.toString('base64'), 3, 70);
+  assert.strictEqual(custom.frames, 3);
+  assert.strictEqual(custom.sha, crypto.createHash('sha256').update(strip).digest('hex'));
+  const withCape = cosmetics.normalize({ ...items, cape: { on: true, style: 'meow', custom } });
+  assert.deepStrictEqual(withCape.cape.custom, custom);
+  const r4 = await cosmetics.saveAndSync(API, acc, withCape);
+  assert.strictEqual(r4.synced, true, r4.error);
+  const online = (await (await fetch(`${API}/v1/cosmetics?uuids=${acc.uuid}`)).json())[acc.uuid].cape;
+  assert.strictEqual(online.image, custom.sha);
+  assert.strictEqual(online.frames, 3);
+  assert.strictEqual(online.delay, 70);
+  assert.strictEqual(online.custom, undefined, 'local-only fields never go online');
+  const served = await fetch(`${API}/v1/cape/${custom.sha}.png`);
+  assert.strictEqual(served.status, 200);
+  assert.ok(Buffer.from(await served.arrayBuffer()).equals(strip));
+  // the game gets your own picture straight from this PC
+  cosmetics.writeForGame(path.join(tmp, 'game2'), API, acc, { showCapePictures: false });
+  const g2 = JSON.parse(fs.readFileSync(path.join(tmp, 'game2', 'config', 'catgirl-cosmetics.json'), 'utf8'));
+  assert.strictEqual(g2.showCapePictures, false);
+  assert.strictEqual(g2.items.cape.image, custom.sha);
+  assert.ok(fs.existsSync(g2.items.cape.file));
+  // moderation: an admin can take a picture down, and it can't come back
+  env.ADMIN_TOKEN = 'admin-secret';
+  let down = await fetch(`${API}/v1/admin/remove-cape`, { method: 'POST', headers: { authorization: 'Bearer nope' }, body: JSON.stringify({ uuid: acc.uuid }) });
+  assert.strictEqual(down.status, 403);
+  down = await fetch(`${API}/v1/admin/remove-cape`, { method: 'POST', headers: { authorization: 'Bearer admin-secret' }, body: JSON.stringify({ uuid: acc.uuid }) });
+  assert.strictEqual((await down.json()).removed, true);
+  assert.strictEqual((await fetch(`${API}/v1/cape/${custom.sha}.png`)).status, 404);
+  const again = await cosmetics.saveAndSync(API, acc, withCape);
+  assert.strictEqual(again.synced, false);
+  assert.match(again.error, /isn't allowed/);
+  // a wrong-sized upload straight to the service is refused
+  assert.throws(() => worker.checkCapeImage({ png: png(60, 100).toString('base64'), frames: 1 }), /wrong size/);
 
   global.fetch = realFetch;
   assert.ok(joinCalls >= 2);
