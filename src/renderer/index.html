@@ -2,14 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'none'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'none'" />
   <title>Catgirl Launcher</title>
+  <link rel="stylesheet" href="../../node_modules/@fontsource/fredoka/400.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/fredoka/600.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/fredoka/700.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/nunito/400.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/nunito/600.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/nunito/700.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/quicksand/400.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/quicksand/600.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/quicksand/700.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/comfortaa/400.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/comfortaa/600.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/comfortaa/700.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/baloo-2/400.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/baloo-2/600.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/baloo-2/700.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/pixelify-sans/400.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/pixelify-sans/600.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/pixelify-sans/700.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body data-theme="sakura">
+  <div id="appBg"></div><div id="appBgDim"></div>
   <header class="titlebar">
     <div class="brand">
-      <img src="assets/logo.svg" alt="" class="brand-logo" />
+      <img src="assets/logo.png" alt="" class="brand-logo" />
       <span class="brand-name">Catgirl <b>Launcher</b></span>
     </div>
     <div class="win-buttons">
@@ -21,14 +40,15 @@
 
   <div class="layout">
     <nav class="sidebar">
-      <button class="nav active" data-page="home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z" /></svg><span>Home</span></button>
-      <button class="nav" data-page="instances"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2" /><rect x="13" y="3" width="8" height="8" rx="2" /><rect x="3" y="13" width="8" height="8" rx="2" /><rect x="13" y="13" width="8" height="8" rx="2" /></svg><span>Instances</span></button>
-      <button class="nav" data-page="mods"><svg viewBox="0 0 24 24"><path d="M12 2l9 5v10l-9 5-9-5V7z" /><path d="M3 7l9 5 9-5M12 12v10" /></svg><span>Mods</span></button>
-      <button class="nav" data-page="console"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 9l3 3-3 3M12 15h5" /></svg><span>Console</span></button>
-      <button class="nav" data-page="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg><span>Settings</span></button>
+      <div class="side-mascot"><img src="assets/logo.png" alt="" /><div><b>Catgirl</b><small>nya~ ready to play</small></div></div>
+      <button class="nav active" data-page="home" title="Home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z" /></svg><span>Home</span></button>
+      <button class="nav" data-page="instances" title="Instances"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2" /><rect x="13" y="3" width="8" height="8" rx="2" /><rect x="3" y="13" width="8" height="8" rx="2" /><rect x="13" y="13" width="8" height="8" rx="2" /></svg><span>Instances</span></button>
+      <button class="nav" data-page="mods" title="Mods"><svg viewBox="0 0 24 24"><path d="M12 2l9 5v10l-9 5-9-5V7z" /><path d="M3 7l9 5 9-5M12 12v10" /></svg><span>Mods</span></button>
+      <button class="nav" data-page="console" title="Console"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 9l3 3-3 3M12 15h5" /></svg><span>Console</span></button>
+      <button class="nav" data-page="settings" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg><span>Settings</span></button>
       <div class="spacer"></div>
       <button class="account-chip" data-page="accounts" id="accountChip">
-        <img id="accountHead" src="assets/logo.svg" alt="" />
+        <img id="accountHead" src="assets/logo.png" alt="" />
         <div><small>Signed in as</small><span id="accountName">Not signed in</span></div>
       </button>
     </nav>
@@ -46,6 +66,7 @@
             <span class="pill" id="heroPill">Catgirl Launcher</span>
             <h1 id="heroName">Welcome!</h1>
             <p id="heroTagline">Create an instance to start playing.</p>
+            <div class="hero-motd hidden" id="heroMotd"></div>
             <div class="hero-meta" id="heroMeta"></div>
             <div class="play-row">
               <button class="play" id="heroPlay">New instance</button>
@@ -101,21 +122,72 @@
       <section class="page" id="page-settings">
         <div class="section-head"><h2>Settings</h2></div>
         <div class="settings">
+          <h3 class="group">Look &amp; feel</h3>
           <div class="field">
             <label>Theme <small>Changes instantly</small></label>
             <div class="themes" id="themePicker"></div>
           </div>
-          <div class="field">
-            <label class="check"><input type="checkbox" id="setCatgirlMenu" /> Catgirl in-game menu</label>
-            <small class="muted">Adds the pink "CatGirl Launcher" title screen to Fabric instances.</small>
+          <div class="field hidden" id="customColorsField">
+            <label>Your colours <small>Pick any colour for the background and the accent</small></label>
+            <div class="custom-colors">
+              <label class="color-pick"><input type="color" id="customBg" /> Background</label>
+              <label class="color-pick"><input type="color" id="customAccent" /> Accent</label>
+            </div>
+            <div class="presets-dots" id="accentDots"></div>
           </div>
           <div class="field">
-            <label>Updates</label>
-            <div class="row"><button class="ghost" id="checkUpdates">Check for updates</button><span class="muted" id="updateText"></span></div>
+            <label>Font</label>
+            <select id="setFont"></select>
+            <div class="row hidden" id="fontNameRow"><input id="setFontName" placeholder="Type any font installed on your PC, e.g. Comic Sans MS" /><button class="ghost" id="applyFontName">Use</button></div>
+            <div class="row hidden" id="fontFileRow"><button class="ghost" id="pickFontFile">Choose font file…</button><span class="muted" id="fontFileName"></span></div>
+          </div>
+          <div class="field">
+            <label>Background</label>
+            <div class="bg-grid" id="bgPicker"></div>
+            <div class="row"><button class="ghost" id="bgPickFile">Use my own picture…</button><input id="bgUrl" placeholder="…or paste an image link (https://…)" /><button class="ghost" id="bgUseUrl">Use link</button></div>
+            <div class="range-row"><span class="muted" style="min-width:90px">Dim</span><input type="range" id="bgDim" min="0" max="90" step="5" /><b id="bgDimVal"></b></div>
+            <div class="range-row"><span class="muted" style="min-width:90px">Blur</span><input type="range" id="bgBlur" min="0" max="20" step="1" /><b id="bgBlurVal"></b></div>
+          </div>
+          <div class="field">
+            <label>Menu position</label>
+            <div class="seg wide" id="navPos"><button data-v="left">Left</button><button data-v="right">Right</button><button data-v="top">Top</button><button data-v="bottom">Bottom</button></div>
+            <label class="check"><input type="checkbox" id="navIcons" /> Icons only</label>
+          </div>
+
+          <h3 class="group">In-game</h3>
+          <div class="field">
+            <label class="check"><input type="checkbox" id="setCatgirlMenu" /> CatGirl title screen &amp; menu</label>
+            <small class="muted">Pink "CatGirl Launcher" title, "CatGirl Client" window name, catgirl splash texts and quick buttons (Fabric instances).</small>
+          </div>
+          <div class="field">
+            <label class="check"><input type="checkbox" id="setSplashes" /> Catgirl facts in the yellow splash text</label>
+          </div>
+          <div class="field">
+            <label>In-game menu position</label>
+            <div class="seg wide" id="menuPos"><button data-v="right">Right</button><button data-v="left">Left</button><button data-v="top">Top</button><button data-v="bottom">Bottom</button><button data-v="hidden">Hidden</button></div>
+            <label class="check"><input type="checkbox" id="menuIcons" /> Icons only</label>
+          </div>
+
+          <h3 class="group">Discord</h3>
+          <div class="field">
+            <label class="check"><input type="checkbox" id="setDiscord" /> Show "Catgirl Launcher" on my Discord profile</label>
+            <label class="check"><input type="checkbox" id="setDiscordServer" /> Show which server I'm playing on</label>
+            <small class="muted">Needs the Discord desktop app open. Shows while the launcher is open (minimised is fine).</small>
+          </div>
+
+          <h3 class="group">Game</h3>
+          <div class="field">
+            <label class="check"><input type="checkbox" id="setShareOptions" /> Share Minecraft settings between instances</label>
+            <label class="check"><input type="checkbox" id="setShareServers" /> Share my multiplayer server list too</label>
+            <small class="muted">Controls, FOV, sensitivity, graphics, sound and chat settings follow you to every instance. Resource packs stay per instance. You can turn this off for one instance in its ✎ settings.</small>
           </div>
           <div class="field">
             <label>When the game starts</label>
-            <select id="setAfterLaunch"><option value="minimize">Minimise the launcher</option><option value="keep">Keep the launcher open</option></select>
+            <select id="setAfterLaunch">
+              <option value="minimize">Minimise the launcher</option>
+              <option value="keep">Keep the launcher open</option>
+              <option value="close">Close the launcher (the game keeps running)</option>
+            </select>
           </div>
           <div class="field">
             <label>Java executable <small>Leave empty and the right Java is downloaded for you</small></label>
@@ -132,8 +204,14 @@
           <div class="field">
             <label class="check"><input type="checkbox" id="setSnapshots" /> Show snapshot versions</label>
           </div>
+          <div class="row"><button class="primary" id="saveSettings">Save game settings</button></div>
+
+          <h3 class="group">About</h3>
+          <div class="field">
+            <div class="row"><button class="ghost" id="checkUpdates">Check for updates</button><span class="muted" id="updateText"></span></div>
+          </div>
           <div class="field"><label>Data folder</label><code id="dataDir"></code></div>
-          <div class="row"><button class="primary" id="saveSettings">Save settings</button><span class="muted" id="appVersion"></span></div>
+          <span class="muted" id="appVersion"></span>
         </div>
       </section>
     </main>

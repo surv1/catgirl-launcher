@@ -100,3 +100,107 @@ function remove(instId, file) {
 }
 
 module.exports = { search, install, listInstalled, toggle, remove };
+
+// ---------- keep mods matching the instance's Minecraft version ----------
+// Called after an instance's version or loader changes: every mod installed from Modrinth
+// is swapped for the build made for the new version. Mods with no build are disabled.
+async function migrate(instId, onProgress = () => {}) {
+  const inst = instances.get(instId);
+  const result = { updated: [], disabled: [], unchanged: [] };
+  if (inst.loader === 'vanilla') return result;
+  const dir = modsDir(instId);
+  const idx = readIndex(instId);
+  const ids = Object.keys(idx);
+  let n = 0;
+  for (const pid of ids) {
+    const m = idx[pid];
+    onProgress(`Updating ${m.title}`, n++, ids.length);
+    let v = null;
+    try { v = await bestVersion(pid, inst); } catch {}
+    const oldPath = path.join(dir, m.file);
+    if (!v) {
+      if (fs.existsSync(oldPath)) fs.renameSync(oldPath, oldPath + '.disabled');
+      result.disabled.push(m.title);
+      continue;
+    }
+    const file = v.files.find((f) => f.primary) || v.files[0];
+    if (file.filename === m.file && fs.existsSync(oldPath)) { result.unchanged.push(m.title); continue; }
+    await download(file.url, path.join(dir, file.filename), { sha1: file.hashes?.sha1, size: file.size });
+    if (file.filename !== m.file) {
+      fs.rmSync(oldPath, { force: true });
+      fs.rmSync(oldPath + '.disabled', { force: true });
+    }
+    idx[pid] = { ...m, file: file.filename, version: v.version_number };
+    result.updated.push(m.title);
+  }
+  writeIndex(instId, idx);
+  return result;
+}
+
+// ---------- modpacks (.mrpack from Modrinth) ----------
+async function searchPacks(query, offset = 0) {
+  const facets = [['project_type:modpack'], ['categories:fabric']];
+  const url = `${API}/search?limit=20&offset=${offset}&index=${query ? 'relevance' : 'downloads'}&query=${encodeURIComponent(query || '')}&facets=${encodeURIComponent(JSON.stringify(facets))}`;
+  const r = await fetchJson(url);
+  return {
+    total: r.total_hits,
+    hits: r.hits.map((h) => ({
+      id: h.project_id, title: h.title, author: h.author, description: h.description,
+      icon: h.icon_url, downloads: h.downloads, versions: h.versions || [],
+    })),
+  };
+}
+
+async function installPack(projectId, onProgress = () => {}) {
+  const { extractZip, readFile } = require('./unzip');
+  const paths = require('./paths');
+  onProgress('Finding modpack version', 0, 0);
+  const project = await fetchJson(`${API}/project/${encodeURIComponent(projectId)}`);
+  const versions = await fetchJson(`${API}/project/${encodeURIComponent(projectId)}/version?loaders=${encodeURIComponent('["fabric"]')}`);
+  const v = versions.find((x) => x.version_type === 'release') || versions[0];
+  if (!v) throw new Error('This modpack has no Fabric version.');
+  const packFile = v.files.find((f) => f.primary) || v.files[0];
+  const packPath = path.join(paths.dirs().cache, `pack-${v.id}.mrpack`);
+  onProgress('Downloading modpack', 0, 0);
+  await download(packFile.url, packPath, { sha1: packFile.hashes?.sha1 });
+
+  const raw = readFile(packPath, 'modrinth.index.json');
+  if (!raw) throw new Error('Not a valid Modrinth modpack.');
+  const index = JSON.parse(raw.toString('utf8'));
+  const deps = index.dependencies || {};
+  if (!deps.minecraft) throw new Error('Modpack does not say which Minecraft version it needs.');
+  if (deps.forge || deps.neoforge || deps.quilt_loader) throw new Error('Only Fabric modpacks are supported.');
+
+  const inst = instances.create({
+    name: project.title.slice(0, 40),
+    mcVersion: deps.minecraft,
+    loader: deps['fabric-loader'] ? 'fabric' : 'vanilla',
+    loaderVersion: deps['fabric-loader'] || null,
+    icon: 'yarn',
+    memoryMB: 6144,
+  });
+  instances.save({ ...instances.get(inst.id), iconUrl: project.icon_url || null, modpack: { id: projectId, version: v.version_number } });
+
+  const game = path.resolve(instances.gameDir(inst.id));
+  const jobs = [];
+  for (const f of index.files || []) {
+    if (f.env?.client === 'unsupported') continue;
+    const dest = path.resolve(game, f.path);
+    if (!dest.startsWith(game + path.sep)) continue; // ignore unsafe paths
+    const url = (f.downloads || [])[0];
+    if (!url) continue;
+    jobs.push({ url, path: dest, sha1: f.hashes?.sha1, size: f.fileSize });
+  }
+  const { downloadAll } = require('./net');
+  await downloadAll(jobs, (d, t) => onProgress('Downloading mods', d, t), 8);
+
+  onProgress('Copying configs', 0, 0);
+  extractZip(packPath, game, { prefix: 'overrides/' });
+  extractZip(packPath, game, { prefix: 'client-overrides/' });
+  fs.rmSync(packPath, { force: true });
+  return instances.get(inst.id);
+}
+
+module.exports.migrate = migrate;
+module.exports.searchPacks = searchPacks;
+module.exports.installPack = installPack;

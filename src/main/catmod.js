@@ -28,15 +28,38 @@ function removeMenuJars(dir, keep) {
 
 // enabled=false removes the mod; otherwise installs/updates it. Never throws: the game
 // should still launch even if GitHub can't be reached.
-async function sync(inst, { enabled, github }, log) {
+// Settings the in-game mod reads from <game>/config/catgirl-client.json
+function writeConfig(inst, settings = {}, discord = {}) {
+  const file = path.join(instances.gameDir(inst.id), 'config', 'catgirl-client.json');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const accent = /^#[0-9a-f]{6}$/i.test(settings.accentHex || '') ? settings.accentHex : '#ff7eb6';
+  fs.writeFileSync(file, JSON.stringify({
+    menuPosition: ['right', 'left', 'top', 'bottom', 'hidden'].includes(settings.menuPosition) ? settings.menuPosition : 'right',
+    iconsOnly: !!settings.menuIconsOnly,
+    accent,
+    windowTitle: 'CatGirl Client',
+    splashes: settings.splashes !== false,
+    discord: {
+      enabled: !!discord.enabled,
+      clientId: String(discord.clientId || ''),
+      showServer: discord.showServer !== false,
+      downloadUrl: discord.downloadUrl || null,
+    },
+  }, null, 2));
+}
+
+// Returns true when the in-game mod is installed and will run (it then also handles Discord).
+async function sync(inst, { enabled, github, settings, discord }, log) {
   const dir = path.join(instances.gameDir(inst.id), 'mods');
-  if (!enabled || inst.loader !== 'fabric') { removeMenuJars(dir); return; }
-  if (!github?.owner || !github?.repo) { log('[Catgirl] In-game menu: no GitHub repo set in config.json yet, skipping.'); return; }
+  if (!enabled || inst.loader !== 'fabric') { removeMenuJars(dir); return false; }
+  try { writeConfig(inst, settings, discord); } catch (e) { log(`[Catgirl] Couldn't write menu settings: ${e.message}`); }
+  const installed = () => fs.existsSync(dir) && fs.readdirSync(dir).some((f) => f.startsWith(PREFIX) && f.endsWith('.jar'));
+  if (!github?.owner || !github?.repo) { log('[Catgirl] In-game menu: no GitHub repo set in config.json yet, skipping.'); return installed(); }
   try {
     const rel = await latestRelease(github);
     const want = `${PREFIX}mc${inst.mcVersion}.jar`;
     const asset = rel.assets?.find((a) => a.name === want);
-    if (!asset) { log(`[Catgirl] In-game menu isn't built for Minecraft ${inst.mcVersion} yet, skipping.`); return; }
+    if (!asset) { log(`[Catgirl] In-game menu isn't built for Minecraft ${inst.mcVersion} yet, skipping.`); removeMenuJars(dir); return false; }
     const fileName = `${PREFIX}${rel.tag_name}-mc${inst.mcVersion}.jar`;
     fs.mkdirSync(dir, { recursive: true });
     removeMenuJars(dir, fileName);
@@ -50,6 +73,7 @@ async function sync(inst, { enabled, github }, log) {
   } catch (e) {
     log(`[Catgirl] Couldn't update the in-game menu: ${e.message}`);
   }
+  return installed();
 }
 
-module.exports = { sync };
+module.exports = { sync, writeConfig };

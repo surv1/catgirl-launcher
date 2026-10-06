@@ -27,9 +27,13 @@ function toast(msg, kind = '') {
   setTimeout(() => t.remove(), kind === 'err' ? 7000 : 3500);
 }
 async function safe(fn, okMsg) {
-  try { const r = await fn(); if (okMsg) toast(okMsg, 'ok'); return r; } catch (e) { toast(e.message, 'err'); return undefined; }
+  try { const r = await fn(); if (okMsg) toast(okMsg, 'ok'); return r; } catch (e) {
+    toast(e.message, 'err');
+    if (/Instance not found/i.test(e.message)) setTimeout(() => refreshInstances(), 0); // a stale card: redraw
+    return undefined;
+  }
 }
-function head(uuid, size = 64) { return uuid ? `https://mc-heads.net/avatar/${uuid}/${size}` : 'assets/logo.svg'; }
+function head(uuid, size = 64) { return uuid ? `https://mc-heads.net/avatar/${uuid}/${size}` : 'assets/logo.png'; }
 function fmtPlay(ms) {
   if (!ms) return 'Never played';
   const h = Math.floor(ms / 3600000), m = Math.round((ms % 3600000) / 60000);
@@ -66,7 +70,7 @@ async function refreshAccounts() {
   state.accounts = (await safe(() => window.cat.auth.list())) || { selected: null, accounts: [] };
   const sel = state.accounts.accounts.find((a) => a.uuid === state.accounts.selected);
   $('#accountName').textContent = sel ? sel.name : 'Not signed in';
-  $('#accountHead').src = sel ? head(sel.uuid) : 'assets/logo.svg';
+  $('#accountHead').src = sel ? head(sel.uuid) : 'assets/logo.png';
   renderHome();
   if ($('#page-accounts').classList.contains('active')) renderAccounts();
 }
@@ -121,6 +125,7 @@ async function playOrStop(id) {
     state.launching.delete(id);
     toast(e.message, 'err');
     pushLog(id, `[Catgirl] Launch failed: ${e.message}`);
+    if (/Instance not found/i.test(e.message)) refreshInstances();
   }
   updatePlayUI(id);
 }
@@ -131,6 +136,7 @@ window.cat.launch.onStarted(({ instId }) => {
   state.running.add(instId);
   updatePlayUI(instId);
   toast('Minecraft is starting. Have fun! 🐾', 'ok');
+  refreshInstances();
 });
 window.cat.launch.onExit(({ instId, code, error }) => {
   state.launching.delete(instId);
@@ -151,7 +157,7 @@ function pushLog(id, line) {
 
 /* ---------- home ---------- */
 function instanceCard(inst) {
-  const icon = ICONS[inst.icon] || '🐱';
+  const icon = inst.iconUrl ? `<img src="${esc(inst.iconUrl)}" alt="" />` : ICONS[inst.icon] || '🐱';
   const loader = inst.loader === 'fabric' ? 'Fabric' : 'Vanilla';
   return `<div class="card" data-inst="${esc(inst.id)}">
     <div class="card-top">
@@ -182,7 +188,9 @@ function renderHome() {
     $('#heroMeta').innerHTML = `<span class="tag">${esc(hero.mcVersion)}</span><span class="tag">${hero.loader === 'fabric' ? 'Fabric' : 'Vanilla'}</span>${hero.joinServer ? `<span class="muted">joins ${esc(hero.joinServer)}</span>` : ''}<span class="muted">${fmtPlay(hero.playTimeMs)}</span>`;
     play.dataset.play = hero.id;
     updatePlayUI(hero.id);
+    renderHeroServer(hero);
   } else {
+    renderHeroServer(null);
     $('#heroPill').textContent = 'Catgirl Launcher';
     $('#heroTagline').textContent = 'Create an instance to start playing any Minecraft version.';
     $('#heroMeta').innerHTML = '';
@@ -199,6 +207,39 @@ function renderHome() {
     : `<div class="empty">${hero ? 'Make more instances for other versions or modpacks.' : 'No instances yet.'} <button class="link" id="emptyNew">Create one</button></div>`;
 }
 $('#heroPlay').addEventListener('click', () => { if (!state.heroId) instanceModal(); });
+
+// The big picture on the home screen shows the last server you played on (its real icon,
+// MOTD and player count). Without a server it shows the Catgirl mascot.
+const pingCache = new Map();
+async function renderHeroServer(inst) {
+  const art = $('.hero-art');
+  const motd = $('#heroMotd');
+  const address = inst && (inst.lastServer || inst.joinServer);
+  if (!address) {
+    art.className = 'hero-art';
+    art.innerHTML = '';
+    motd.classList.add('hidden');
+    return;
+  }
+  const key = address.toLowerCase();
+  let entry = pingCache.get(key);
+  if (!entry || Date.now() - entry.at > 60000) {
+    entry = { at: Date.now(), promise: window.cat.ping(address).catch(() => null) };
+    pingCache.set(key, entry);
+  }
+  const info = await entry.promise;
+  if (state.heroId !== inst.id) return; // hero changed while waiting
+  art.className = 'hero-art server';
+  const online = info && info.online != null;
+  art.innerHTML = `<img src="${info?.favicon || 'assets/logo.png'}" alt="" />
+    <span class="online ${online ? '' : 'off'}">${online ? `● ${info.online}/${info.max} online` : 'Offline'}</span>`;
+  motd.textContent = `${address}${info?.motd ? `\n${info.motd}` : ''}`;
+  motd.classList.remove('hidden');
+}
+window.cat.launch.onServer(({ instId, server }) => {
+  const inst = state.instances.find((i) => i.id === instId);
+  if (inst) { inst.lastServer = server; if (state.heroId === instId) renderHeroServer(inst); }
+});
 document.addEventListener('click', (e) => {
   if (e.target.id === 'emptyNew') instanceModal();
   const ed = e.target.closest('[data-edit]');
@@ -212,6 +253,7 @@ function renderInstances() {
 $('#newInstanceBtn').addEventListener('click', () => instanceModal());
 
 function openModal(html) {
+  $('#modal .modal').classList.remove('wide');
   $('#modalBody').innerHTML = html;
   $('#modal').classList.remove('hidden');
 }
@@ -229,6 +271,7 @@ async function instanceModal(existing = null) {
   const inst = existing || { name: '', mcVersion: '', loader: 'fabric', loaderVersion: null, memoryMB: 4096, joinServer: '', icon: 'cat', javaArgs: '' };
   openModal(`
     <h3>${editing ? 'Edit instance' : 'New instance'}</h3>
+    ${editing ? '' : '<button class="ghost" id="iPack" style="width:100%;margin:-4px 0 16px">📦 Install a modpack instead</button>'}
     <div class="field"><label>Name</label><input id="iName" value="${esc(inst.name)}" placeholder="My survival world" maxlength="40" /></div>
     <div class="field"><label>Icon</label><div class="seg" id="iIcon">${Object.entries(ICONS).map(([k, v]) => `<button data-v="${k}" class="${inst.icon === k ? 'on' : ''}">${v}</button>`).join('')}</div></div>
     <div class="field"><label>Minecraft version</label><select id="iVersion"><option>Loading…</option></select></div>
@@ -238,6 +281,7 @@ async function instanceModal(existing = null) {
     <div class="field ${inst.loader === 'fabric' ? '' : 'hidden'}" id="iLoaderVerWrap"><label>Fabric loader <small>Latest stable is picked automatically</small></label><select id="iLoaderVer"><option value="">Latest stable</option></select></div>
     <div class="field"><label>Memory</label><div class="range-row"><input type="range" id="iMem" min="1024" max="16384" step="512" value="${inst.memoryMB}" /><b id="iMemVal"></b></div></div>
     <div class="field"><label>Join a server on launch <small>Optional, e.g. play.example.net</small></label><input id="iServer" value="${esc(inst.joinServer)}" /></div>
+    <div class="field"><label class="check"><input type="checkbox" id="iShare" ${inst.shareSettings === false ? '' : 'checked'} /> Use my shared Minecraft settings</label></div>
     <div class="field"><label>Java arguments <small>Optional</small></label><input id="iArgs" value="${esc(inst.javaArgs || '')}" placeholder="-XX:+UseG1GC" /></div>
     <div class="actions">
       ${editing ? '<button class="ghost" id="iFolder">Open folder</button><button class="danger" id="iDelete">Delete</button>' : ''}
@@ -245,6 +289,7 @@ async function instanceModal(existing = null) {
       <button class="primary" id="iSave">${editing ? 'Save' : 'Create'}</button>
     </div>`);
 
+  $('#iPack')?.addEventListener('click', modpackModal);
   let loader = inst.loader, icon = inst.icon;
   const memLabel = () => { $('#iMemVal').textContent = `${(+$('#iMem').value / 1024).toFixed(1)} GB`; };
   memLabel();
@@ -283,7 +328,15 @@ async function instanceModal(existing = null) {
     $('#iFolder').addEventListener('click', () => window.cat.instances.openFolder(inst.id));
     $('#iDelete')?.addEventListener('click', async () => {
       if (!confirm(`Delete "${inst.name}" and all its worlds, mods and settings? This can't be undone.`)) return;
-      if (await safe(() => window.cat.instances.remove(inst.id), 'Instance deleted') !== undefined) { closeModal(); refreshInstances(); }
+      try {
+        await window.cat.instances.remove(inst.id);
+        toast(`${inst.name} deleted`, 'ok');
+        closeModal();
+      } catch (e) {
+        toast(e.message, 'err');
+        if (/not found/i.test(e.message)) closeModal(); // it was already gone
+      }
+      refreshInstances(); // always redraw so no stale card is left behind
     });
   }
   $('#iSave').addEventListener('click', async () => {
@@ -295,14 +348,80 @@ async function instanceModal(existing = null) {
       memoryMB: +$('#iMem').value,
       icon,
       javaArgs: $('#iArgs').value.trim(),
+      shareSettings: $('#iShare').checked,
     };
     data.joinServer = $('#iServer').value.trim();
     if (!data.name) return toast('Give your instance a name.', 'err');
     if (!data.mcVersion) return toast('Pick a Minecraft version.', 'err');
+    const versionChanged = editing && (data.mcVersion !== inst.mcVersion || data.loader !== inst.loader);
     const r = editing ? await safe(() => window.cat.instances.update(inst.id, data), 'Saved') : await safe(() => window.cat.instances.create(data), 'Instance created');
-    if (r) { closeModal(); refreshInstances(); }
+    if (!r) return;
+    closeModal();
+    refreshInstances();
+    if (versionChanged && data.loader === 'fabric') migrateMods(r);
   });
 }
+
+// After a version change, swap every Modrinth mod for the build made for the new version.
+async function migrateMods(inst) {
+  const mods = (await safe(() => window.cat.mods.list(inst.id))) || [];
+  if (!mods.some((m) => m.projectId)) return;
+  toast(`Updating ${inst.name}'s mods for Minecraft ${inst.mcVersion}…`);
+  const r = await safe(() => window.cat.mods.migrate(inst.id));
+  if (!r) return;
+  const parts = [];
+  if (r.updated.length) parts.push(`${r.updated.length} updated`);
+  if (r.unchanged.length) parts.push(`${r.unchanged.length} already fine`);
+  if (r.disabled.length) parts.push(`${r.disabled.length} disabled (no ${inst.mcVersion} version yet: ${r.disabled.join(', ')})`);
+  toast(`Mods for ${inst.mcVersion}: ${parts.join(', ')}`, r.disabled.length ? '' : 'ok');
+  if ($('#page-mods').classList.contains('active')) renderMods();
+}
+
+/* ---------- modpacks ---------- */
+async function modpackModal() {
+  openModal(`
+    <h3>Install a modpack</h3>
+    <p class="muted" style="margin:-8px 0 12px">Fabric modpacks from Modrinth. Every mod comes in the exact version the pack was made for.</p>
+    <input id="packSearch" class="search" placeholder="Search modpacks… (Fabulously Optimized, Cobblemon, Simply Optimized)" />
+    <div class="pack-list" id="packResults"><div class="empty"><span class="spinner"></span>Loading…</div></div>`);
+  $('#modal .modal').classList.add('wide');
+  let timer = null;
+  const run = async () => {
+    const q = $('#packSearch')?.value.trim() || '';
+    const r = await safe(() => window.cat.packs.search(q, 0));
+    if (!$('#packResults')) return;
+    if (!r) { $('#packResults').innerHTML = '<div class="empty">Couldn\'t reach Modrinth.</div>'; return; }
+    $('#packResults').innerHTML = r.hits.map((h) => `
+      <div class="mod">
+        ${h.icon ? `<img src="${esc(h.icon)}" alt="" loading="lazy" />` : '<div class="ph"></div>'}
+        <div class="info"><b>${esc(h.title)}</b><small>${esc(h.description)}</small><small>by ${esc(h.author)} · ${fmtNum(h.downloads)} downloads${h.versions.length ? ` · MC ${esc(h.versions[h.versions.length - 1])}` : ''}</small></div>
+        <button class="primary small" data-pack="${esc(h.id)}">Install</button>
+      </div>`).join('') || '<div class="empty">No modpacks found.</div>';
+  };
+  $('#packSearch').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, 300); });
+  $('#packResults').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-pack]');
+    if (!b) return;
+    $$('[data-pack]').forEach((x) => { x.disabled = true; });
+    b.innerHTML = '<span class="spinner"></span>Starting';
+    state.packBtn = b;
+    const inst = await safe(() => window.cat.packs.install(b.dataset.pack));
+    state.packBtn = null;
+    if (inst) {
+      closeModal();
+      toast(`${inst.name} is installed. Press Play!`, 'ok');
+      refreshInstances();
+    } else {
+      $$('[data-pack]').forEach((x) => { x.disabled = false; });
+      b.textContent = 'Install';
+    }
+  });
+  run();
+}
+window.cat.packs.onProgress(({ stage, done, total }) => {
+  if (!state.packBtn) return;
+  state.packBtn.innerHTML = `<span class="spinner"></span>${esc(stage)}${total ? ` ${Math.round((done / total) * 100)}%` : ''}`;
+});
 
 /* ---------- mods ---------- */
 function fillInstanceSelects() {
@@ -445,27 +564,221 @@ async function addAccount() {
   }
 }
 
-/* ---------- themes ---------- */
+/* ---------- look & feel: themes, colours, fonts, backgrounds, menu ---------- */
 const THEMES = [
   { id: 'sakura', name: 'Sakura', dots: ['#170d1c', '#ff7eb6', '#c77dff'] },
   { id: 'lavender', name: 'Lavender', dots: ['#13111d', '#b69cff', '#7f9cff'] },
   { id: 'midnight', name: 'Midnight', dots: ['#0b0e1a', '#7aa2ff', '#c77dff'] },
   { id: 'strawberry', name: 'Strawberry', dots: ['#1a0c10', '#ff5c7a', '#ffb36b'] },
   { id: 'mint', name: 'Mint', dots: ['#0c1613', '#6fe3b5', '#7ec8ff'] },
+  { id: 'peach', name: 'Peach', dots: ['#1c120e', '#ff9f7a', '#ff7eb6'] },
+  { id: 'ocean', name: 'Ocean', dots: ['#08151c', '#4fd1e8', '#7f9cff'] },
+  { id: 'sunset', name: 'Sunset', dots: ['#1a0f1c', '#ff8a5c', '#c86bff'] },
+  { id: 'neon', name: 'Neon', dots: ['#07060f', '#ff3fd1', '#2ee6ff'] },
+  { id: 'mocha', name: 'Mocha', dots: ['#17110f', '#e8a87c', '#d98fb0'] },
   { id: 'cottoncandy', name: 'Cotton Candy', dots: ['#fff4f9', '#ff5fa2', '#9b6bff'] },
+  { id: 'snow', name: 'Snow', dots: ['#f6f4ff', '#8b6bff', '#ff7eb6'] },
+  { id: 'custom', name: 'Custom…', dots: ['#000', '#ff7eb6', '#c77dff'] },
 ];
-function applyTheme(id) {
-  const theme = THEMES.some((t) => t.id === id) ? id : 'sakura';
-  document.body.dataset.theme = theme;
-  $$('.theme-swatch').forEach((b) => b.classList.toggle('on', b.dataset.theme === theme));
+const ACCENT_PRESETS = ['#ff7eb6', '#ff5c7a', '#ff9f7a', '#ffd166', '#6fe3b5', '#4fd1e8', '#7aa2ff', '#b69cff', '#c77dff', '#ff3fd1', '#ffffff'];
+const FONTS = [
+  { id: 'default', name: 'Default (Segoe UI)', css: '"Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif' },
+  { id: 'fredoka', name: 'Fredoka (round & cute)', css: '"Fredoka", "Segoe UI", sans-serif' },
+  { id: 'nunito', name: 'Nunito (soft)', css: '"Nunito", "Segoe UI", sans-serif' },
+  { id: 'quicksand', name: 'Quicksand (light)', css: '"Quicksand", "Segoe UI", sans-serif' },
+  { id: 'comfortaa', name: 'Comfortaa (bubbly)', css: '"Comfortaa", "Segoe UI", sans-serif' },
+  { id: 'baloo', name: 'Baloo 2 (chunky)', css: '"Baloo 2", "Segoe UI", sans-serif' },
+  { id: 'pixel', name: 'Pixelify Sans (pixel)', css: '"Pixelify Sans", "Segoe UI", sans-serif' },
+  { id: 'comic', name: 'Comic Sans MS', css: '"Comic Sans MS", "Comic Sans", "Segoe UI", sans-serif' },
+  { id: 'installed', name: 'A font on my PC…', css: null },
+  { id: 'file', name: 'A font file…', css: '"CatgirlCustomFont", "Segoe UI", sans-serif' },
+];
+const BACKGROUNDS = [
+  { id: 'none', name: 'None' },
+  { id: 'sakura-night', name: 'Sakura night', url: 'assets/bg/sakura-night.svg' },
+  { id: 'catgirl', name: 'Catgirl', url: 'assets/bg/catgirl.svg' },
+  { id: 'starry', name: 'Cat stars', url: 'assets/bg/starry.svg' },
+  { id: 'paws', name: 'Paws', url: 'assets/bg/paws.svg' },
+  { id: 'custom', name: 'My picture', url: null },
+];
+state.look = {};
+state.customBgUrl = null;
+
+/* colour maths for the custom theme */
+const hexToRgb = (h) => { const n = parseInt(h.replace('#', ''), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const rgbToHex = (r) => '#' + r.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+const mix = (a, b, t) => rgbToHex(hexToRgb(a).map((v, i) => v + (hexToRgb(b)[i] - v) * t));
+const lum = (h) => { const [r, g, b] = hexToRgb(h).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+
+function customThemeVars(bg, accent) {
+  const dark = lum(bg) < 0.4;
+  const toward = dark ? '#ffffff' : '#000000';
+  const text = dark ? mix('#ffffff', accent, 0.06) : mix('#1a1020', accent, 0.1);
+  return {
+    '--bg': bg, '--bg-2': mix(bg, toward, 0.035), '--panel': mix(bg, toward, 0.08), '--panel-2': mix(bg, toward, 0.13), '--line': mix(bg, toward, 0.2),
+    '--text': text, '--muted': mix(text, bg, 0.4),
+    '--pink': accent, '--pink-2': dark ? mix(accent, '#ffffff', 0.35) : mix(accent, '#000000', 0.2),
+    '--lilac': mix(accent, '#7f9cff', 0.55), '--on-accent': lum(accent) > 0.45 ? '#1a1020' : '#ffffff',
+    '--hero-a': mix(bg, accent, dark ? 0.35 : 0.3), '--hero-b': mix(bg, accent, 0.1), '--hero-c': bg,
+    '--console': dark ? mix(bg, '#000000', 0.4) : '#1d1630', '--console-text': dark ? mix(text, bg, 0.15) : '#e2dbfa',
+    '--backdrop': dark ? 'rgba(0,0,0,.6)' : 'rgba(40,30,60,.3)',
+  };
 }
-$('#themePicker').innerHTML = THEMES.map((t) => `<button class="theme-swatch" data-theme="${t.id}"><div class="dots">${t.dots.map((c) => `<i style="background:${c}"></i>`).join('')}</div><span>${t.name}</span></button>`).join('');
-$('#themePicker').addEventListener('click', (e) => {
-  const b = e.target.closest('.theme-swatch');
-  if (!b) return;
-  applyTheme(b.dataset.theme);
-  safe(() => window.cat.settings.set({ theme: b.dataset.theme }));
+
+function currentAccent(look) {
+  if (look.theme === 'custom') return look.customAccent || '#ff7eb6';
+  return (THEMES.find((t) => t.id === look.theme) || THEMES[0]).dots[1];
+}
+
+function applyLook(look) {
+  const root = document.documentElement;
+  const body = document.body;
+  // theme
+  const theme = THEMES.some((t) => t.id === look.theme) ? look.theme : 'sakura';
+  body.dataset.theme = theme;
+  const custom = customThemeVars(look.customBg || '#1a1020', look.customAccent || '#ff7eb6');
+  for (const k of Object.keys(custom)) body.style.removeProperty(k);
+  if (theme === 'custom') for (const [k, v] of Object.entries(custom)) body.style.setProperty(k, v);
+  $$('.theme-swatch').forEach((b) => b.classList.toggle('on', b.dataset.theme === theme));
+  $('#customColorsField').classList.toggle('hidden', theme !== 'custom');
+  // font
+  const f = FONTS.find((x) => x.id === look.font) || FONTS[0];
+  let css = f.css;
+  if (f.id === 'installed') css = look.fontName ? `"${look.fontName.replace(/["\\]/g, '')}", "Segoe UI", sans-serif` : FONTS[0].css;
+  root.style.setProperty('--font', css);
+  root.style.setProperty('--display', css);
+  // background
+  const bg = BACKGROUNDS.find((x) => x.id === look.background) || BACKGROUNDS[0];
+  const url = bg.id === 'custom' ? state.customBgUrl : bg.url;
+  const on = bg.id !== 'none' && !!url;
+  body.classList.toggle('has-bg', on);
+  $('#appBg').style.backgroundImage = on ? `url("${url}")` : 'none';
+  $('#appBg').style.filter = on && look.bgBlur ? `blur(${look.bgBlur}px)` : 'none';
+  $('#appBg').style.inset = on && look.bgBlur ? `-${look.bgBlur * 2}px` : '0';
+  $('#appBgDim').style.opacity = on ? String((look.bgDim ?? 55) / 100) : '0';
+  $$('.bg-tile').forEach((t) => t.classList.toggle('on', t.dataset.bg === bg.id));
+  // launcher menu layout
+  const pos = ['left', 'right', 'top', 'bottom'].includes(look.navPosition) ? look.navPosition : 'left';
+  body.classList.remove('nav-left', 'nav-right', 'nav-top', 'nav-bottom');
+  body.classList.add(`nav-${pos}`);
+  body.classList.toggle('nav-icons', !!look.navIcons);
+}
+
+async function setLook(change) {
+  Object.assign(state.look, change);
+  applyLook(state.look);
+  syncLookControls();
+  await safe(() => window.cat.settings.set({ ...change, accentHex: currentAccent(state.look) }));
+}
+
+function syncLookControls() {
+  const l = state.look;
+  $('#customBg').value = l.customBg || '#1a1020';
+  $('#customAccent').value = l.customAccent || '#ff7eb6';
+  $('#setFont').value = l.font || 'default';
+  $('#fontNameRow').classList.toggle('hidden', l.font !== 'installed');
+  $('#fontFileRow').classList.toggle('hidden', l.font !== 'file');
+  $('#setFontName').value = l.fontName || '';
+  $('#bgDim').value = l.bgDim ?? 55; $('#bgDimVal').textContent = `${l.bgDim ?? 55}%`;
+  $('#bgBlur').value = l.bgBlur ?? 0; $('#bgBlurVal').textContent = `${l.bgBlur ?? 0}px`;
+  $$('#navPos button').forEach((b) => b.classList.toggle('on', b.dataset.v === (l.navPosition || 'left')));
+  $('#navIcons').checked = !!l.navIcons;
+  $$('#menuPos button').forEach((b) => b.classList.toggle('on', b.dataset.v === (l.menuPosition || 'right')));
+  $('#menuIcons').checked = !!l.menuIconsOnly;
+  $('#setSplashes').checked = l.splashes !== false;
+  $('#setShareOptions').checked = l.shareOptions !== false;
+  $('#setShareServers').checked = l.shareServers !== false;
+  $('#setShareServers').disabled = l.shareOptions === false;
+  $('#setDiscord').checked = l.discordPresence !== false;
+  $('#setDiscordServer').checked = l.discordShowServer !== false;
+  $('#setDiscordServer').disabled = l.discordPresence === false;
+}
+
+// build the pickers
+$('#themePicker').innerHTML = THEMES.map((t) => `<button class="theme-swatch ${t.id === 'custom' ? 'custom' : ''}" data-theme="${t.id}"><div class="dots">${t.dots.map((c) => `<i style="background:${c}"></i>`).join('')}</div><span>${t.name}</span></button>`).join('');
+$('#themePicker').addEventListener('click', (e) => { const b = e.target.closest('.theme-swatch'); if (b) setLook({ theme: b.dataset.theme }); });
+$('#accentDots').innerHTML = ACCENT_PRESETS.map((c) => `<button style="background:${c}" data-accent="${c}" title="${c}"></button>`).join('');
+$('#accentDots').addEventListener('click', (e) => { const b = e.target.closest('[data-accent]'); if (b) setLook({ customAccent: b.dataset.accent }); });
+let colorTimer = null;
+for (const id of ['customBg', 'customAccent']) {
+  $(`#${id}`).addEventListener('input', (e) => {
+    state.look[id] = e.target.value;
+    applyLook(state.look); // live preview while dragging
+    clearTimeout(colorTimer);
+    colorTimer = setTimeout(() => setLook({ [id]: e.target.value }), 250);
+  });
+}
+$('#setFont').innerHTML = FONTS.map((f) => `<option value="${f.id}">${esc(f.name)}</option>`).join('');
+$('#setFont').addEventListener('change', (e) => setLook({ font: e.target.value }));
+$('#applyFontName').addEventListener('click', () => setLook({ fontName: $('#setFontName').value.trim() }));
+$('#setFontName').addEventListener('keydown', (e) => { if (e.key === 'Enter') setLook({ fontName: e.target.value.trim() }); });
+$('#pickFontFile').addEventListener('click', async () => {
+  const r = await safe(() => window.cat.font.pickFile());
+  if (!r) return;
+  await loadFontFile(r.dataUrl);
+  $('#fontFileName').textContent = r.name;
+  setLook({ font: 'file' });
 });
+async function loadFontFile(dataUrl) {
+  if (!dataUrl) return;
+  try {
+    const face = new FontFace('CatgirlCustomFont', `url(${dataUrl})`);
+    await face.load();
+    document.fonts.add(face);
+  } catch { toast("That font file couldn't be loaded.", 'err'); }
+}
+
+$('#bgPicker').innerHTML = BACKGROUNDS.map((b) => `<button class="bg-tile ${b.id === 'none' ? 'none' : ''}" data-bg="${b.id}" ${b.url ? `style="background-image:url('${b.url}')"` : ''}><span>${b.name}</span></button>`).join('');
+$('#bgPicker').addEventListener('click', async (e) => {
+  const t = e.target.closest('.bg-tile');
+  if (!t) return;
+  if (t.dataset.bg === 'custom' && !state.customBgUrl) return pickBgFile();
+  setLook({ background: t.dataset.bg });
+});
+function showCustomBgTile() {
+  const tile = $('.bg-tile[data-bg="custom"]');
+  if (tile && state.customBgUrl) tile.style.backgroundImage = `url("${state.customBgUrl}")`;
+}
+async function pickBgFile() {
+  const url = await safe(() => window.cat.bg.pickFile());
+  if (!url) return;
+  state.customBgUrl = url;
+  showCustomBgTile();
+  setLook({ background: 'custom' });
+}
+$('#bgPickFile').addEventListener('click', pickBgFile);
+$('#bgUseUrl').addEventListener('click', async () => {
+  const link = $('#bgUrl').value.trim();
+  if (!link) return toast('Paste an image link first. Right-click a picture → "Copy image address".', 'err');
+  $('#bgUseUrl').disabled = true;
+  const url = await safe(() => window.cat.bg.fromUrl(link), 'Background set 🐾');
+  $('#bgUseUrl').disabled = false;
+  if (!url) return;
+  state.customBgUrl = url;
+  $('#bgUrl').value = '';
+  showCustomBgTile();
+  setLook({ background: 'custom' });
+});
+let sliderTimer = null;
+for (const [id, key] of [['bgDim', 'bgDim'], ['bgBlur', 'bgBlur']]) {
+  $(`#${id}`).addEventListener('input', (e) => {
+    state.look[key] = +e.target.value;
+    applyLook(state.look);
+    syncLookControls();
+    clearTimeout(sliderTimer);
+    sliderTimer = setTimeout(() => setLook({ [key]: +e.target.value }), 250);
+  });
+}
+$$('#navPos button').forEach((b) => b.addEventListener('click', () => setLook({ navPosition: b.dataset.v })));
+$('#navIcons').addEventListener('change', (e) => setLook({ navIcons: e.target.checked }));
+$$('#menuPos button').forEach((b) => b.addEventListener('click', () => setLook({ menuPosition: b.dataset.v })));
+$('#menuIcons').addEventListener('change', (e) => setLook({ menuIconsOnly: e.target.checked }));
+$('#setCatgirlMenu').addEventListener('change', (e) => setLook({ catgirlMenu: e.target.checked }));
+$('#setShareOptions').addEventListener('change', (e) => setLook({ shareOptions: e.target.checked }));
+$('#setShareServers').addEventListener('change', (e) => setLook({ shareServers: e.target.checked }));
+$('#setSplashes').addEventListener('change', (e) => setLook({ splashes: e.target.checked }));
+$('#setDiscord').addEventListener('change', (e) => setLook({ discordPresence: e.target.checked }));
+$('#setDiscordServer').addEventListener('change', (e) => setLook({ discordShowServer: e.target.checked }));
 
 /* ---------- updates ---------- */
 function showUpdate(u) {
@@ -486,10 +799,13 @@ $('#updateRestart').addEventListener('click', () => window.cat.update.install())
 $('#checkUpdates').addEventListener('click', () => safe(() => window.cat.update.check()));
 
 /* ---------- settings ---------- */
+const LOOK_KEYS = ['theme', 'customBg', 'customAccent', 'font', 'fontName', 'background', 'bgDim', 'bgBlur', 'navPosition', 'navIcons', 'menuPosition', 'menuIconsOnly', 'catgirlMenu', 'discordPresence', 'discordShowServer', 'splashes', 'shareOptions', 'shareServers'];
 async function loadSettings() {
   const s = await safe(() => window.cat.settings.get());
   if (!s) return;
-  applyTheme(s.theme);
+  for (const k of LOOK_KEYS) state.look[k] = s[k];
+  applyLook(state.look);
+  syncLookControls();
   $('#setCatgirlMenu').checked = s.catgirlMenu !== false;
   $('#setAfterLaunch').value = s.afterLaunch;
   $('#setJavaPath').value = s.javaPath || '';
@@ -504,7 +820,6 @@ async function loadSettings() {
 }
 $('#pickJava').addEventListener('click', async () => { const p = await safe(() => window.cat.settings.pickJava()); if (p) $('#setJavaPath').value = p; });
 $('#saveSettings').addEventListener('click', () => safe(() => window.cat.settings.set({
-  catgirlMenu: $('#setCatgirlMenu').checked,
   afterLaunch: $('#setAfterLaunch').value,
   javaPath: $('#setJavaPath').value.trim(),
   javaArgs: $('#setJavaArgs').value.trim(),
@@ -515,11 +830,14 @@ $('#saveSettings').addEventListener('click', () => safe(() => window.cat.setting
 }), 'Settings saved'));
 
 /* ---------- boot ---------- */
-$('#accountHead').addEventListener('error', (e) => { e.target.src = 'assets/logo.svg'; });
+$('#accountHead').addEventListener('error', (e) => { e.target.src = 'assets/logo.png'; });
 (async function boot() {
   state.info = await safe(() => window.cat.info());
-  const s0 = await safe(() => window.cat.settings.get());
-  applyTheme(s0?.theme);
+  const [bgUrl, font] = await Promise.all([safe(() => window.cat.bg.get()), safe(() => window.cat.font.get())]);
+  state.customBgUrl = bgUrl || null;
+  showCustomBgTile();
+  if (font?.dataUrl) loadFontFile(font.dataUrl);
+  await loadSettings();
   showUpdate(state.info?.update);
   for (const id of state.info?.running || []) state.running.add(id);
   await Promise.all([refreshInstances(), refreshAccounts()]);

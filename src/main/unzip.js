@@ -53,13 +53,18 @@ function readEntry(buf, e) {
 }
 
 // Extract a zip into destDir. Entries that try to escape destDir are skipped.
-function extractZip(zipPath, destDir, { exclude = [] } = {}) {
+// prefix: only extract entries under this folder, with the folder removed (e.g. "overrides/").
+function extractZip(zipPath, destDir, { exclude = [], prefix = '' } = {}) {
   const buf = fs.readFileSync(zipPath);
   const root = path.resolve(destDir);
   fs.mkdirSync(root, { recursive: true });
   for (const e of entries(buf)) {
-    const name = e.name.replace(/\\/g, '/');
+    let name = e.name.replace(/\\/g, '/');
     if (exclude.some((x) => name.startsWith(x))) continue;
+    if (prefix) {
+      if (!name.startsWith(prefix) || name === prefix) continue;
+      name = name.slice(prefix.length);
+    }
     const target = path.resolve(root, name);
     if (target !== root && !target.startsWith(root + path.sep)) continue;
     if (name.endsWith('/')) { fs.mkdirSync(target, { recursive: true }); continue; }
@@ -69,4 +74,11 @@ function extractZip(zipPath, destDir, { exclude = [] } = {}) {
   }
 }
 
-module.exports = { extractZip };
+// Read one file from a zip as a Buffer (or null if missing).
+function readFile(zipPath, name) {
+  const buf = fs.readFileSync(zipPath);
+  const e = entries(buf).find((x) => x.name === name);
+  return e ? readEntry(buf, e) : null;
+}
+
+module.exports = { extractZip, readFile };

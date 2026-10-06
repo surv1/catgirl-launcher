@@ -1,7 +1,11 @@
 {
   "msClientId": "72041394-117d-4001-9021-c086f62028e6",
-  "github": { "owner": "", "repo": "catgirl-launcher" },
+  "github": {
+    "owner": "",
+    "repo": "catgirl-launcher"
+  },
   "featured": null,
   "discord": "",
-  "website": ""
+  "website": "",
+  "discordClientId": "1556846441165758536"
 }

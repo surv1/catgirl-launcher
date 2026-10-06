@@ -1,21 +1,27 @@
 {
   "name": "catgirl-launcher",
   "productName": "Catgirl Launcher",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A cute Minecraft launcher with instances, Fabric, mods, themes and auto-updates.",
   "main": "src/main/main.js",
   "author": "Jerrix",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "test": "node test/rules.test.js",
+    "test": "node test/rules.test.js && node test/v3.test.js && node test/discord.test.js && node test/shared.test.js",
     "dist": "electron-builder --publish never",
     "dist:win": "electron-builder --win --publish never",
     "dist:mac": "electron-builder --mac --publish never",
     "dist:linux": "electron-builder --linux --publish never"
   },
   "dependencies": {
-    "electron-updater": "^6.6.2"
+    "electron-updater": "^6.6.2",
+    "@fontsource/fredoka": "^5.0.0",
+    "@fontsource/nunito": "^5.0.0",
+    "@fontsource/quicksand": "^5.0.0",
+    "@fontsource/comfortaa": "^5.0.0",
+    "@fontsource/baloo-2": "^5.0.0",
+    "@fontsource/pixelify-sans": "^5.0.0"
   },
   "devDependencies": {
     "electron": "^38.2.0",

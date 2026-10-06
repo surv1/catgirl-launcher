@@ -8,6 +8,10 @@ const versions = require('./versions');
 const instances = require('./instances');
 const mods = require('./mods');
 const catmod = require('./catmod');
+const { ping } = require('./ping');
+const assets = require('./userAssets');
+const { DiscordPresence, buildActivity } = require('./discord');
+const sharedOptions = require('./sharedOptions');
 const launcher = require('./launch');
 
 let autoUpdater = null;
@@ -17,9 +21,34 @@ const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'conf
 const DEFAULT_SETTINGS = {
   javaPath: '', javaArgs: '', afterLaunch: 'minimize', customResolution: false, width: 1280, height: 720,
   showSnapshots: false, theme: 'sakura', catgirlMenu: true,
+  customBg: '#1a1020', customAccent: '#ff7eb6',
+  font: 'default', fontName: '',
+  background: 'none', bgDim: 55, bgBlur: 0, navPosition: 'left', navIcons: false,
+  menuPosition: 'right', menuIconsOnly: false, splashes: true, accentHex: '#ff7eb6',
+  discordPresence: true, discordShowServer: true, shareOptions: true, shareServers: true,
 };
 
 let win = null;
+
+// ---------- Discord Rich Presence ----------
+const presence = new DiscordPresence(config.discordClientId);
+const playing = { inst: null, server: null, startedAt: 0, gameHandlesDiscord: false };
+function downloadUrl() {
+  const gh = config.github;
+  return gh?.owner && gh?.repo ? `https://github.com/${gh.owner}/${gh.repo}/releases/latest` : null;
+}
+function updatePresence() {
+  const s = settings();
+  // While a game with the Catgirl mod runs, the game itself shows the Discord status
+  // (so it stays even if the launcher is closed). The launcher steps aside.
+  if (!s.discordPresence || !presence.configured || playing.gameHandlesDiscord) { presence.stop(); return; }
+  presence.start();
+  presence.set(buildActivity({
+    playing: !!playing.inst, inst: playing.inst, server: playing.server, startedAt: playing.startedAt,
+    showServer: s.discordShowServer,
+    downloadUrl: downloadUrl(),
+  }));
+}
 let updateState = { state: 'idle' };
 
 function settings() { return { ...DEFAULT_SETTINGS, ...paths.readJson(paths.dirs().settings, {}), msClientId: config.msClientId }; }
@@ -107,11 +136,26 @@ function registerIpc() {
     delete current.msClientId;
     for (const k of Object.keys(DEFAULT_SETTINGS)) if (k in s) current[k] = s[k];
     paths.writeJson(paths.dirs().settings, current);
+    if ('discordPresence' in s || 'discordShowServer' in s) updatePresence();
     return settings();
   });
   handle('settings:pickJava', async () => {
     const r = await dialog.showOpenDialog(win, { title: 'Choose a java executable', properties: ['openFile'] });
     return r.canceled ? null : r.filePaths[0];
+  });
+
+  handle('server:ping', (address) => ping(address));
+
+  handle('bg:get', () => assets.getBackground());
+  handle('bg:pickFile', async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Choose a background picture', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }] });
+    return r.canceled ? null : assets.setBackgroundFromFile(r.filePaths[0]);
+  });
+  handle('bg:fromUrl', (url) => assets.setBackgroundFromUrl(url));
+  handle('font:get', () => assets.getFont());
+  handle('font:pickFile', async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Choose a font file', properties: ['openFile'], filters: [{ name: 'Fonts', extensions: ['ttf', 'otf', 'woff', 'woff2'] }] });
+    return r.canceled ? null : assets.setFontFromFile(r.filePaths[0]);
   });
 
   handle('update:check', async () => {
@@ -133,7 +177,11 @@ function registerIpc() {
   handle('inst:list', () => instances.list());
   handle('inst:create', (data) => instances.create(data));
   handle('inst:update', (id, data) => instances.update(id, data));
-  handle('inst:remove', (id) => instances.remove(id));
+  handle('inst:remove', (id) => {
+    if (launcher.runningIds().includes(id)) throw new Error('Close Minecraft for this instance before deleting it.');
+    instances.remove(id);
+    return true;
+  });
   handle('inst:openFolder', (id) => shell.openPath(instances.gameDir(id)));
 
   handle('mods:search', (id, q, offset) => mods.search(id, q, offset));
@@ -141,6 +189,9 @@ function registerIpc() {
   handle('mods:list', (id) => mods.listInstalled(id));
   handle('mods:toggle', (id, file) => mods.toggle(id, file));
   handle('mods:remove', (id, file) => mods.remove(id, file));
+  handle('mods:migrate', (id) => mods.migrate(id, (stage, done, total) => send('mods:progress', { instId: id, stage, done, total })));
+  handle('packs:search', (q, offset) => mods.searchPacks(q, offset));
+  handle('packs:install', (projectId) => mods.installPack(projectId, (stage, done, total) => send('pack:progress', { projectId, stage, done, total })));
 
   handle('launch:start', async (id) => {
     const account = await auth.getLaunchAccount();
@@ -148,16 +199,32 @@ function registerIpc() {
     const s = settings();
     await installStarterMods(inst);
     send('launch:progress', { instId: id, stage: 'Checking Catgirl menu', done: 0, total: 0 });
-    await catmod.sync(inst, { enabled: s.catgirlMenu, github: config.github }, (line) => send('launch:log', { instId: id, line }));
+    if (s.shareOptions) {
+      try {
+        sharedOptions.collect();
+        if (sharedOptions.apply(inst, { servers: s.shareServers })) send('launch:log', { instId: id, line: '[Catgirl] Applied your shared Minecraft settings' });
+      } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't share settings: ${e.message}` }); }
+    }
+    const modActive = await catmod.sync(inst, {
+      enabled: s.catgirlMenu, github: config.github, settings: s,
+      discord: { enabled: s.discordPresence && presence.configured, clientId: config.discordClientId, showServer: s.discordShowServer, downloadUrl: downloadUrl() },
+    }, (line) => send('launch:log', { instId: id, line }));
     await launcher.launch(id, account, s, {
       progress: (p) => send('launch:progress', p),
       log: (l) => send('launch:log', l),
+      server: (x) => { send('launch:server', x); playing.server = x.server; updatePresence(); },
       started: (x) => {
         send('launch:started', x);
+        Object.assign(playing, { inst: instances.get(id), server: inst.joinServer || null, startedAt: Date.now(), gameHandlesDiscord: modActive });
+        updatePresence();
         if (s.afterLaunch === 'minimize') win?.minimize();
+        // Minecraft runs on its own, so the launcher can close without stopping the game.
+        if (s.afterLaunch === 'close') setTimeout(() => app.quit(), 1500);
       },
       exit: (x) => {
         send('launch:exit', x);
+        if (settings().shareOptions) { try { sharedOptions.collect(); } catch {} }
+        if (playing.inst?.id === id) { Object.assign(playing, { inst: null, server: null, startedAt: 0, gameHandlesDiscord: false }); updatePresence(); }
         if (s.afterLaunch === 'minimize' && win?.isMinimized()) win.restore();
       },
     });
@@ -169,10 +236,13 @@ app.whenReady().then(() => {
   paths.init(app.getPath('appData'));
   auth.setClientId(config.msClientId);
   ensureFeatured();
+  try { if (settings().shareOptions) sharedOptions.collect(); } catch {}
   registerIpc();
   createWindow();
   setupUpdates();
+  updatePresence();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
+app.on('before-quit', () => presence.stop());
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

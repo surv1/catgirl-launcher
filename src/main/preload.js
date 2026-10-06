@@ -22,6 +22,21 @@ contextBridge.exposeInMainWorld('cat', {
   info: () => call('app:info'),
   openExternal: (url) => call('app:openExternal', url),
   copy: (text) => call('app:copy', text),
+  ping: (address) => call('server:ping', address),
+  bg: {
+    get: () => call('bg:get'),
+    pickFile: () => call('bg:pickFile'),
+    fromUrl: (url) => call('bg:fromUrl', url),
+  },
+  font: {
+    get: () => call('font:get'),
+    pickFile: () => call('font:pickFile'),
+  },
+  packs: {
+    search: (q, offset) => call('packs:search', q, offset),
+    install: (projectId) => call('packs:install', projectId),
+    onProgress: on('pack:progress'),
+  },
   update: {
     check: () => call('update:check'),
     install: () => call('update:install'),
@@ -57,6 +72,8 @@ contextBridge.exposeInMainWorld('cat', {
     list: (id) => call('mods:list', id),
     toggle: (id, file) => call('mods:toggle', id, file),
     remove: (id, file) => call('mods:remove', id, file),
+    migrate: (id) => call('mods:migrate', id),
+    onProgress: on('mods:progress'),
   },
   launch: {
     start: (id) => call('launch:start', id),
@@ -65,5 +82,6 @@ contextBridge.exposeInMainWorld('cat', {
     onLog: on('launch:log'),
     onStarted: on('launch:started'),
     onExit: on('launch:exit'),
+    onServer: on('launch:server'),
   },
 });

@@ -32,16 +32,16 @@ function save(inst) {
   return inst;
 }
 
-function create({ name, mcVersion, loader = 'vanilla', loaderVersion = null, memoryMB = 4096, joinServer = '', icon = 'cat', featured = false, id = null }) {
+function create({ name, mcVersion, loader = 'vanilla', loaderVersion = null, memoryMB = 4096, joinServer = '', icon = 'cat', featured = false, id = null, shareSettings = true }) {
   if (!name || !mcVersion) throw new Error('Name and Minecraft version are required');
   let newId = id || slug(name);
   if (!id) while (fs.existsSync(instDir(newId))) newId = `${slug(name)}-${crypto.randomBytes(2).toString('hex')}`;
-  return save({ id: newId, name, mcVersion, loader, loaderVersion, memoryMB, joinServer, icon, featured, created: Date.now(), lastPlayed: 0, playTimeMs: 0, javaArgs: '' });
+  return save({ id: newId, name, mcVersion, loader, loaderVersion, memoryMB, joinServer, icon, featured, created: Date.now(), lastPlayed: 0, playTimeMs: 0, javaArgs: '', shareSettings: shareSettings !== false });
 }
 
 function update(id, changes) {
   const inst = get(id);
-  const allowed = ['name', 'mcVersion', 'loader', 'loaderVersion', 'memoryMB', 'joinServer', 'icon', 'javaArgs'];
+  const allowed = ['name', 'mcVersion', 'loader', 'loaderVersion', 'memoryMB', 'joinServer', 'icon', 'javaArgs', 'shareSettings'];
   for (const k of allowed) if (k in changes) inst[k] = changes[k];
   // Changing game version or loader means the old loader version no longer applies.
   if ('mcVersion' in changes || 'loader' in changes) {
@@ -62,4 +62,17 @@ function recordPlay(id, ms) {
   save(inst);
 }
 
-module.exports = { list, get, create, update, remove, save, gameDir, instDir, recordPlay };
+function markLaunched(id) {
+  const inst = get(id);
+  inst.lastPlayed = Date.now();
+  save(inst);
+}
+
+function setLastServer(id, server) {
+  const inst = get(id);
+  if (inst.lastServer === server) return;
+  inst.lastServer = server;
+  save(inst);
+}
+
+module.exports = { markLaunched, setLastServer, list, get, create, update, remove, save, gameDir, instDir, recordPlay };

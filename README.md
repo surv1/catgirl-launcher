@@ -1,6 +1,8 @@
 # 🐱 Catgirl Launcher
 
-A cute Minecraft launcher in the style of Prism: separate **instances** (each with its own version, mods and worlds), **Fabric** support, a **Modrinth mod browser**, automatic **Java downloads**, **six themes**, **auto-updates**, and its own **in-game title screen** with "CatGirl Launcher" in bold pink.
+A cute Minecraft launcher in the style of Prism: separate **instances** (each with its own version, mods and worlds), **Fabric** support, a **Modrinth mod and modpack browser**, automatic **Java downloads**, **12 themes plus a custom colour picker**, **fonts**, **backgrounds** (built-in art, your own picture or an image link), a movable **menu** (left/right/top/bottom, icons only), **auto-updates**, and its own **in-game title screen** ("CatGirl Launcher" title, "CatGirl Client" window name, catgirl splash texts and a quick menu).
+
+Minecraft runs separately from the launcher, so closing the launcher never closes the game. The home screen shows the last instance you played and the real icon, MOTD and player count of the last server you joined. When you change an instance's Minecraft version, its Modrinth mods are swapped for the matching versions automatically.
 
 ## Run it on your PC
 
@@ -85,3 +87,11 @@ src/renderer/          the launcher UI
 mod/                   the in-game Fabric mod (built by GitHub Actions)
 .github/workflows/     builds and publishes releases
 ```
+
+## Discord status ("Playing Catgirl Launcher")
+
+1. Go to https://discord.com/developers/applications → **New Application** → name it **Catgirl Launcher** (this name is what Discord shows).
+2. Copy the **Application ID** into `config.json` as `discordClientId`.
+3. In the app, open **Rich Presence → Art Assets** and upload the logo (a 1024×1024 PNG) with the name **logo**.
+
+Players can turn it off, or hide the server name, in **Settings → Discord**. In Fabric instances the in-game mod shows the status itself (In the menus / Playing singleplayer / Playing on <server>), so it stays even if the launcher is closed. For vanilla instances the launcher shows it while it's open. Discord desktop needs to be running.

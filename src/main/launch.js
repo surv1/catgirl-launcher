@@ -141,33 +141,71 @@ async function launch(instId, account, settings, events) {
   const safeLog = args.map((a) => (a === account.mcToken ? '********' : a));
   events.log({ instId, line: `[Catgirl] ${javaPath} ${safeLog.join(' ')}` });
 
-  const child = spawn(javaPath, args, { cwd: game, windowsHide: false });
+  // The game runs fully detached from the launcher: closing the launcher never closes Minecraft.
+  // Its output goes to a log file, which the launcher follows for the Console tab.
+  const logDir = path.join(instances.instDir(instId), 'logs');
+  fs.mkdirSync(logDir, { recursive: true });
+  const logFile = path.join(logDir, 'game-output.log');
+  const fd = fs.openSync(logFile, 'w');
+  const child = spawn(javaPath, args, { cwd: game, detached: true, stdio: ['ignore', fd, fd], windowsHide: false });
+  fs.closeSync(fd);
+  child.unref();
   running.set(instId, child);
   const started = Date.now();
+  instances.markLaunched(instId);
 
-  const pipe = (stream) => {
-    let buf = '';
-    stream.on('data', (d) => {
-      buf += d.toString();
-      const lines = buf.split(/\r?\n/);
-      buf = lines.pop();
-      for (const line of lines) events.log({ instId, line: line.split(account.mcToken).join('********') });
-    });
-  };
-  pipe(child.stdout);
-  pipe(child.stderr);
+  const tail = followLog(logFile, (line) => {
+    const clean = line.split(account.mcToken).join('********');
+    const server = parseServer(clean);
+    if (server) { try { instances.setLastServer(instId, server); } catch {} events.server?.({ instId, server }); }
+    events.log({ instId, line: clean });
+  });
 
   child.on('error', (e) => {
+    tail.stop();
     running.delete(instId);
     events.exit({ instId, code: -1, error: e.message });
   });
-  child.on('close', (code) => {
-    running.delete(instId);
-    try { instances.recordPlay(instId, Date.now() - started); } catch {}
-    events.exit({ instId, code });
+  child.on('exit', (code) => {
+    setTimeout(() => {
+      tail.stop();
+      running.delete(instId);
+      try { instances.recordPlay(instId, Date.now() - started); } catch {}
+      events.exit({ instId, code });
+    }, 400); // let the last log lines arrive
   });
 
   events.started({ instId });
+}
+
+// "Connecting to play.example.net, 25565" -> "play.example.net" (port kept if not default)
+function parseServer(line) {
+  const m = /Connecting to ([^,\s]+), (\d+)/.exec(line);
+  if (!m) return null;
+  return m[2] === '25565' ? m[1] : `${m[1]}:${m[2]}`;
+}
+
+// Poll a growing text file and emit complete lines.
+function followLog(file, onLine) {
+  let pos = 0;
+  let buf = '';
+  const read = () => {
+    let size;
+    try { size = fs.statSync(file).size; } catch { return; }
+    if (size < pos) pos = 0;
+    if (size === pos) return;
+    const fd = fs.openSync(file, 'r');
+    const chunk = Buffer.alloc(size - pos);
+    fs.readSync(fd, chunk, 0, chunk.length, pos);
+    fs.closeSync(fd);
+    pos = size;
+    buf += chunk.toString('utf8');
+    const lines = buf.split(/\r?\n/);
+    buf = lines.pop();
+    for (const l of lines) onLine(l);
+  };
+  const timer = setInterval(read, 250);
+  return { stop() { clearInterval(timer); read(); if (buf) onLine(buf); } };
 }
 
 function kill(instId) {
@@ -177,4 +215,4 @@ function kill(instId) {
 
 function runningIds() { return [...running.keys()]; }
 
-module.exports = { launch, kill, runningIds };
+module.exports = { launch, kill, runningIds, parseServer, followLog };
