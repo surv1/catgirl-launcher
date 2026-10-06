@@ -142,7 +142,7 @@ public final class Cosmetics {
             item(o, "tail", 0x3b2a2a), item(o, "bow", 0xff7eb6),
             item(o, "wings", 0xffffff), wings != null && "demon".equals(str(wings, "style")),
             item(o, "halo", 0xffd34d), item(o, "horns", 0x5a1a1a), item(o, "pet", 0xffb3d9),
-            item(o, "cape", 0xff7eb6), color(cape, "trim", 0xffffff), cape == null ? 1 : switch (str(cape, "style")) { case "plain" -> 0; case "heart" -> 2; default -> 1; });
+            item(o, "cape", 0xff7eb6), color(cape, "trim", 0xffffff), cape == null ? 1 : switch (str(cape, "style")) { case "plain" -> 0; case "heart" -> 2; case "meow" -> 3; default -> 1; });
     }
 
     private static Item item(JsonObject o, String key, int def) {

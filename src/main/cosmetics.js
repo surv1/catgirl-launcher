@@ -27,7 +27,7 @@ function normalize(input) {
     out[k] = { on: !!v.on, color: hexColor(v.color, DEFAULTS[k].color) };
     if (k === 'ears') out[k].inner = hexColor(v.inner, DEFAULTS.ears.inner);
     if (k === 'wings') out[k].style = ['angel', 'demon'].includes(v.style) ? v.style : 'angel';
-    if (k === 'cape') { out[k].trim = hexColor(v.trim, '#ffffff'); out[k].style = ['plain', 'paw', 'heart'].includes(v.style) ? v.style : 'paw'; }
+    if (k === 'cape') { out[k].trim = hexColor(v.trim, '#ffffff'); out[k].style = ['plain', 'paw', 'heart', 'meow'].includes(v.style) ? v.style : 'paw'; }
   }
   return out;
 }

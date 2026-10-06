@@ -9,7 +9,7 @@ const COS_ITEMS = [
   { id: 'halo', name: 'Halo', emoji: '😇', colors: [['color', 'Colour']] },
   { id: 'horns', name: 'Devil horns', emoji: '😈', colors: [['color', 'Colour']] },
   { id: 'pet', name: 'Angel buddy', emoji: '👼', colors: [['color', 'Colour']] },
-  { id: 'cape', name: 'Cape', emoji: '🧣', colors: [['color', 'Cape'], ['trim', 'Trim']], styles: [['plain', 'Plain'], ['paw', 'Paw'], ['heart', 'Heart']] },
+  { id: 'cape', name: 'Cape', emoji: '🧣', colors: [['color', 'Cape'], ['trim', 'Trim']], styles: [['plain', 'Plain'], ['paw', 'Paw'], ['heart', 'Heart'], ['meow', 'Meow']] },
 ];
 const COS_DEFAULTS = {
   ears: { on: false, color: '#3b2a2a', inner: '#ffb3d9' },
@@ -37,13 +37,13 @@ const PRESETS = {
 const cos = { view2: 'back', items: structuredClone(COS_DEFAULTS), skin: null, variant: 'classic', loaded: false, dirty: false, anim: 0, saving: false };
 
 /* ---------- shared shape maths (model pixels, y points down, -x is the player's right, -z the front) ---------- */
-const TAIL = { N: 9, LEN: 1.35, A0: -0.7, CURL: 0.2, BASE: [0, 10.5, 2] };
+const TAIL = { N: 14, LEN: 0.9, A0: -0.7, CURL: 0.13, BASE: [0, 10.5, 2] };
 const EAR = (s) => ({ base: [[s * 1.0, -8], [s * 4.4, -8]], tip: [s * 3.7, -12.6], inner: [[s * 1.8, -8.1], [s * 3.8, -8.1], [s * 3.45, -11.3]], z: [-1.6, -0.2] });
 const BOW = { c: [3.0, -7.3], tilt: 0.35, wing: (s) => [[3.0 + s * 0.4, -7.3], [3.0 + s * 2.1, -8.5], [3.0 + s * 2.1, -6.1]], knot: [2.45, -7.9, 3.55, -6.7] };
 
 function earFlick(t) { const ph = t % 80; return ph < 6 ? Math.sin((ph / 6) * Math.PI) * 0.25 : 0; }
-function tailSway(t, i) { return i < 0 ? Math.sin(t * 0.08) * 0.22 : Math.sin(t * 0.08 - (i + 1) * 0.5) * 0.08; }
-function tailWidth(i) { return 1.8 - (0.75 * i) / (TAIL.N - 1); }
+function tailSway(t, i) { return i < 0 ? Math.sin(t * 0.08) * 0.22 : Math.sin(t * 0.08 - (i + 1) * 0.32) * 0.05; }
+function tailWidth(i) { const f = i / (TAIL.N - 1); return 1.5 + 0.5 * Math.sin(Math.PI * f * 0.8) - 0.7 * f ** 3; }
 
 const mmul = (a, b) => a.map((r) => [0, 1, 2].map((j) => r[0] * b[0][j] + r[1] * b[1][j] + r[2] * b[2][j]));
 const rx = (a) => [[1, 0, 0], [0, Math.cos(a), -Math.sin(a)], [0, Math.sin(a), Math.cos(a)]];
@@ -150,7 +150,10 @@ function drawEars(ctx, it, view, t) {
     const pivot = [s * 2.75, -8];
     const a = s * earFlick(t + (s > 0 ? 0 : 40));
     poly(ctx, view, at3(rot2([e.base[0], e.tip, e.base[1]], pivot, a), 0), it.color);
-    if (view === 'front') poly(ctx, view, at3(rot2(e.inner, pivot, a), 0), it.inner);
+    if (view === 'front') {
+      poly(ctx, view, at3(rot2(e.inner, pivot, a), 0), it.inner);
+      poly(ctx, view, at3(rot2([[s * 2.2, -8.15], [s * 2.9, -9.7], [s * 3.4, -8.15]], pivot, a), 0), shade(it.inner, 1.35));
+    }
   }
 }
 
@@ -165,7 +168,7 @@ function drawTail(ctx, it, view, t) {
   const pts = tailJoints(t).map((p) => VIEW[view].at(p));
   ctx.lineCap = 'round';
   for (let i = 0; i < TAIL.N; i++) {
-    ctx.strokeStyle = i >= TAIL.N - 2 ? shade(it.color, 1.25) : it.color;
+    ctx.strokeStyle = i >= TAIL.N - 3 ? shade(it.color, 1.25) : it.color;
     ctx.lineWidth = tailWidth(i) * S;
     ctx.beginPath();
     ctx.moveTo(pts[i][0] * S, pts[i][1] * S);
@@ -288,6 +291,7 @@ function petFaces(F, it, t) {
 const EMBLEMS = {
   paw: ['..XX.XX..', '..XX.XX..', 'XX.....XX', 'XX.XXX.XX', '..XXXXX..', '.XXXXXXX.', '.XXXXXXX.', '..XX.XX..'],
   heart: ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'],
+  meow: ['X.........X', 'XX.......XX', 'XXX.....XXX', 'XXXXXXXXXXX', 'XX..XXX..XX', 'XX..XXX..XX', 'XXXXX.XXXXX', 'XXXX.X.XXXX', '.XXXXXXXXX.'],
 };
 function emblemBoxes(F, color, rows, cell, top, z) {
   rows.forEach((row, r) => {
@@ -308,7 +312,7 @@ function capeFaces(F, it, t) {
   F.box(it.trim, -5, 0, 1, -4.2, 16, 1.1);
   F.box(it.trim, 4.2, 0, 1, 5, 16, 1.1);
   F.box(it.trim, -5, 15.2, 1, 5, 16, 1.1);
-  if (EMBLEMS[it.style]) emblemBoxes(F, it.trim, EMBLEMS[it.style], 0.75, 4.5, 1);
+  if (EMBLEMS[it.style]) emblemBoxes(F, it.trim, EMBLEMS[it.style], Math.min(0.75, 7.6 / EMBLEMS[it.style][0].length), 4.5, 1);
   F.p = saved;
 }
 

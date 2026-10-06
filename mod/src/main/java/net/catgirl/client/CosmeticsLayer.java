@@ -19,13 +19,13 @@ import net.minecraft.resources.Identifier;
  * -z is the front). They match the preview on the launcher's Cosmetics page.
  */
 public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
-    private static final RenderType TYPE = RenderTypes.entityCutoutNoCull(Identifier.fromNamespaceAndPath("catgirl", "textures/entity/white.png"));
+    private static final RenderType TYPE = RenderTypes.entityCutoutNoCull(Identifier.fromNamespaceAndPath("catgirl", "textures/entity/grain.png"));
 
     // Tail: a chain of boxes that curls up and sways (same numbers as the launcher preview).
-    private static final int TAIL_N = 9;
-    private static final float TAIL_LEN = 1.35F;
+    private static final int TAIL_N = 14;
+    private static final float TAIL_LEN = 0.9F;
     private static final float TAIL_A0 = -0.7F;
-    private static final float TAIL_CURL = 0.2F;
+    private static final float TAIL_CURL = 0.13F;
     private static final int FULL_BRIGHT = 0xF000F0;
 
     public CosmeticsLayer(RenderLayerParent<AvatarRenderState, PlayerModel> parent) {
@@ -103,6 +103,8 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             m.prism(color, outer, -1.6F, -0.2F);
             float[][] in = {{s * 1.8F, -8.1F}, {s * 3.45F, -11.3F}, {s * 3.8F, -8.1F}};
             m.flatTri(inner, in, -1.65F, 1F);
+            float[][] tuft = {{s * 2.2F, -8.15F}, {s * 2.9F, -9.7F}, {s * 3.4F, -8.15F}};
+            m.flatTri(shade(inner, 1.35F), tuft, -1.7F, 1F);
             m.p = saved;
         }
     }
@@ -120,7 +122,13 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
     }
 
     private static float sway(float t, int i, float swing) {
-        return i < 0 ? (float) Math.sin(t * 0.08F) * 0.22F * swing : (float) Math.sin(t * 0.08F - (i + 1) * 0.5F) * 0.08F * swing;
+        return i < 0 ? (float) Math.sin(t * 0.08F) * 0.22F * swing : (float) Math.sin(t * 0.08F - (i + 1) * 0.32F) * 0.05F * swing;
+    }
+
+    /** Fluffy: a little thicker in the middle, rounding off at the tip. Same formula as the launcher. */
+    private static float tailWidth(int i) {
+        float f = i / (float) (TAIL_N - 1);
+        return 1.5F + 0.5F * (float) Math.sin(Math.PI * f * 0.8F) - 0.7F * f * f * f;
     }
 
     private static void tail(Mesh m, int color, float t, float swing) {
@@ -129,8 +137,8 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         m.p.rotate(Axis.YP.rotation(sway(t, -1, swing)));
         m.p.rotate(Axis.XP.rotation(TAIL_A0));
         for (int i = 0; i < TAIL_N; i++) {
-            float w = (1.8F - 0.75F * i / (TAIL_N - 1)) / 2F;
-            m.box(i >= TAIL_N - 2 ? tip : color, -w, -w, -0.15F, w, w, TAIL_LEN + 0.15F);
+            float w = tailWidth(i) / 2F;
+            m.box(i >= TAIL_N - 3 ? tip : color, -w, -w, -0.2F, w, w, TAIL_LEN + 0.2F);
             m.p.translate(0F, 0F, TAIL_LEN);
             m.p.rotate(Axis.XP.rotation(TAIL_CURL));
             m.p.rotate(Axis.YP.rotation(sway(t, i, swing)));
@@ -246,6 +254,7 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         {},
         {"..XX.XX..", "..XX.XX..", "XX.....XX", "XX.XXX.XX", "..XXXXX..", ".XXXXXXX.", ".XXXXXXX.", "..XX.XX.."},
         {".XX.XX.", "XXXXXXX", "XXXXXXX", ".XXXXX.", "..XXX..", "...X..."},
+        {"X.........X", "XX.......XX", "XXX.....XXX", "XXXXXXXXXXX", "XX..XXX..XX", "XX..XXX..XX", "XXXXX.XXXXX", "XXXX.X.XXXX", ".XXXXXXXXX."},
     };
 
     private static void cape(Mesh m, int color, int trim, int style, float swingDeg, float sideDeg) {
@@ -253,11 +262,12 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         m.p.rotate(Axis.XP.rotationDegrees(swingDeg));
         m.p.rotate(Axis.ZP.rotationDegrees(sideDeg));
         m.box(color, -5F, 0F, 0F, 5F, 16F, 1F);
+        m.box(shade(color, 0.72F), -4.8F, 0.2F, -0.08F, 4.8F, 15.8F, 0F); // lining
         m.box(trim, -5F, 0F, 1F, -4.2F, 16F, 1.1F);
         m.box(trim, 4.2F, 0F, 1F, 5F, 16F, 1.1F);
         m.box(trim, -5F, 15.2F, 1F, 5F, 16F, 1.1F);
         String[] rows = EMBLEMS[Math.max(0, Math.min(EMBLEMS.length - 1, style))];
-        float cell = 0.75F, top = 4.5F;
+        float cell = rows.length == 0 ? 0.75F : Math.min(0.75F, 7.6F / rows[0].length()), top = 4.5F;
         for (int r = 0; r < rows.length; r++) {
             String row = rows[r];
             for (int i = 0; i < row.length(); ) {
@@ -342,14 +352,27 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             nx /= len; ny /= len; nz /= len;
             float mx = (a[0] + b[0] + c[0] + d[0]) / 4 - ix, my = (a[1] + b[1] + c[1] + d[1]) / 4 - iy, mz = (a[2] + b[2] + c[2] + d[2]) / 4 - iz;
             if (mx * nx + my * ny + mz * nz < 0) { nx = -nx; ny = -ny; nz = -nz; }
-            vertex(a, color, nx, ny, nz);
-            vertex(b, color, nx, ny, nz);
-            vertex(c, color, nx, ny, nz);
-            vertex(d, color, nx, ny, nz);
+            // Map the soft grain texture across the face (1 texture pixel = half a model pixel),
+            // starting at a spot picked from the face's position so neighbours don't repeat.
+            int i1, i2;
+            float ax = Math.abs(nx), ay = Math.abs(ny), az = Math.abs(nz);
+            if (ax >= ay && ax >= az) { i1 = 2; i2 = 1; } else if (ay >= az) { i1 = 0; i2 = 2; } else { i1 = 0; i2 = 1; }
+            float[][] vs = {a, b, c, d};
+            float min1 = Float.MAX_VALUE, min2 = Float.MAX_VALUE, max1 = -Float.MAX_VALUE, max2 = -Float.MAX_VALUE;
+            for (float[] v : vs) { min1 = Math.min(min1, v[i1]); max1 = Math.max(max1, v[i1]); min2 = Math.min(min2, v[i2]); max2 = Math.max(max2, v[i2]); }
+            float k = 1F / 32F;
+            float span1 = Math.min(1F, (max1 - min1) * k), span2 = Math.min(1F, (max2 - min2) * k);
+            float h = (float) Math.abs(Math.sin((mx + ix) * 12.9898 + (my + iy) * 78.233 + (mz + iz) * 37.719) * 43758.5453);
+            float s1 = (h % 1F) * (1F - span1), s2 = ((h * 7.13F) % 1F) * (1F - span2);
+            for (float[] v : vs) {
+                float u = s1 + (max1 > min1 ? (v[i1] - min1) / (max1 - min1) * span1 : 0F);
+                float w = s2 + (max2 > min2 ? (v[i2] - min2) / (max2 - min2) * span2 : 0F);
+                vertex(v, color, u, w, nx, ny, nz);
+            }
         }
 
-        private void vertex(float[] v, int color, float nx, float ny, float nz) {
-            vc.addVertex(p, v[0], v[1], v[2]).setColor(color).setUv(0.5F, 0.5F).setOverlay(overlay).setLight(light).setNormal(p, nx, ny, nz);
+        private void vertex(float[] v, int color, float u, float w, float nx, float ny, float nz) {
+            vc.addVertex(p, v[0], v[1], v[2]).setColor(color).setUv(u, w).setOverlay(overlay).setLight(light).setNormal(p, nx, ny, nz);
         }
     }
 }
