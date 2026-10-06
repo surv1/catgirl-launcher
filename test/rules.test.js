@@ -28,8 +28,8 @@ t('rules: features', () => {
 
 t('expandArgs + quick play', () => {
   const list = ['--username', '${auth_player_name}', { rules: [{ action: 'allow', features: { is_quick_play_multiplayer: true } }], value: ['--quickPlayMultiplayer', '${quickPlayMultiplayer}'] }, { rules: [{ action: 'allow', features: { is_demo_user: true } }], value: '--demo' }];
-  const out = r.expandArgs(list, { auth_player_name: 'Jerrix', quickPlayMultiplayer: 'playnexusmc.net' }, { is_quick_play_multiplayer: true });
-  assert.deepStrictEqual(out, ['--username', 'Jerrix', '--quickPlayMultiplayer', 'playnexusmc.net']);
+  const out = r.expandArgs(list, { auth_player_name: 'Jerrix', quickPlayMultiplayer: 'play.catland.net' }, { is_quick_play_multiplayer: true });
+  assert.deepStrictEqual(out, ['--username', 'Jerrix', '--quickPlayMultiplayer', 'play.catland.net']);
 });
 
 t('mergeVersions: fabric on vanilla', () => {

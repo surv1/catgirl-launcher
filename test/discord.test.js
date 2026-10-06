@@ -29,7 +29,7 @@ server.listen(sockPath, async () => {
   assert.ok(p.configured);
   assert.ok(!new DiscordPresence('PUT-YOUR-DISCORD-APPLICATION-ID-HERE').configured);
   const inst = { mcVersion: '1.21.11', loader: 'fabric', loaderVersion: '0.17.3' };
-  p.set(buildActivity({ playing: true, inst, server: 'playnexusmc.net', startedAt: 1700000000000, showServer: true, downloadUrl: 'https://github.com/surv1/catgirl-launcher/releases/latest' }));
+  p.set(buildActivity({ playing: true, inst, server: 'play.catland.net', startedAt: 1700000000000, showServer: true, downloadUrl: 'https://github.com/surv1/catgirl-launcher/releases/latest' }));
   p.start();
   await new Promise((r) => setTimeout(r, 300));
   p.stop(); server.close();
@@ -37,7 +37,7 @@ server.listen(sockPath, async () => {
   assert.strictEqual(got[0].op, 0);
   assert.deepStrictEqual(got[0].msg, { v: 1, client_id: '1234567890123456789' });
   const act = got.find((g) => g.msg.cmd === 'SET_ACTIVITY').msg.args.activity;
-  assert.strictEqual(act.details, 'Playing on playnexusmc.net');
+  assert.strictEqual(act.details, 'Playing on play.catland.net');
   assert.strictEqual(act.state, 'Minecraft 1.21.11 / Fabric 0.17.3');
   assert.strictEqual(act.timestamps.start, 1700000000);
   assert.strictEqual(act.assets.large_image, 'logo');

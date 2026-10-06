@@ -52,7 +52,7 @@ global.fetch = async (url) => {
   });
 
   await t('plainText of chat components', () => {
-    assert.strictEqual(plainText({ text: '§dNexus', extra: [{ text: 'MC ' }, { text: 'Lifesteal' }] }), 'NexusMC Lifesteal');
+    assert.strictEqual(plainText({ text: '§dCat', extra: [{ text: 'land ' }, { text: 'SMP' }] }), 'Catland SMP');
     assert.strictEqual(plainText('§aHello'), 'Hello');
   });
 
@@ -82,7 +82,7 @@ global.fetch = async (url) => {
   });
 
   await t('detect the server from the game log', () => {
-    assert.strictEqual(parseServer('[02:10:01] [Render thread/INFO]: Connecting to playnexusmc.net, 25565'), 'playnexusmc.net');
+    assert.strictEqual(parseServer('[02:10:01] [Render thread/INFO]: Connecting to play.catland.net, 25565'), 'play.catland.net');
     assert.strictEqual(parseServer('[x] Connecting to 1.2.3.4, 25570'), '1.2.3.4:25570');
     assert.strictEqual(parseServer('[x] Loading world'), null);
   });

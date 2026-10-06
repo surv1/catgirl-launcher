@@ -378,6 +378,7 @@ async function migrateMods(inst) {
 }
 
 /* ---------- modpacks ---------- */
+let packSearchId = 0;
 async function modpackModal() {
   openModal(`
     <h3>Install a modpack</h3>
@@ -388,8 +389,9 @@ async function modpackModal() {
   let timer = null;
   const run = async () => {
     const q = $('#packSearch')?.value.trim() || '';
+    const myId = ++packSearchId;
     const r = await safe(() => window.cat.packs.search(q, 0));
-    if (!$('#packResults')) return;
+    if (myId !== packSearchId || !$('#packResults')) return;
     if (!r) { $('#packResults').innerHTML = '<div class="empty">Couldn\'t reach Modrinth.</div>'; return; }
     $('#packResults').innerHTML = r.hits.map((h) => `
       <div class="mod">
@@ -475,12 +477,16 @@ document.addEventListener('click', async (e) => {
 
 let searchTimer = null;
 $('#modSearch').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => searchMods(true), 300); });
+$('#modSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') { clearTimeout(searchTimer); searchMods(true); } });
 $('#modMore').addEventListener('click', () => searchMods(false));
 
+let modSearchId = 0;
 async function searchMods(reset) {
+  const myId = ++modSearchId; // only the newest search may show its results
   if (reset) { state.modOffset = 0; $('#modResults').innerHTML = '<div class="empty"><span class="spinner"></span>Searching Modrinth…</div>'; }
   const q = $('#modSearch').value.trim();
   const r = await safe(() => window.cat.mods.search(state.modsInst, q, state.modOffset));
+  if (myId !== modSearchId) return; // a newer search started while this one was loading
   if (!r) { $('#modResults').innerHTML = '<div class="empty">Couldn\'t reach Modrinth.</div>'; return; }
   const html = r.hits.map((h) => `
     <div class="mod">
