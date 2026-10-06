@@ -17,7 +17,7 @@
 const DEFAULT_COLOR = { ears: '#3b2a2a', tail: '#3b2a2a', bow: '#ff7eb6', wings: '#ffffff', halo: '#ffd34d', horns: '#5a1a1a', pet: '#ffb3d9', cape: '#ff7eb6' };
 const ITEMS = Object.keys(DEFAULT_COLOR);
 const WING_STYLES = ['angel', 'demon'];
-const CAPE_STYLES = ['plain', 'paw', 'heart', 'meow'];
+const CAPE_STYLES = ['plain', 'paw', 'heart', 'meow', 'catmeow'];
 const MAX_UUIDS = 60;
 const NONCE_TTL_MS = 2 * 60 * 1000;
 // Custom cape pictures: a PNG "film strip" of frames stacked top to bottom, each 60×96 (cape shape).

@@ -9,7 +9,7 @@ const COS_ITEMS = [
   { id: 'halo', name: 'Halo', emoji: '😇', colors: [['color', 'Colour']] },
   { id: 'horns', name: 'Devil horns', emoji: '😈', colors: [['color', 'Colour']] },
   { id: 'pet', name: 'Angel buddy', emoji: '👼', colors: [['color', 'Colour']] },
-  { id: 'cape', name: 'Cape', emoji: '🧣', colors: [['color', 'Cape'], ['trim', 'Trim']], styles: [['plain', 'Plain'], ['paw', 'Paw'], ['heart', 'Heart'], ['meow', 'Meow']] },
+  { id: 'cape', name: 'Cape', emoji: '🧣', colors: [['color', 'Cape'], ['trim', 'Trim']], styles: [['plain', 'Plain'], ['paw', 'Paw'], ['heart', 'Heart'], ['meow', 'Meow'], ['catmeow', 'Catgirl meow ✨']] },
 ];
 const COS_DEFAULTS = {
   ears: { on: false, color: '#3b2a2a', inner: '#ffb3d9' },
@@ -326,10 +326,12 @@ function capeFaces(F, it, t) {
   F.p.translate(0, 0, 2.1).rotate(rx(capeSwing(t)));
   F.bend = makeBend(0.25, t);
   F.boxY(it.color, -5, 0, 0, 5, 16, 1, CAPE_SLICES);
-  if (it.custom && cos.capeSheet) {
+  const sheet = it.custom && cos.capeSheet ? { img: cos.capeSheet, fw: CAPE_W, fh: CAPE_H, frames: it.custom.frames, delay: it.custom.delay }
+    : it.style === 'catmeow' && MEOW_SHEET.img ? MEOW_SHEET : null;
+  if (sheet) {
     for (let i = 0; i < CAPE_SLICES; i++) {
       const ya = (16 * i) / CAPE_SLICES, yb = (16 * (i + 1)) / CAPE_SLICES;
-      F.list.push({ pic: true, v0: i / CAPE_SLICES, v1: (i + 1) / CAPE_SLICES, color: it.color, pts: [[5, ya, 1.02], [-5, ya, 1.02], [-5, yb, 1.02], [5, yb, 1.02]].map((q) => F.p.apply(F.bend(q))) });
+      F.list.push({ pic: true, sheet, v0: i / CAPE_SLICES, v1: (i + 1) / CAPE_SLICES, color: it.color, pts: [[5, ya, 1.02], [-5, ya, 1.02], [-5, yb, 1.02], [5, yb, 1.02]].map((q) => F.p.apply(F.bend(q))) });
     }
     F.bend = null;
     F.p = saved;
@@ -370,16 +372,20 @@ function drawFaces(ctx, faces, view, behind) {
 }
 
 // Your cape picture, stretched onto the back of the cape (only visible from behind).
+// The built-in animated "Catgirl meow" cape (same picture the game uses).
+const MEOW_SHEET = { img: null, fw: 120, fh: 192, frames: 16, delay: 90 };
+(() => { const i = new Image(); i.onload = () => { MEOW_SHEET.img = i; }; i.src = 'assets/cape-meow.png'; })();
+
 function drawCapePicture(ctx, view, f) {
-  if (view !== 'back' || !cos.capeSheet) return;
-  const c = cos.items.cape.custom;
+  const sh0 = f.sheet;
+  if (view !== 'back' || !sh0?.img) return;
   const [p0, p1, , p3] = f.pts.map((p) => VIEW[view].at(p).map((v) => v * S));
-  const frame = Math.floor(performance.now() / c.delay) % c.frames;
-  const sy = frame * CAPE_H + f.v0 * CAPE_H, sh = (f.v1 - f.v0) * CAPE_H;
+  const frame = Math.floor(performance.now() / sh0.delay) % sh0.frames;
+  const sy = frame * sh0.fh + f.v0 * sh0.fh, sh = (f.v1 - f.v0) * sh0.fh;
   ctx.save();
-  ctx.setTransform((p1[0] - p0[0]) / CAPE_W, (p1[1] - p0[1]) / CAPE_W, (p3[0] - p0[0]) / sh, (p3[1] - p0[1]) / sh, p0[0], p0[1]);
+  ctx.setTransform((p1[0] - p0[0]) / sh0.fw, (p1[1] - p0[1]) / sh0.fw, (p3[0] - p0[0]) / sh, (p3[1] - p0[1]) / sh, p0[0], p0[1]);
   ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(cos.capeSheet, 0, sy, CAPE_W, sh, 0, 0, CAPE_W, sh + 0.35); // a hair of overlap hides seams
+  ctx.drawImage(sh0.img, 0, sy, sh0.fw, sh, 0, 0, sh0.fw, sh + 0.35); // a hair of overlap hides seams
   ctx.restore();
 }
 

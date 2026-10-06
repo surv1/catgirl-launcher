@@ -29,7 +29,7 @@ function normalize(input) {
     if (k === 'wings') out[k].style = ['angel', 'demon'].includes(v.style) ? v.style : 'angel';
     if (k === 'cape') {
       out[k].trim = hexColor(v.trim, '#ffffff');
-      out[k].style = ['plain', 'paw', 'heart', 'meow'].includes(v.style) ? v.style : 'paw';
+      out[k].style = ['plain', 'paw', 'heart', 'meow', 'catmeow'].includes(v.style) ? v.style : 'paw';
       const c = v.custom;
       if (c && /^[0-9a-f]{64}$/.test(c.sha || '')) out[k].custom = { sha: c.sha, frames: clampInt(c.frames, 1, MAX_FRAMES, 1), delay: clampInt(c.delay, 20, 2000, 100) };
     }

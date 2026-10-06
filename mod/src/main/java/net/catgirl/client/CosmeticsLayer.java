@@ -27,6 +27,8 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
     private static final float TAIL_A0 = -0.7F;
     private static final float TAIL_CURL = 0.13F;
     private static final int FULL_BRIGHT = 0xF000F0;
+    private static final Identifier MEOW_CAPE = Identifier.fromNamespaceAndPath("catgirl", "textures/cape/meow.png");
+    private static final int MEOW_FRAMES = 16, MEOW_DELAY = 90;
 
     public CosmeticsLayer(RenderLayerParent<AvatarRenderState, PlayerModel> parent) {
         super(parent);
@@ -61,6 +63,10 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             model.body.translateAndRotate(poses);
             Cosmetics.CapePicture pic = look.capePicture();
             Identifier tex = pic == null ? null : CapeTextures.get(pic.sha(), pic.file(), Cosmetics.api());
+            if (tex == null && look.capeStyle() == 4) { // the built-in animated "Catgirl meow" cape
+                tex = MEOW_CAPE;
+                pic = new Cosmetics.CapePicture("", MEOW_FRAMES, MEOW_DELAY, "");
+            }
             boolean picture = tex != null;
             out.submitCustomGeometry(poses, TYPE, (pose, vc) -> cape(new Mesh(pose, vc, light, overlay), look.cape().color(), look.capeTrim(), look.capeStyle(), swingDeg, sideDeg, picture, bend, ct));
             if (picture) {

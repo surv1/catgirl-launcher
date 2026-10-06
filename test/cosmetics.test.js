@@ -20,6 +20,7 @@ const cosmetics = require('../src/main/cosmetics');
     cape: { on: false, color: '#ff7eb6', trim: '#ffffff', style: 'paw' },
   });
   assert.strictEqual(worker.clean({ cape: { on: true, style: 'meow' } }).cape.style, 'meow');
+  assert.strictEqual(cosmetics.normalize({ cape: { style: 'catmeow' } }).cape.style, 'catmeow');
   assert.deepStrictEqual(worker.clean({ cape: { on: true, style: 'skull', trim: '#FFD34D' } }), { cape: { on: true, color: '#ff7eb6', trim: '#ffd34d', style: 'paw' } });
   assert.strictEqual(cosmetics.normalize({ wings: { on: true, style: 'demon', color: '#8B1A1A' } }).wings.style, 'demon');
   assert.strictEqual(cosmetics.normalize({ wings: { on: true, style: 'dragon' } }).wings.style, 'angel');
