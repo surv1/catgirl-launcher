@@ -43,15 +43,34 @@ jobs:
       - name: Prepare Minecraft
         working-directory: mod
         run: gradle compileJava --no-daemon -q || true
-      - name: Print signatures
+      - name: Collect signatures
         shell: bash
         run: |
-          set -uo pipefail
-          # every remapped jar loom produced (Minecraft + Fabric API modules)
-          JARS=$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*loom*' -o -path '*minecraftMaven*' \) 2>/dev/null | grep -Ei 'minecraft-(merged|client|common)|fabric-(rendering|api-base|lifecycle|entity)' | tr '\n' ':')
+          set +e
+          JARS=$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*loom*' -o -path '*minecraftMaven*' \) 2>/dev/null | grep -Ei 'minecraft-(merged|client|common)|fabric-(rendering|api-base|lifecycle|entity|renderer)' | tr '\n' ':')
+          mkdir -p /tmp/out
           for C in ${{ inputs.classes }}; do
-            OUT=$(javap -p -cp "$JARS" "$C" 2>&1 | head -c 60000)
-            [ "${C##*.}" = "Deadmau5EarsLayer" -o "${C##*.}" = "CapeLayer" -o "${C##*.}" = "WingsLayer" ] && OUT=$(javap -p -c -cp "$JARS" "$C" 2>&1 | grep -E 'invoke|getfield|class |public|protected|private' | head -c 60000)
-            ESC=$(printf '%s' "$OUT" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
-            echo "::notice title=$C::$ESC"
+            F=/tmp/out/all.txt
+            echo "##### $C" >> $F
+            case "$C" in
+              *Layer) javap -p -c -cp "$JARS" "$C" 2>&1 | grep -E 'invoke|getfield|getstatic|class |public|protected|private' >> $F ;;
+              *) javap -p -cp "$JARS" "$C" 2>&1 | grep -v '^Compiled' >> $F ;;
+            esac
           done
+          split -b 3900 -d -a 2 /tmp/out/all.txt /tmp/out/part-
+          ls /tmp/out | head -60
+      - name: Emit 1
+        shell: bash
+        run: for i in $(seq -w 0 9); do f=/tmp/out/part-$i; [ -f $f ] && echo "::notice title=part-$i::$(sed 's/%/%25/g' $f | sed ':a;N;$!ba;s/\n/%0A/g')"; done; true
+      - name: Emit 2
+        shell: bash
+        run: for i in $(seq 10 19); do f=/tmp/out/part-$i; [ -f $f ] && echo "::notice title=part-$i::$(sed 's/%/%25/g' $f | sed ':a;N;$!ba;s/\n/%0A/g')"; done; true
+      - name: Emit 3
+        shell: bash
+        run: for i in $(seq 20 29); do f=/tmp/out/part-$i; [ -f $f ] && echo "::notice title=part-$i::$(sed 's/%/%25/g' $f | sed ':a;N;$!ba;s/\n/%0A/g')"; done; true
+      - name: Emit 4
+        shell: bash
+        run: for i in $(seq 30 39); do f=/tmp/out/part-$i; [ -f $f ] && echo "::notice title=part-$i::$(sed 's/%/%25/g' $f | sed ':a;N;$!ba;s/\n/%0A/g')"; done; true
+      - name: Emit 5
+        shell: bash
+        run: for i in $(seq 40 49); do f=/tmp/out/part-$i; [ -f $f ] && echo "::notice title=part-$i::$(sed 's/%/%25/g' $f | sed ':a;N;$!ba;s/\n/%0A/g')"; done; true
