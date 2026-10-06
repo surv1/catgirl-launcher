@@ -7,7 +7,8 @@
   <meta name="description" content="Catgirl Client is a cute, cosy Minecraft launcher: instances, one-click mods, themes, catgirl splash facts and Discord status. Free for Windows." />
   <meta property="og:title" content="Catgirl Client" />
   <meta property="og:description" content="A cute, cosy Minecraft launcher. Free for Windows." />
-  <meta property="og:image" content="https://surv1.github.io/catgirl-launcher/home.png" />
+  <meta property="og:url" content="https://catgirlclient.lol/" />
+  <meta property="og:image" content="https://catgirlclient.lol/home.png" />
   <meta name="theme-color" content="#1d1026" />
   <link rel="icon" href="favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -61,15 +62,16 @@
     h1 .line2 { display: block; color: var(--sakura); }
     /* the Minecraft-style splash text: the one loud thing on the page */
     .splash {
-      position: absolute; right: -18px; bottom: 6px; transform-origin: center;
-      transform: translate(30%, 20%) rotate(-17deg);
+      position: absolute; left: 89%; top: 60%; right: auto; bottom: auto; transform-origin: left center;
+      transform: rotate(-17deg);
       font: 400 clamp(15px, 1.9vw, 21px)/1.1 var(--pop); color: var(--butter);
       text-shadow: 2px 2px 0 #3d3200; white-space: nowrap; cursor: pointer;
-      background: none; border: 0; padding: 4px; max-width: 380px;
+      background: none; border: 0; padding: 4px;
       animation: splash 0.9s ease-in-out infinite alternate;
     }
     @keyframes splash { from { scale: 1; } to { scale: 1.08; } }
-    .lede { max-width: 30em; color: var(--haze); font-size: 19px; margin: 34px 0 30px; }
+    .lede { max-width: 30em; color: var(--haze); font-size: 19px; margin: 40px 0 30px; }
+    .splash.long { font-size: clamp(13px, 1.5vw, 17px); }
     .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; }
     .download {
       display: inline-flex; align-items: center; gap: 12px; padding: 17px 28px; border-radius: 18px;
@@ -314,7 +316,7 @@
     let last = 0;
     function nextFact() {
       let i; do { i = Math.floor(Math.random() * FACTS.length); } while (i === last);
-      last = i; splash.textContent = FACTS[i];
+      last = i; splash.textContent = FACTS[i]; splash.classList.toggle('long', FACTS[i].length > 24);
     }
     splash.addEventListener('click', nextFact);
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
