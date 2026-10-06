@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'none'" />
+  <title>Catgirl Launcher</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-theme="sakura">
+  <header class="titlebar">
+    <div class="brand">
+      <img src="assets/logo.svg" alt="" class="brand-logo" />
+      <span class="brand-name">Catgirl <b>Launcher</b></span>
+    </div>
+    <div class="win-buttons">
+      <button data-win="minimize" title="Minimise"><svg viewBox="0 0 12 12"><path d="M2 6h8" /></svg></button>
+      <button data-win="maximize" title="Maximise"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" rx="1" /></svg></button>
+      <button data-win="close" class="close" title="Close"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" /></svg></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar">
+      <button class="nav active" data-page="home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z" /></svg><span>Home</span></button>
+      <button class="nav" data-page="instances"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2" /><rect x="13" y="3" width="8" height="8" rx="2" /><rect x="3" y="13" width="8" height="8" rx="2" /><rect x="13" y="13" width="8" height="8" rx="2" /></svg><span>Instances</span></button>
+      <button class="nav" data-page="mods"><svg viewBox="0 0 24 24"><path d="M12 2l9 5v10l-9 5-9-5V7z" /><path d="M3 7l9 5 9-5M12 12v10" /></svg><span>Mods</span></button>
+      <button class="nav" data-page="console"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 9l3 3-3 3M12 15h5" /></svg><span>Console</span></button>
+      <button class="nav" data-page="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg><span>Settings</span></button>
+      <div class="spacer"></div>
+      <button class="account-chip" data-page="accounts" id="accountChip">
+        <img id="accountHead" src="assets/logo.svg" alt="" />
+        <div><small>Signed in as</small><span id="accountName">Not signed in</span></div>
+      </button>
+    </nav>
+
+    <main>
+      <div class="update-banner hidden" id="updateBanner">
+        <span id="updateBannerText">A new version is ready.</span>
+        <button class="primary small" id="updateRestart">Restart to update</button>
+      </div>
+      <!-- HOME -->
+      <section class="page active" id="page-home">
+        <div class="hero" id="hero">
+          <div class="hero-art" aria-hidden="true"></div>
+          <div class="hero-body">
+            <span class="pill" id="heroPill">Catgirl Launcher</span>
+            <h1 id="heroName">Welcome!</h1>
+            <p id="heroTagline">Create an instance to start playing.</p>
+            <div class="hero-meta" id="heroMeta"></div>
+            <div class="play-row">
+              <button class="play" id="heroPlay">New instance</button>
+              <div class="progress hidden" id="heroProgress"><div class="bar"></div><span></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="section-head"><h2>Your instances</h2><button class="link" data-page="instances">See all</button></div>
+        <div class="cards" id="recentInstances"></div>
+      </section>
+
+      <!-- INSTANCES -->
+      <section class="page" id="page-instances">
+        <div class="section-head"><h2>Instances</h2><button class="primary" id="newInstanceBtn">+ New instance</button></div>
+        <div class="cards" id="instanceGrid"></div>
+      </section>
+
+      <!-- MODS -->
+      <section class="page" id="page-mods">
+        <div class="section-head">
+          <h2>Mods</h2>
+          <label class="select-wrap">For <select id="modsInstance"></select></label>
+        </div>
+        <div class="tabs"><button class="tab active" data-tab="installed">Installed</button><button class="tab" data-tab="browse">Browse Modrinth</button></div>
+        <div id="modsInstalled" class="mod-list"></div>
+        <div id="modsBrowse" class="hidden">
+          <input id="modSearch" class="search" placeholder="Search mods… (Sodium, Iris, Mod Menu)" />
+          <div id="modResults" class="mod-list"></div>
+          <button class="ghost hidden" id="modMore">Load more</button>
+        </div>
+      </section>
+
+      <!-- CONSOLE -->
+      <section class="page" id="page-console">
+        <div class="section-head">
+          <h2>Console</h2>
+          <div class="row">
+            <label class="select-wrap"><select id="consoleInstance"></select></label>
+            <button class="ghost" id="consoleCopy">Copy log</button>
+            <button class="danger" id="consoleKill">Force stop</button>
+          </div>
+        </div>
+        <pre class="console" id="consoleOut"></pre>
+      </section>
+
+      <!-- ACCOUNTS -->
+      <section class="page" id="page-accounts">
+        <div class="section-head"><h2>Accounts</h2><button class="primary" id="addAccountBtn">+ Add Microsoft account</button></div>
+        <div id="accountList" class="account-list"></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="page" id="page-settings">
+        <div class="section-head"><h2>Settings</h2></div>
+        <div class="settings">
+          <div class="field">
+            <label>Theme <small>Changes instantly</small></label>
+            <div class="themes" id="themePicker"></div>
+          </div>
+          <div class="field">
+            <label class="check"><input type="checkbox" id="setCatgirlMenu" /> Catgirl in-game menu</label>
+            <small class="muted">Adds the pink "CatGirl Launcher" title screen to Fabric instances.</small>
+          </div>
+          <div class="field">
+            <label>Updates</label>
+            <div class="row"><button class="ghost" id="checkUpdates">Check for updates</button><span class="muted" id="updateText"></span></div>
+          </div>
+          <div class="field">
+            <label>When the game starts</label>
+            <select id="setAfterLaunch"><option value="minimize">Minimise the launcher</option><option value="keep">Keep the launcher open</option></select>
+          </div>
+          <div class="field">
+            <label>Java executable <small>Leave empty and the right Java is downloaded for you</small></label>
+            <div class="row"><input id="setJavaPath" placeholder="Automatic" /><button class="ghost" id="pickJava">Browse</button></div>
+          </div>
+          <div class="field">
+            <label>Extra Java arguments <small>Applies to instances without their own</small></label>
+            <input id="setJavaArgs" placeholder="-XX:+UseG1GC" />
+          </div>
+          <div class="field">
+            <label class="check"><input type="checkbox" id="setCustomRes" /> Custom window size</label>
+            <div class="row"><input id="setWidth" type="number" min="640" /> × <input id="setHeight" type="number" min="480" /></div>
+          </div>
+          <div class="field">
+            <label class="check"><input type="checkbox" id="setSnapshots" /> Show snapshot versions</label>
+          </div>
+          <div class="field"><label>Data folder</label><code id="dataDir"></code></div>
+          <div class="row"><button class="primary" id="saveSettings">Save settings</button><span class="muted" id="appVersion"></span></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal shell -->
+  <div class="modal-backdrop hidden" id="modal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <button class="modal-x" id="modalClose" aria-label="Close">×</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+  <script src="app.js"></script>
+</body>
+</html>

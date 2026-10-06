@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "catgirl",
+  "version": "${version}",
+  "name": "Catgirl Client",
+  "description": "The Catgirl Launcher title screen: pink branding and a quick-access side menu.",
+  "authors": ["Jerrix"],
+  "license": "MIT",
+  "icon": "assets/catgirl/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["net.catgirl.client.CatgirlClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=21",
+    "fabric-screen-api-v1": "*"
+  }
+}

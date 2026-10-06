@@ -1,0 +1,124 @@
+# Builds the in-game mod and the launcher installers, then publishes a GitHub Release.
+# Installed launchers check these releases for auto-updates and download the in-game mod from them.
+#
+# Make a release:  GitHub → Actions → "Release" → Run workflow → type a version like 0.2.1
+# (or push a tag like v0.2.1). Leave the version empty to just test the build.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 0.2.1 (leave empty to only test the build)"
+        required: false
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  VERSION: ${{ inputs.version || (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '0.0.0-dev' }}
+
+jobs:
+  mod:
+    name: In-game mod (MC ${{ matrix.mc }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Add more Minecraft versions here as you port the mod.
+        mc: ["1.21.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+      - name: Pick Fabric versions for MC ${{ matrix.mc }}
+        working-directory: mod
+        run: |
+          set -euo pipefail
+          MC='${{ matrix.mc }}'
+          V="${VERSION#v}"
+          LOADER=$(curl -fsSL "https://meta.fabricmc.net/v2/versions/loader/$MC" | jq -r '([.[] | select(.loader.stable)][0] // .[0]).loader.version')
+          FAPI=$(curl -fsSL -A 'catgirl-launcher-ci' "https://api.modrinth.com/v2/project/fabric-api/version?game_versions=%5B%22$MC%22%5D&loaders=%5B%22fabric%22%5D" | jq -r '.[0].version_number')
+          LOOM=$(curl -fsSL https://maven.fabricmc.net/fabric-loom/fabric-loom.gradle.plugin/maven-metadata.xml | sed -n 's:.*<release>\(.*\)</release>.*:\1:p')
+          sed -i "s/^minecraft_version=.*/minecraft_version=$MC/; s/^loader_version=.*/loader_version=$LOADER/; s/^fabric_version=.*/fabric_version=$FAPI/; s/^loom_version=.*/loom_version=$LOOM/; s/^mod_version=.*/mod_version=$V/" gradle.properties
+          cat gradle.properties
+      - name: Build
+        working-directory: mod
+        run: gradle build --no-daemon --stacktrace
+      - name: Rename jar
+        run: cp "$(ls mod/build/libs/*.jar | grep -v -- '-sources' | head -1)" "catgirl-client-mc${{ matrix.mc }}.jar"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mod-${{ matrix.mc }}
+          path: catgirl-client-mc*.jar
+
+  launcher:
+    name: Launcher (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Point the app at this GitHub repo
+        shell: bash
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const v = process.env.VERSION.replace(/^v/, '');
+            const c = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+            c.github = { owner: process.env.OWNER, repo: process.env.REPO };
+            fs.writeFileSync('config.json', JSON.stringify(c, null, 2));
+            const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            p.version = v;
+            p.build.publish[0].owner = process.env.OWNER;
+            p.build.publish[0].repo = process.env.REPO;
+            fs.writeFileSync('package.json', JSON.stringify(p, null, 2));
+          "
+      - run: npm install
+      - run: npm test
+      - name: Build installer
+        shell: bash
+        run: npx electron-builder --publish never ${{ matrix.os == 'windows-latest' && '--win' || '--linux' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: launcher-${{ matrix.os }}
+          path: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/*.AppImage
+            dist/latest*.yml
+
+  release:
+    name: Publish release
+    needs: [mod, launcher]
+    if: ${{ inputs.version != '' || startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - run: ls -la out
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(env.VERSION, 'v') && env.VERSION || format('v{0}', env.VERSION) }}
+          name: Catgirl Launcher ${{ startsWith(env.VERSION, 'v') && env.VERSION || format('v{0}', env.VERSION) }}
+          generate_release_notes: true
+          files: out/*

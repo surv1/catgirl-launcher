@@ -1,0 +1,5 @@
+node_modules/
+dist/
+mod/build/
+mod/.gradle/
+mod/run/
