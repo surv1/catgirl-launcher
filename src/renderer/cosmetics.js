@@ -9,6 +9,7 @@ const COS_ITEMS = [
   { id: 'halo', name: 'Halo', emoji: '😇', colors: [['color', 'Colour']] },
   { id: 'horns', name: 'Devil horns', emoji: '😈', colors: [['color', 'Colour']] },
   { id: 'pet', name: 'Angel buddy', emoji: '👼', colors: [['color', 'Colour']] },
+  { id: 'trim', name: 'Glow trim', emoji: '✨', colors: [['color', 'Glow'], ['accent', 'Accent']], styles: [['paws', 'Paws'], ['stars', 'Starlight'], ['hearts', 'Heartbeat'], ['circuit', 'Circuit']] },
   { id: 'cape', name: 'Cape', emoji: '🧣', colors: [['color', 'Cape'], ['trim', 'Trim']], styles: [['plain', 'Plain'], ['paw', 'Paw'], ['heart', 'Heart'], ['meow', 'Meow'], ['catmeow', 'Catgirl meow ✨']] },
 ];
 const COS_DEFAULTS = {
@@ -20,6 +21,7 @@ const COS_DEFAULTS = {
   horns: { on: false, color: '#5a1a1a' },
   pet: { on: false, color: '#ffb3d9' },
   cape: { on: false, color: '#ff7eb6', trim: '#ffffff', style: 'paw', line: 'cycle' },
+  trim: { on: false, color: '#7ec8ff', accent: '#ff7eb6', style: 'paws' },
 };
 const WING_DEFAULT = { angel: '#ffffff', demon: '#8b1a1a' };
 const FUR_PRESETS = ['#3b2a2a', '#1b1b1f', '#f5f0e6', '#c98a4b', '#f2c879', '#9a9aa3', '#ff7eb6', '#b48cff'];
@@ -31,6 +33,8 @@ const PRESETS = {
   horns: ['#5a1a1a', '#e5383b', '#1b1b1f', '#3a1f5c', '#f5f0e6', '#ff7eb6'],
   pet: ['#ffb3d9', '#ffffff', '#ffd34d', '#7ec8ff', '#b48cff', '#6fe3b5'],
   cape: ['#ff7eb6', '#b48cff', '#1b1b1f', '#ffffff', '#8b1a1a', '#3a1f5c', '#7ec8ff', '#6fe3b5'],
+  trim: ['#7ec8ff', '#ff7eb6', '#b48cff', '#6fe3b5', '#ffd34d', '#ff5c5c', '#ffffff', '#ff9a3c'],
+  'trim.accent': ['#ff7eb6', '#ffffff', '#ffd34d', '#7ec8ff', '#b48cff', '#6fe3b5'],
   'cape.trim': ['#ffffff', '#ffd34d', '#1b1b1f', '#ff7eb6', '#b48cff', '#e5383b'],
 };
 
@@ -349,8 +353,48 @@ function capeFaces(F, it, t) {
   F.p = saved;
 }
 
+// Glowing trim patterns (# = glow colour, + = accent). Same as the mod.
+const TRIM_PATTERNS = {"paws": {"body": ["########", "........", "..#..#..", ".#.##.#.", "...##...", "..####..", "..####..", "........", "........", "+......+", ".+....+.", "..++++.."], "arm": ["####", "....", "....", "....", ".#..", "..#.", ".#..", "....", "....", "....", "++++", "...."], "leg": ["....", "....", "....", "....", ".##.", "#..#", ".##.", "....", "....", "....", "####", "+..+"]}, "stars": {"body": ["+......+", "...#....", "..###...", "...#....", "......+.", ".+......", ".....#..", "....###.", ".....#..", "..+.....", "........", "+..++..+"], "arm": ["+..+", "....", ".#..", "###.", ".#..", "....", "..+.", "....", ".+..", "....", "....", "++++"], "leg": ["....", ".+..", "....", "..#.", ".###", "..#.", "....", "+...", "....", "..+.", "####", "...."]}, "hearts": {"body": ["++++++++", "........", ".##..##.", "########", "########", ".######.", "..####..", "...##...", "........", "#..#....", ".##.#..#", "....#.##"], "arm": ["++++", "....", "....", "....", "....", "#...", ".#.#", "..#.", "....", "....", "....", "++++"], "leg": ["....", "....", "....", "....", ".##.", "####", "####", ".##.", "....", "....", "++++", "...."]}, "circuit": {"body": ["########", "#......#", "#.####.#", "#.#..#.#", "#.####.#", "#..##..#", "#..##..#", "#......#", "#.+..+.#", "#......#", "#......#", "########"], "arm": ["####", "#..#", "#..#", "#++#", "#..#", "#..#", "#..#", "#..#", "#++#", "#..#", "#..#", "####"], "leg": ["####", "#..#", "#..#", "#..#", "#++#", "#..#", "#..#", "#..#", "#++#", "#..#", "#..#", "####"]}};
+
+// Standing-pose pivots of each body part, as in the game.
+const PARTS = { head: [0, 0], body: [0, 0], rightArm: [-5, 2], leftArm: [5, 2], rightLeg: [-1.9, 12], leftLeg: [1.9, 12] };
+function trimGrid(F, grid, x0, y0, cellW, d, glow, accent) {
+  const cols = grid[0].length;
+  for (const side of [0, 1]) {
+    const z = side === 0 ? -(2 + d) : 2 + d;
+    grid.forEach((row, r) => {
+      for (let c = 0; c < cols;) {
+        const ch = row[c];
+        if (ch !== '#' && ch !== '+') { c++; continue; }
+        let e = c; while (e < cols && row[e] === ch) e++;
+        const [xa, xb] = side === 0 ? [x0 + c * cellW, x0 + e * cellW] : [x0 + (cols - e) * cellW, x0 + (cols - c) * cellW];
+        F.box(ch === '#' ? glow : accent, xa, y0 + r, z - 0.06, xb, y0 + r + 1, z + 0.06, true);
+        c = e;
+      }
+    });
+  }
+}
+function trimFaces(F, it, t) {
+  const pat = TRIM_PATTERNS[it.style] || TRIM_PATTERNS.paws;
+  const pulse = 1 + 0.15 * Math.sin(t * 0.12); // brightens and dims, so it glows
+  const glow = shade(it.color, pulse), accent = shade(it.accent, pulse), d = 0.3;
+  const at = (part, fn) => { const saved = F.p.copy(); F.p.translate(PARTS[part][0], PARTS[part][1], 0); fn(); F.p = saved; };
+  at('head', () => {
+    const o = 4 + d;
+    F.box(glow, -o, -6, -o - 0.06, o, -5.4, -o + 0.06, true);
+    F.box(glow, -o, -6, o - 0.06, o, -5.4, o + 0.06, true);
+    F.box(accent, -0.9, -6.6, -o - 0.14, 0.9, -4.8, -o + 0.02, true);
+  });
+  at('body', () => trimGrid(F, pat.body, -4, 0, 1, d, glow, accent));
+  at('rightArm', () => trimGrid(F, pat.arm, -2.25, -2, 0.75, d, glow, accent));
+  at('leftArm', () => trimGrid(F, pat.arm, -0.75, -2, 0.75, d, glow, accent));
+  at('rightLeg', () => trimGrid(F, pat.leg, -2, 0, 1, d, glow, accent));
+  at('leftLeg', () => trimGrid(F, pat.leg, -2, 0, 1, d, glow, accent));
+}
+
 function cosmeticFaces(t) {
   const F = new Faces(), it = cos.items;
+  if (it.trim.on) trimFaces(F, it.trim, t);
   if (it.cape.on) capeFaces(F, it.cape, t);
   if (it.wings.on) wingFaces(F, it.wings, t);
   if (it.halo.on) haloFaces(F, it.halo, t);

@@ -14,9 +14,10 @@
 //
 // Setup: a KV namespace bound as COSMETICS, and a secret NONCE_SECRET (any long random text).
 
-const DEFAULT_COLOR = { ears: '#3b2a2a', tail: '#3b2a2a', bow: '#ff7eb6', wings: '#ffffff', halo: '#ffd34d', horns: '#5a1a1a', pet: '#ffb3d9', cape: '#ff7eb6' };
+const DEFAULT_COLOR = { ears: '#3b2a2a', tail: '#3b2a2a', bow: '#ff7eb6', wings: '#ffffff', halo: '#ffd34d', horns: '#5a1a1a', pet: '#ffb3d9', cape: '#ff7eb6', trim: '#7ec8ff' };
 const ITEMS = Object.keys(DEFAULT_COLOR);
 const WING_STYLES = ['angel', 'demon'];
+const TRIM_STYLES = ['paws', 'stars', 'hearts', 'circuit'];
 const CAPE_STYLES = ['plain', 'paw', 'heart', 'meow', 'catmeow'];
 const CAPE_LINES = [...["meow!", "nya~", "nyaa~!", "mrrp?", "purr~", "mew!", ":3", "uwu"], 'cycle', 'none'];
 const MAX_UUIDS = 60;
@@ -58,6 +59,7 @@ export function clean(input) {
     out[k] = { on: !!v.on, color: color(v.color, DEFAULT_COLOR[k]) };
     if (k === 'ears') out[k].inner = color(v.inner, '#ffb3d9');
     if (k === 'wings') out[k].style = WING_STYLES.includes(v.style) ? v.style : 'angel';
+    if (k === 'trim') { out[k].accent = color(v.accent, '#ff7eb6'); out[k].style = TRIM_STYLES.includes(v.style) ? v.style : 'paws'; }
     if (k === 'cape') { out[k].trim = color(v.trim, '#ffffff'); out[k].style = CAPE_STYLES.includes(v.style) ? v.style : 'paw'; out[k].line = CAPE_LINES.includes(v.line) ? v.line : 'cycle'; }
   }
   return out;

@@ -14,6 +14,7 @@ const DEFAULTS = {
   horns: { on: false, color: '#5a1a1a' },
   pet: { on: false, color: '#ffb3d9' },
   cape: { on: false, color: '#ff7eb6', trim: '#ffffff', style: 'paw', line: 'cycle' },
+  trim: { on: false, color: '#7ec8ff', accent: '#ff7eb6', style: 'paws' },
 };
 const ITEMS = Object.keys(DEFAULTS);
 const UA = 'CatgirlLauncher (+https://catgirlclient.lol)';
@@ -27,6 +28,7 @@ function normalize(input) {
     out[k] = { on: !!v.on, color: hexColor(v.color, DEFAULTS[k].color) };
     if (k === 'ears') out[k].inner = hexColor(v.inner, DEFAULTS.ears.inner);
     if (k === 'wings') out[k].style = ['angel', 'demon'].includes(v.style) ? v.style : 'angel';
+    if (k === 'trim') { out[k].accent = hexColor(v.accent, '#ff7eb6'); out[k].style = ['paws', 'stars', 'hearts', 'circuit'].includes(v.style) ? v.style : 'paws'; }
     if (k === 'cape') {
       out[k].trim = hexColor(v.trim, '#ffffff');
       out[k].style = ['plain', 'paw', 'heart', 'meow', 'catmeow'].includes(v.style) ? v.style : 'paw';

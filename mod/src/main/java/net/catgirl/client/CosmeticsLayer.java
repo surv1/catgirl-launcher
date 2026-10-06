@@ -27,6 +27,31 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
     private static final float TAIL_A0 = -0.7F;
     private static final float TAIL_CURL = 0.13F;
     private static final int FULL_BRIGHT = 0xF000F0;
+    // Glowing trim patterns (# = glow colour, + = accent). Same as the launcher preview.
+    private static final String[] TRIM_NAMES = {"paws", "stars", "hearts", "circuit"};
+    private static final String[][][] TRIMS = {
+        { // paws
+            {"########", "........", "..#..#..", ".#.##.#.", "...##...", "..####..", "..####..", "........", "........", "+......+", ".+....+.", "..++++.."},
+            {"####", "....", "....", "....", ".#..", "..#.", ".#..", "....", "....", "....", "++++", "...."},
+            {"....", "....", "....", "....", ".##.", "#..#", ".##.", "....", "....", "....", "####", "+..+"},
+        },
+        { // stars
+            {"+......+", "...#....", "..###...", "...#....", "......+.", ".+......", ".....#..", "....###.", ".....#..", "..+.....", "........", "+..++..+"},
+            {"+..+", "....", ".#..", "###.", ".#..", "....", "..+.", "....", ".+..", "....", "....", "++++"},
+            {"....", ".+..", "....", "..#.", ".###", "..#.", "....", "+...", "....", "..+.", "####", "...."},
+        },
+        { // hearts
+            {"++++++++", "........", ".##..##.", "########", "########", ".######.", "..####..", "...##...", "........", "#..#....", ".##.#..#", "....#.##"},
+            {"++++", "....", "....", "....", "....", "#...", ".#.#", "..#.", "....", "....", "....", "++++"},
+            {"....", "....", "....", "....", ".##.", "####", "####", ".##.", "....", "....", "++++", "...."},
+        },
+        { // circuit
+            {"########", "#......#", "#.####.#", "#.#..#.#", "#.####.#", "#..##..#", "#..##..#", "#......#", "#.+..+.#", "#......#", "#......#", "########"},
+            {"####", "#..#", "#..#", "#++#", "#..#", "#..#", "#..#", "#..#", "#++#", "#..#", "#..#", "####"},
+            {"####", "#..#", "#..#", "#..#", "#++#", "#..#", "#..#", "#..#", "#++#", "#..#", "#..#", "####"},
+        },
+    };
+
     private static final Identifier MEOW_CAPE = Identifier.fromNamespaceAndPath("catgirl", "textures/cape/meow.png");
     private static final int MEOW_FRAMES = 16, MEOW_DELAY = 90;
     private static final int MEOW_EDGE = 0xFF5B6FD6; // the art's blue, so the whole cape matches
@@ -49,6 +74,20 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         int seed = s.id;
         PlayerModel model = getParentModel();
 
+        if (look.trim().on()) {
+            String[][] pat = TRIMS[Math.max(0, Math.min(TRIMS.length - 1, look.trimStyle()))];
+            float pulse = 1F + 0.15F * (float) Math.sin(t * 0.12F); // brightens and dims, so it glows
+            int glow = shade(look.trim().color(), pulse), accent = shade(look.trimAccent(), pulse);
+            boolean helmet = !s.headEquipment.isEmpty(), chest = !s.chestEquipment.isEmpty(), legs = !s.legsEquipment.isEmpty(), feet = !s.feetEquipment.isEmpty();
+            // Sit on top of armour when it's worn (armour is 1 pixel out, leggings half a pixel), else on the skin.
+            float dHead = helmet ? 1.05F : 0.3F, dBody = chest ? 1.05F : legs ? 0.55F : 0.3F, dArm = chest ? 1.05F : 0.3F, dLeg = feet ? 1.05F : legs ? 0.55F : 0.3F;
+            trimPart(poses, out, model.head, overlay, m -> circlet(m, dHead, glow, accent));
+            trimPart(poses, out, model.body, overlay, m -> trimGrid(m, pat[0], -4F, 0F, 1F, 2F, dBody, glow, accent));
+            trimPart(poses, out, model.rightArm, overlay, m -> trimGrid(m, pat[1], -2.25F, -2F, 0.75F, 2F, dArm, glow, accent));
+            trimPart(poses, out, model.leftArm, overlay, m -> trimGrid(m, pat[1], -0.75F, -2F, 0.75F, 2F, dArm, glow, accent));
+            trimPart(poses, out, model.rightLeg, overlay, m -> trimGrid(m, pat[2], -2F, 0F, 1F, 2F, dLeg, glow, accent));
+            trimPart(poses, out, model.leftLeg, overlay, m -> trimGrid(m, pat[2], -2F, 0F, 1F, 2F, dLeg, glow, accent));
+        }
         if ((look.halo().on() || look.horns().on()) && model.head.visible) {
             poses.pushPose();
             model.head.translateAndRotate(poses);
@@ -350,6 +389,47 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         }
         float v0 = row / (float) CAPE_LINES.length, v1 = (row + 1) / (float) CAPE_LINES.length;
         m.texQuad(0xFFFFFFFF, v[0], v[1], v[2], v[3], 0F, v0, 1F, v1, 0F, cy, 0F);
+    }
+
+    // ---- glow trim: pixel patterns on the front and back of each body part, glowing in the dark
+    private static void trimPart(PoseStack poses, SubmitNodeCollector out, net.minecraft.client.model.geom.ModelPart part, int overlay, java.util.function.Consumer<Mesh> draw) {
+        if (!part.visible) return;
+        poses.pushPose();
+        part.translateAndRotate(poses);
+        out.submitCustomGeometry(poses, TYPE, (pose, vc) -> draw.accept(new Mesh(pose, vc, FULL_BRIGHT, overlay)));
+        poses.popPose();
+    }
+
+    /** grid rows top to bottom; on the front, column 0 is on the player's right (-x); the back is mirrored. */
+    private static void trimGrid(Mesh m, String[] grid, float x0, float y0, float cellW, float halfDepth, float d, int glow, int accent) {
+        int cols = grid[0].length();
+        for (int side = 0; side < 2; side++) {
+            float z = side == 0 ? -(halfDepth + d) : halfDepth + d;
+            for (int r = 0; r < grid.length; r++) {
+                String row = grid[r];
+                for (int c = 0; c < cols; ) {
+                    char ch = row.charAt(c);
+                    if (ch != '#' && ch != '+') { c++; continue; }
+                    int e = c;
+                    while (e < cols && row.charAt(e) == ch) e++;
+                    float xa, xb;
+                    if (side == 0) { xa = x0 + c * cellW; xb = x0 + e * cellW; }
+                    else { xa = x0 + (cols - e) * cellW; xb = x0 + (cols - c) * cellW; }
+                    m.box(ch == '#' ? glow : accent, xa, y0 + r, z - 0.06F, xb, y0 + r + 1, z + 0.06F);
+                    c = e;
+                }
+            }
+        }
+    }
+
+    /** A thin glowing band around the head with a gem on the forehead. */
+    private static void circlet(Mesh m, float d, int glow, int accent) {
+        float o = 4F + d, y0 = -6F, y1 = -5.4F;
+        m.box(glow, -o, y0, -o - 0.06F, o, y1, -o + 0.06F);
+        m.box(glow, -o, y0, o - 0.06F, o, y1, o + 0.06F);
+        m.box(glow, -o - 0.06F, y0, -o, -o + 0.06F, y1, o);
+        m.box(glow, o - 0.06F, y0, -o, o + 0.06F, y1, o);
+        m.box(accent, -0.9F, -6.6F, -o - 0.14F, 0.9F, -4.8F, -o + 0.02F);
     }
 
     /** f < 1 darkens, f > 1 mixes towards white. */

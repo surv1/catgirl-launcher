@@ -31,8 +31,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class Cosmetics {
     public record Item(boolean on, int color) {}
     public record Look(Item ears, int earsInner, Item tail, Item bow, Item wings, boolean demonWings, Item halo, Item horns, Item pet,
-                       Item cape, int capeTrim, int capeStyle, CapePicture capePicture, String capeLine) {
-        boolean any() { return ears.on || tail.on || bow.on || wings.on || halo.on || horns.on || pet.on || cape.on; }
+                       Item cape, int capeTrim, int capeStyle, CapePicture capePicture, String capeLine,
+                       Item trim, int trimAccent, int trimStyle) {
+        boolean any() { return ears.on || tail.on || bow.on || wings.on || halo.on || horns.on || pet.on || cape.on || trim.on; }
     }
     /** A custom cape picture: sha256 of the PNG, how many frames, ms per frame, and (for you) the local file. */
     public record CapePicture(String sha, int frames, int delay, String file) {}
@@ -83,7 +84,7 @@ public final class Cosmetics {
         if (c == null || c.look == null) return null;
         if (!showOthersPictures && c.look.capePicture() != null) {
             Look l = c.look;
-            return new Look(l.ears(), l.earsInner(), l.tail(), l.bow(), l.wings(), l.demonWings(), l.halo(), l.horns(), l.pet(), l.cape(), l.capeTrim(), l.capeStyle(), null, l.capeLine());
+            return new Look(l.ears(), l.earsInner(), l.tail(), l.bow(), l.wings(), l.demonWings(), l.halo(), l.horns(), l.pet(), l.cape(), l.capeTrim(), l.capeStyle(), null, l.capeLine(), l.trim(), l.trimAccent(), l.trimStyle());
         }
         return c.look;
     }
@@ -147,6 +148,7 @@ public final class Cosmetics {
         if (el == null || !el.isJsonObject()) return null;
         JsonObject o = el.getAsJsonObject();
         JsonObject ears = o.has("ears") && o.get("ears").isJsonObject() ? o.getAsJsonObject("ears") : null;
+        JsonObject trimO = o.has("trim") && o.get("trim").isJsonObject() ? o.getAsJsonObject("trim") : null;
         JsonObject cape = o.has("cape") && o.get("cape").isJsonObject() ? o.getAsJsonObject("cape") : null;
         JsonObject wings = o.has("wings") && o.get("wings").isJsonObject() ? o.getAsJsonObject("wings") : null;
         return new Look(item(o, "ears", 0x3b2a2a), color(ears, "inner", 0xffb3d9),
@@ -154,7 +156,8 @@ public final class Cosmetics {
             item(o, "wings", 0xffffff), wings != null && "demon".equals(str(wings, "style")),
             item(o, "halo", 0xffd34d), item(o, "horns", 0x5a1a1a), item(o, "pet", 0xffb3d9),
             item(o, "cape", 0xff7eb6), color(cape, "trim", 0xffffff), cape == null ? 1 : switch (str(cape, "style")) { case "plain" -> 0; case "heart" -> 2; case "meow" -> 3; case "catmeow" -> 4; default -> 1; },
-            picture(cape), cape == null ? "cycle" : str(cape, "line"));
+            picture(cape), cape == null ? "cycle" : str(cape, "line"),
+            item(o, "trim", 0x7ec8ff), color(trimO, "accent", 0xff7eb6), trimO == null ? 0 : switch (str(trimO, "style")) { case "stars" -> 1; case "hearts" -> 2; case "circuit" -> 3; default -> 0; });
     }
 
     private static CapePicture picture(JsonObject cape) {
