@@ -12,6 +12,8 @@ const { ping } = require('./ping');
 const assets = require('./userAssets');
 const { DiscordPresence, buildActivity } = require('./discord');
 const sharedOptions = require('./sharedOptions');
+const skins = require('./skins');
+const wardrobe = require('./wardrobe');
 const launcher = require('./launch');
 
 let autoUpdater = null;
@@ -33,6 +35,10 @@ let win = null;
 // ---------- Discord Rich Presence ----------
 const presence = new DiscordPresence(config.discordClientId);
 const playing = { inst: null, server: null, startedAt: 0, gameHandlesDiscord: false };
+// How the in-game mod starts this launcher (or pokes the running one) to open the Wardrobe.
+function launcherCommand() {
+  return app.isPackaged ? [process.execPath] : [process.execPath, app.getAppPath()];
+}
 function downloadUrl() {
   const gh = config.github;
   return gh?.owner && gh?.repo ? `https://github.com/${gh.owner}/${gh.repo}/releases/latest` : null;
@@ -209,6 +215,7 @@ function registerIpc() {
     const modActive = await catmod.sync(inst, {
       enabled: s.catgirlMenu, github: config.github, settings: s,
       discord: { enabled: s.discordPresence && presence.configured, clientId: config.discordClientId, showServer: s.discordShowServer, downloadUrl: downloadUrl() },
+      launcherCommand: launcherCommand(),
     }, (line) => send('launch:log', { instId: id, line }));
     await launcher.launch(id, account, s, {
       progress: (p) => send('launch:progress', p),
@@ -231,15 +238,58 @@ function registerIpc() {
     });
   });
   handle('launch:kill', (id) => launcher.kill(id));
+
+  // ---------- wardrobe ----------
+  handle('wardrobe:open', () => openWardrobe({ fromGame: false }));
+  handle('wardrobe:search', (site, q) => wardrobe.search(site, q));
+  handle('wardrobe:nav', (cmd) => wardrobe.nav(cmd));
+  handle('wardrobe:window', (cmd) => wardrobe.windowCmd(cmd));
+  handle('wardrobe:sites', () => Object.fromEntries(Object.entries(wardrobe.SITES).map(([k, v]) => [k, v.name])));
+  handle('skins:history', async () => {
+    let acc = null;
+    try { acc = await auth.getLaunchAccount(); } catch {}
+    return { account: acc ? { uuid: acc.uuid, name: acc.name } : null, items: skins.history(acc?.uuid || '') };
+  });
+  handle('skins:remember', async () => { const acc = await auth.getLaunchAccount(); await skins.rememberCurrent(acc); return true; });
+  handle('skins:wear', async ({ dataUrl, historyId, variant, name, source }) => {
+    const acc = await auth.getLaunchAccount();
+    const buf = historyId ? skins.historyBuffer(historyId) : skins.fromDataUrl(dataUrl);
+    await skins.wear(acc, buf, { variant, name, source });
+    return skins.history(acc.uuid);
+  });
+  handle('skins:remove', async (id) => { let acc = null; try { acc = await auth.getLaunchAccount(); } catch {} skins.removeFromHistory(id, acc?.uuid || ''); return true; });
+  handle('skins:fromUrl', (url) => skins.fromUrl(url));
+  handle('skins:fromPlayer', (name) => skins.fromPlayer(name));
+  handle('skins:pickFile', async () => {
+    const parent = BrowserWindow.getFocusedWindow() || win;
+    const r = await dialog.showOpenDialog(parent, { title: 'Choose a skin file', properties: ['openFile'], filters: [{ name: 'Skin (PNG)', extensions: ['png'] }] });
+    return r.canceled ? null : skins.fromFile(r.filePaths[0]);
+  });
 }
 
+function openWardrobe({ fromGame }) {
+  wardrobe.open({ fromGame });
+}
+
+// Only one launcher at a time. Starting it again (e.g. from the in-game Wardrobe button)
+// just pokes the running one.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) app.quit();
+app.on('second-instance', (_e, argv) => {
+  if (argv.includes('--wardrobe')) { openWardrobe({ fromGame: true }); return; }
+  if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); }
+});
+
 app.whenReady().then(() => {
+  if (!gotLock) return;
   paths.init(app.getPath('appData'));
+  wardrobe.init({ icon: path.join(__dirname, '..', 'renderer', 'assets', 'icon.png'), preload: path.join(__dirname, 'preload.js'), renderer: path.join(__dirname, '..', 'renderer') });
   auth.setClientId(config.msClientId);
   ensureFeatured();
   try { if (settings().shareOptions) sharedOptions.collect(); } catch {}
   registerIpc();
   createWindow();
+  if (process.argv.includes('--wardrobe')) { win.minimize(); openWardrobe({ fromGame: true }); }
   setupUpdates();
   updatePresence();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

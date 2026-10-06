@@ -178,7 +178,7 @@ public class CatgirlClient implements ClientModInitializer {
             new Entry("Screenshots", new ItemStack(Items.PAINTING), "folder:screenshots"),
             new Entry("Mods Folder", new ItemStack(Items.BOOKSHELF), "folder:mods"),
             new Entry("Resource Packs", new ItemStack(Items.PINK_DYE), "folder:resourcepacks"),
-            new Entry("Change Skin", new ItemStack(Items.LEATHER_CHESTPLATE), "url:https://www.minecraft.net/msaprofile/mygames/editskin"),
+            new Entry("Wardrobe", new ItemStack(Items.LEATHER_CHESTPLATE), "wardrobe"),
             new Entry("Settings", new ItemStack(Items.COMPARATOR), "options")
         );
     }
@@ -290,6 +290,8 @@ public class CatgirlClient implements ClientModInitializer {
     private static void run(Minecraft client, Screen screen, File gameDir, String action) {
         if (action.equals("options")) {
             client.setScreen(new OptionsScreen(screen, client.options));
+        } else if (action.equals("wardrobe")) {
+            openWardrobe();
         } else if (action.startsWith("folder:")) {
             File dir = new File(gameDir, action.substring("folder:".length()));
             dir.mkdirs();
@@ -297,6 +299,25 @@ public class CatgirlClient implements ClientModInitializer {
         } else if (action.startsWith("url:")) {
             open(action.substring("url:".length()));
         }
+    }
+
+    /**
+     * Opens the Catgirl Wardrobe window. Starting the launcher again just tells the running
+     * launcher to show the Wardrobe (or starts it if it was closed). Without the launcher,
+     * falls back to Minecraft's own skin page in the browser.
+     */
+    private static void openWardrobe() {
+        if (!config.launcherCommand.isEmpty()) {
+            try {
+                List<String> cmd = new ArrayList<>(config.launcherCommand);
+                cmd.add("--wardrobe");
+                new ProcessBuilder(cmd).start();
+                return;
+            } catch (IOException e) {
+                System.err.println("[Catgirl] Couldn't open the Wardrobe: " + e.getMessage());
+            }
+        }
+        open("https://www.minecraft.net/msaprofile/mygames/editskin");
     }
 
     /** Opens a folder or https link with the operating system. */
@@ -338,6 +359,7 @@ public class CatgirlClient implements ClientModInitializer {
         boolean discordShowServer = true;
         String discordClientId = "";
         String downloadUrl = null;
+        List<String> launcherCommand = new ArrayList<>();
 
         static Config load(File file) {
             Config c = new Config();
@@ -348,6 +370,9 @@ public class CatgirlClient implements ClientModInitializer {
                 if (o.has("iconsOnly")) c.iconsOnly = o.get("iconsOnly").getAsBoolean();
                 if (o.has("windowTitle")) c.windowTitle = o.get("windowTitle").getAsString();
                 if (o.has("splashes")) c.splashes = o.get("splashes").getAsBoolean();
+                if (o.has("launcherCommand") && o.get("launcherCommand").isJsonArray()) {
+                    for (com.google.gson.JsonElement e : o.get("launcherCommand").getAsJsonArray()) c.launcherCommand.add(e.getAsString());
+                }
                 if (o.has("discord") && o.get("discord").isJsonObject()) {
                     JsonObject d = o.get("discord").getAsJsonObject();
                     if (d.has("enabled")) c.discordEnabled = d.get("enabled").getAsBoolean();

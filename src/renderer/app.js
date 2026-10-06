@@ -59,6 +59,8 @@ document.addEventListener('click', (e) => {
   if (play) playOrStop(play.dataset.play);
 });
 
+$('#navWardrobe').addEventListener('click', () => safe(() => window.cat.wardrobe.open()));
+
 /* ---------- data ---------- */
 async function refreshInstances() {
   state.instances = (await safe(() => window.cat.instances.list())) || [];

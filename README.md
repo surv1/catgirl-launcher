@@ -39,7 +39,8 @@ Play any version, add mods in one click, and make the whole launcher your own. N
 - Put the menu on the **left, right, top or bottom**, with or without labels.
 
 **🐱 Inside Minecraft**
-- A **CatGirl title screen** with "CatGirl Launcher" in the corner and a quick menu (screenshots, mods folder, resource packs, change skin, settings).
+- A **CatGirl title screen** with "CatGirl Launcher" in the corner and a quick menu (screenshots, mods folder, resource packs, wardrobe, settings).
+- **Wardrobe:** search skins on The Skindex, NameMC or Planet Minecraft in a little Catgirl window, click Download on one you like and wear it in one click. Every skin you've worn is kept under **Old skins used**, so you can always switch back. You can also paste a skin link, pick a file, or copy a player's skin.
 - **Catgirl fun facts** in the yellow splash text. Over 90 of them!
 - The game window is called **CatGirl Client**.
 - **Discord status:** your friends see *Catgirl Launcher – Playing on (server)*, with a timer and a download button.

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'none'" />
+  <title>Catgirl Wardrobe</title>
+  <link rel="stylesheet" href="../../node_modules/@fontsource/fredoka/400.css" />
+  <link rel="stylesheet" href="../../node_modules/@fontsource/nunito/400.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { overflow: hidden; }
+    .panel { width: 360px; height: 100vh; display: flex; flex-direction: column; background: var(--bg-2); border-right: 1px solid var(--line); }
+    .head { display: flex; align-items: center; gap: 10px; padding: 12px 10px 12px 14px; -webkit-app-region: drag; border-bottom: 1px solid var(--line); }
+    .head img { width: 30px; height: 30px; border-radius: 8px; }
+    .head b { font: 600 17px var(--display); flex: 1; }
+    .head button { -webkit-app-region: no-drag; width: 30px; height: 30px; border-radius: 8px; color: var(--muted); display: grid; place-items: center; }
+    .head button:hover { background: var(--panel); color: var(--text); }
+    .head button.on { color: var(--pink); }
+    .head svg { width: 15px; height: 15px; }
+    .scroll { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 18px; }
+    .block h4 { margin: 0 0 8px; font: 700 13px var(--display); color: var(--pink-2); }
+    .hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+    .search-row { display: flex; gap: 8px; }
+    .search-row input { flex: 1; min-width: 0; }
+    .sites { display: flex; gap: 6px; margin-top: 8px; }
+    .sites button { flex: 1; padding: 6px 4px; border-radius: 9px; font-size: 12px; font-weight: 600; background: var(--panel); border: 1px solid var(--line); color: var(--muted); }
+    .sites button.on { background: var(--pink); color: var(--on-accent); border-color: var(--pink); }
+    .navbar { display: flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+    .navbar button { width: 28px; height: 26px; border-radius: 7px; background: var(--panel); border: 1px solid var(--line); }
+    .navbar button:disabled { opacity: .4; }
+    .navbar span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-left: 4px; }
+
+    .found { display: grid; grid-template-columns: 96px 1fr; gap: 12px; padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--pink) 12%, var(--panel)); border: 1px solid color-mix(in srgb, var(--pink) 45%, transparent); }
+    .found canvas { width: 96px; height: 192px; image-rendering: pixelated; background: color-mix(in srgb, var(--bg) 60%, transparent); border-radius: 10px; }
+    .found .info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .found .info b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .found .info small { color: var(--muted); font-size: 12px; }
+    .found .seg button { padding: 5px; font-size: 12px; }
+    .found .actions { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
+
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .tile { position: relative; aspect-ratio: 1; border-radius: 11px; background: var(--panel); border: 1px solid var(--line); display: grid; place-items: center; cursor: pointer; padding: 0; }
+    .tile canvas { width: 70%; height: 70%; image-rendering: pixelated; }
+    .tile:hover { border-color: var(--pink); }
+    .tile.current { border-color: var(--pink); box-shadow: 0 0 0 2px color-mix(in srgb, var(--pink) 35%, transparent); }
+    .tile .x { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 6px; font-size: 12px; line-height: 18px; color: var(--muted); background: var(--bg-2); opacity: 0; }
+    .tile:hover .x { opacity: 1; }
+    .tile .x:hover { color: var(--danger); }
+    .empty-note { font-size: 12px; color: var(--muted); }
+    .more .row { margin-bottom: 8px; }
+    .more input { flex: 1; min-width: 0; }
+    .status { padding: 10px 14px; font-size: 12.5px; border-top: 1px solid var(--line); min-height: 40px; color: var(--muted); }
+    .status.err { color: var(--danger); }
+    .status.ok { color: var(--ok); }
+  </style>
+</head>
+<body data-theme="sakura">
+  <div class="panel">
+    <div class="head">
+      <img src="assets/logo.png" alt="" />
+      <b>Wardrobe</b>
+      <button id="pin" title="Keep on top of Minecraft"><svg viewBox="0 0 24 24"><path d="M9 4h6l-1 6 4 4H6l4-4zM12 14v7" /></svg></button>
+      <button data-wcmd="minimize" title="Minimise"><svg viewBox="0 0 12 12"><path d="M2 6h8" /></svg></button>
+      <button data-wcmd="close" title="Close"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" /></svg></button>
+    </div>
+
+    <div class="scroll">
+      <div class="block">
+        <h4>Find a skin</h4>
+        <div class="search-row">
+          <input id="q" placeholder="purple, catgirl, hoodie…" />
+          <button class="primary" id="go">Search</button>
+        </div>
+        <div class="sites" id="sites"></div>
+        <div class="navbar">
+          <button id="back" title="Back">‹</button><button id="fwd" title="Forward">›</button><button id="reload" title="Reload">⟳</button>
+          <span id="where">minecraftskins.com</span>
+          <button id="ext" title="Open in my browser">↗</button>
+        </div>
+        <p class="hint">Click <b>Download</b> on any skin and it pops up here. You can also right-click a skin picture → "Use this picture as my skin".</p>
+      </div>
+
+      <div class="block hidden" id="foundBlock">
+        <h4>Found a skin!</h4>
+        <div class="found">
+          <canvas id="foundCanvas" width="16" height="32"></canvas>
+          <div class="info">
+            <b id="foundName">New skin</b>
+            <small id="foundSource"></small>
+            <div class="seg" id="variant"><button data-v="classic">Classic arms</button><button data-v="slim">Slim arms</button></div>
+            <div class="actions"><button class="primary" id="wear">Use this skin</button><button class="ghost small" id="skip">Not this one</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <h4>Old skins used</h4>
+        <div class="grid" id="history"></div>
+        <p class="hint" id="historyHint">Every skin you wear is saved here, including the one you had before. Click one to wear it again.</p>
+      </div>
+
+      <div class="block more">
+        <h4>More ways</h4>
+        <div class="row"><input id="link" placeholder="Paste a skin link (https://…png)" /><button class="ghost" id="useLink">Use</button></div>
+        <div class="row"><input id="player" placeholder="Copy a player's skin (username)" /><button class="ghost" id="usePlayer">Copy</button></div>
+        <div class="row"><button class="ghost" id="useFile" style="width:100%">Choose a skin file from my PC…</button></div>
+      </div>
+    </div>
+    <div class="status" id="status">Skins change on your Minecraft account. Rejoin a server to see a new skin in-game.</div>
+  </div>
+  <script src="wardrobe.js"></script>
+</body>
+</html>

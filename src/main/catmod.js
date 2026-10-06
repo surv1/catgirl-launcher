@@ -29,7 +29,7 @@ function removeMenuJars(dir, keep) {
 // enabled=false removes the mod; otherwise installs/updates it. Never throws: the game
 // should still launch even if GitHub can't be reached.
 // Settings the in-game mod reads from <game>/config/catgirl-client.json
-function writeConfig(inst, settings = {}, discord = {}) {
+function writeConfig(inst, settings = {}, discord = {}, launcherCommand = []) {
   const file = path.join(instances.gameDir(inst.id), 'config', 'catgirl-client.json');
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const accent = /^#[0-9a-f]{6}$/i.test(settings.accentHex || '') ? settings.accentHex : '#ff7eb6';
@@ -38,6 +38,7 @@ function writeConfig(inst, settings = {}, discord = {}) {
     iconsOnly: !!settings.menuIconsOnly,
     accent,
     windowTitle: 'CatGirl Client',
+    launcherCommand: Array.isArray(launcherCommand) ? launcherCommand.map(String) : [],
     splashes: settings.splashes !== false,
     discord: {
       enabled: !!discord.enabled,
@@ -49,10 +50,10 @@ function writeConfig(inst, settings = {}, discord = {}) {
 }
 
 // Returns true when the in-game mod is installed and will run (it then also handles Discord).
-async function sync(inst, { enabled, github, settings, discord }, log) {
+async function sync(inst, { enabled, github, settings, discord, launcherCommand }, log) {
   const dir = path.join(instances.gameDir(inst.id), 'mods');
   if (!enabled || inst.loader !== 'fabric') { removeMenuJars(dir); return false; }
-  try { writeConfig(inst, settings, discord); } catch (e) { log(`[Catgirl] Couldn't write menu settings: ${e.message}`); }
+  try { writeConfig(inst, settings, discord, launcherCommand); } catch (e) { log(`[Catgirl] Couldn't write menu settings: ${e.message}`); }
   const installed = () => fs.existsSync(dir) && fs.readdirSync(dir).some((f) => f.startsWith(PREFIX) && f.endsWith('.jar'));
   if (!github?.owner || !github?.repo) { log('[Catgirl] In-game menu: no GitHub repo set in config.json yet, skipping.'); return installed(); }
   try {
