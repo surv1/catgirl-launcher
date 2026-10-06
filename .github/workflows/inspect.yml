@@ -61,7 +61,7 @@ jobs:
           ls /tmp/out | head -60
       - name: Emit 1
         shell: bash
-        run: for i in $(seq -w 0 9); do f=/tmp/out/part-$i; [ -f $f ] && echo "::notice title=part-$i::$(sed 's/%/%25/g' $f | sed ':a;N;$!ba;s/\n/%0A/g')"; done; true
+        run: for i in 00 01 02 03 04 05 06 07 08 09; do f=/tmp/out/part-$i; [ -f $f ] && echo "::notice title=part-$i::$(sed 's/%/%25/g' $f | sed ':a;N;$!ba;s/\n/%0A/g')"; done; true
       - name: Emit 2
         shell: bash
         run: for i in $(seq 10 19); do f=/tmp/out/part-$i; [ -f $f ] && echo "::notice title=part-$i::$(sed 's/%/%25/g' $f | sed ':a;N;$!ba;s/\n/%0A/g')"; done; true
