@@ -17,11 +17,13 @@ const cosmetics = require('../src/main/cosmetics');
   assert.deepStrictEqual(n, {
     ears: { on: true, color: '#abcdef', inner: '#ffb3d9' }, tail: { on: true, color: '#3b2a2a' }, bow: { on: false, color: '#ff7eb6' },
     wings: { on: false, color: '#ffffff', style: 'angel' }, halo: { on: false, color: '#ffd34d' }, horns: { on: false, color: '#5a1a1a' }, pet: { on: false, color: '#ffb3d9' },
-    cape: { on: false, color: '#ff7eb6', trim: '#ffffff', style: 'paw' },
+    cape: { on: false, color: '#ff7eb6', trim: '#ffffff', style: 'paw', line: 'cycle' },
   });
   assert.strictEqual(worker.clean({ cape: { on: true, style: 'meow' } }).cape.style, 'meow');
   assert.strictEqual(cosmetics.normalize({ cape: { style: 'catmeow' } }).cape.style, 'catmeow');
-  assert.deepStrictEqual(worker.clean({ cape: { on: true, style: 'skull', trim: '#FFD34D' } }), { cape: { on: true, color: '#ff7eb6', trim: '#ffd34d', style: 'paw' } });
+  assert.strictEqual(cosmetics.normalize({ cape: { line: 'nya~' } }).cape.line, 'nya~');
+  assert.strictEqual(worker.clean({ cape: { on: true, line: 'something rude' } }).cape.line, 'cycle', 'only preset lines');
+  assert.deepStrictEqual(worker.clean({ cape: { on: true, style: 'skull', trim: '#FFD34D' } }), { cape: { on: true, color: '#ff7eb6', trim: '#ffd34d', style: 'paw', line: 'cycle' } });
   assert.strictEqual(cosmetics.normalize({ wings: { on: true, style: 'demon', color: '#8B1A1A' } }).wings.style, 'demon');
   assert.strictEqual(cosmetics.normalize({ wings: { on: true, style: 'dragon' } }).wings.style, 'angel');
   assert.deepStrictEqual(worker.clean({ wings: { on: true, style: 'demon' }, pet: { on: true } }), { wings: { on: true, color: '#ffffff', style: 'demon' }, pet: { on: true, color: '#ffb3d9' } });

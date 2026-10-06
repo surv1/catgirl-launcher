@@ -19,7 +19,7 @@ const COS_DEFAULTS = {
   halo: { on: false, color: '#ffd34d' },
   horns: { on: false, color: '#5a1a1a' },
   pet: { on: false, color: '#ffb3d9' },
-  cape: { on: false, color: '#ff7eb6', trim: '#ffffff', style: 'paw' },
+  cape: { on: false, color: '#ff7eb6', trim: '#ffffff', style: 'paw', line: 'cycle' },
 };
 const WING_DEFAULT = { angel: '#ffffff', demon: '#8b1a1a' };
 const FUR_PRESETS = ['#3b2a2a', '#1b1b1f', '#f5f0e6', '#c98a4b', '#f2c879', '#9a9aa3', '#ff7eb6', '#b48cff'];
@@ -194,7 +194,7 @@ const rz = (a) => [[Math.cos(a), -Math.sin(a), 0], [Math.sin(a), Math.cos(a), 0]
 // Collects coloured faces in model space.
 class Faces {
   constructor() { this.list = []; this.p = new Pose(); this.bend = null; }
-  face(color, pts, glow = false) { this.list.push({ color, pts: pts.map((q) => this.p.apply(this.bend ? this.bend(q) : q)), glow }); }
+  face(color, pts, glow = false) { this.list.push({ color, layer: this.layer || 0, pts: pts.map((q) => this.p.apply(this.bend ? this.bend(q) : q)), glow }); }
   boxY(color, x0, y0, z0, x1, y1, z1, n) { for (let i = 0; i < n; i++) this.box(color, x0, y0 + ((y1 - y0) * i) / n, z0, x1, y0 + ((y1 - y0) * (i + 1)) / n, z1); }
   box(color, x0, y0, z0, x1, y1, z1, glow) {
     const c = (x, y, z) => [x, y, z];
@@ -325,22 +325,26 @@ function capeFaces(F, it, t) {
   const saved = F.p.copy();
   F.p.translate(0, 0, 2.1).rotate(rx(capeSwing(t)));
   F.bend = makeBend(0.25, t);
-  F.boxY(it.color, -5, 0, 0, 5, 16, 1, CAPE_SLICES);
+  const meow = !(it.custom && cos.capeSheet) && it.style === 'catmeow';
+  F.boxY(meow ? MEOW_EDGE : it.color, -5, 0, 0, 5, 16, 1, CAPE_SLICES);
   const sheet = it.custom && cos.capeSheet ? { img: cos.capeSheet, fw: CAPE_W, fh: CAPE_H, frames: it.custom.frames, delay: it.custom.delay }
     : it.style === 'catmeow' && MEOW_SHEET.img ? MEOW_SHEET : null;
   if (sheet) {
     for (let i = 0; i < CAPE_SLICES; i++) {
       const ya = (16 * i) / CAPE_SLICES, yb = (16 * (i + 1)) / CAPE_SLICES;
-      F.list.push({ pic: true, sheet, v0: i / CAPE_SLICES, v1: (i + 1) / CAPE_SLICES, color: it.color, pts: [[5, ya, 1.02], [-5, ya, 1.02], [-5, yb, 1.02], [5, yb, 1.02]].map((q) => F.p.apply(F.bend(q))) });
+      F.list.push({ pic: true, layer: 1, sheet, v0: i / CAPE_SLICES, v1: (i + 1) / CAPE_SLICES, color: it.color, pts: [[5, ya, 1.02], [-5, ya, 1.02], [-5, yb, 1.02], [5, yb, 1.02]].map((q) => F.p.apply(F.bend(q))) });
     }
+    if (meow) { const line = capeLine(it.line); F.layer = 2; if (line) capeTextFaces(F, line, t); F.layer = 0; }
     F.bend = null;
     F.p = saved;
     return;
   }
+  F.layer = 2;
   F.boxY(it.trim, -5, 0, 1, -4.2, 16, 1.1, CAPE_SLICES);
   F.boxY(it.trim, 4.2, 0, 1, 5, 16, 1.1, CAPE_SLICES);
   F.box(it.trim, -5, 15.2, 1, 5, 16, 1.1);
   if (EMBLEMS[it.style]) emblemBoxes(F, it.trim, EMBLEMS[it.style], Math.min(0.75, 7.6 / EMBLEMS[it.style][0].length), 4.5, 1);
+  F.layer = 0;
   F.bend = null;
   F.p = saved;
 }
@@ -360,7 +364,7 @@ function drawFaces(ctx, faces, view, behind) {
   const depth = (f) => f.pts.reduce((a, p) => a + (view === 'side' ? p[0] : view === 'back' ? -p[2] : p[2]), 0) / f.pts.length; // bigger = further away
   // Sort by each face's farthest corner so small details (trim, emblems) land on top of the big face they sit on.
   const far = (f) => Math.max(...f.pts.map((p) => (view === 'side' ? p[0] : view === 'back' ? -p[2] : p[2])));
-  const list = faces.filter((f) => (depth(f) > (view === 'side' ? 0.5 : 1.5)) === behind).sort((a, b) => far(b) - far(a));
+  const list = faces.filter((f) => (depth(f) > (view === 'side' ? 0.5 : 1.5)) === behind).sort((a, b) => (far(b) - (b.layer || 0) * 4) - (far(a) - (a.layer || 0) * 4)); // things stuck on the cape go on top
   for (const f of list) {
     if (f.pic) { drawCapePicture(ctx, view, f); continue; }
     const [a, b, c] = f.pts;
@@ -372,6 +376,24 @@ function drawFaces(ctx, faces, view, behind) {
 }
 
 // Your cape picture, stretched onto the back of the cape (only visible from behind).
+const CAPE_LINES = ["meow!", "nya~", "nyaa~!", "mrrp?", "purr~", "mew!", ":3", "uwu"];
+
+const MEOW_EDGE = '#5b6fd6'; // the art's blue, so the whole cape matches
+function capeLine(chosen) {
+  if (chosen === 'none') return '';
+  return CAPE_LINES.includes(chosen) ? chosen : CAPE_LINES[Math.floor(Date.now() / 2500) % CAPE_LINES.length];
+}
+// The catgirl's line near the bottom of the cape (from cape-lines.png), bouncing and wiggling. Same as the mod.
+const LINES_SHEET = { img: null, fw: 256, fh: 80 * 8, frames: 1, delay: 1000 };
+(() => { const i = new Image(); i.onload = () => { LINES_SHEET.img = i; }; i.src = 'assets/cape-lines.png'; })();
+function capeTextFaces(F, line, t) {
+  const row = Math.max(0, CAPE_LINES.indexOf(line));
+  const w = 9.4, h = (w * 80) / 256, cy = 13.6 - Math.abs(Math.sin(t * 0.35)) * 0.5;
+  const a = Math.sin(t * 0.18) * 0.12, c = Math.cos(a), sn = Math.sin(a);
+  const pts = [[w / 2, -h / 2], [-w / 2, -h / 2], [-w / 2, h / 2], [w / 2, h / 2]].map(([x, y]) => [x * c - y * sn, cy + x * sn + y * c, 1.12]);
+  F.list.push({ pic: true, layer: 2, sheet: LINES_SHEET, v0: row / 8, v1: (row + 1) / 8, pts: pts.map((q) => F.p.apply(F.bend ? F.bend(q) : q)) });
+}
+
 // The built-in animated "Catgirl meow" cape (same picture the game uses).
 const MEOW_SHEET = { img: null, fw: 120, fh: 192, frames: 16, delay: 90 };
 (() => { const i = new Image(); i.onload = () => { MEOW_SHEET.img = i; }; i.src = 'assets/cape-meow.png'; })();
@@ -385,7 +407,7 @@ function drawCapePicture(ctx, view, f) {
   ctx.save();
   ctx.setTransform((p1[0] - p0[0]) / sh0.fw, (p1[1] - p0[1]) / sh0.fw, (p3[0] - p0[0]) / sh, (p3[1] - p0[1]) / sh, p0[0], p0[1]);
   ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(sh0.img, 0, sy, sh0.fw, sh, 0, 0, sh0.fw, sh + 0.35); // a hair of overlap hides seams
+  ctx.drawImage(sh0.img, 0, sy, sh0.fw, sh, 0, 0, sh0.fw, sh + 1); // a little overlap hides seams
   ctx.restore();
 }
 
@@ -511,6 +533,7 @@ function renderCosItems() {
           <div class="presets-dots">${presetsFor(d.id, key).map((c) => `<button style="background:${c}" data-preset="${d.id}.${key}" data-c="${c}" title="${c}"></button>`).join('')}</div></div>`).join('')}
 
       </div>
+        ${d.id === 'cape' && v.style === 'catmeow' && !v.custom ? `<div class="cos-lines"><span>Catgirl says</span><div class="seg wrap">${[['cycle', 'All of them'], ...CAPE_LINES.map((l) => [l, l]), ['none', 'Nothing']].map(([k, l]) => `<button data-line="${esc(k)}" class="${(v.line || 'cycle') === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div></div>` : ''}
         ${d.id === 'cape' ? `<div class="cos-pic">
           <button class="ghost small" data-act="cape-pick">🖼️ ${v.custom ? 'Change picture' : 'Use my own picture or GIF…'}</button>
           ${v.custom ? `<button class="ghost small" data-act="cape-clear">Remove picture</button>` : ''}
@@ -535,6 +558,8 @@ $('#cosItems').addEventListener('click', (e) => {
   const act = e.target.closest('[data-act]');
   if (act?.dataset.act === 'cape-pick') pickCapePicture();
   if (act?.dataset.act === 'cape-clear') { delete cos.items.cape.custom; cos.capeSheet = null; setCos('cape', 'on', cos.items.cape.on); renderCosItems(); }
+  const ln = e.target.closest('[data-line]');
+  if (ln) { setCos('cape', 'line', ln.dataset.line); $$('[data-line]').forEach((b) => b.classList.toggle('on', b === ln)); }
   const st = e.target.closest('[data-style]');
   if (st) {
     const item = st.dataset.style, old = cos.items[item].style;
@@ -542,6 +567,7 @@ $('#cosItems').addEventListener('click', (e) => {
     // Swap to the new style's usual colour if you hadn't picked your own.
     if (item === 'wings' && cos.items.wings.color === WING_DEFAULT[old]) setCos('wings', 'color', WING_DEFAULT[st.dataset.v]);
     $$(`[data-style="${item}"]`).forEach((b) => b.classList.toggle('on', b === st));
+    if (item === 'cape') renderCosItems(); // show or hide the catgirl's lines
   }
 });
 

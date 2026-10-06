@@ -29,6 +29,10 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
     private static final int FULL_BRIGHT = 0xF000F0;
     private static final Identifier MEOW_CAPE = Identifier.fromNamespaceAndPath("catgirl", "textures/cape/meow.png");
     private static final int MEOW_FRAMES = 16, MEOW_DELAY = 90;
+    private static final int MEOW_EDGE = 0xFF5B6FD6; // the art's blue, so the whole cape matches
+    private static final Identifier LINES_TEX = Identifier.fromNamespaceAndPath("catgirl", "textures/cape/lines.png"); // one row per line
+    static final String[] CAPE_LINES = {"meow!", "nya~", "nyaa~!", "mrrp?", "purr~", "mew!", ":3", "uwu"};
+
 
     public CosmeticsLayer(RenderLayerParent<AvatarRenderState, PlayerModel> parent) {
         super(parent);
@@ -63,16 +67,20 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             model.body.translateAndRotate(poses);
             Cosmetics.CapePicture pic = look.capePicture();
             Identifier tex = pic == null ? null : CapeTextures.get(pic.sha(), pic.file(), Cosmetics.api());
-            if (tex == null && look.capeStyle() == 4) { // the built-in animated "Catgirl meow" cape
+            boolean meow = tex == null && look.capeStyle() == 4;
+            if (meow) { // the built-in animated "Catgirl meow" cape
                 tex = MEOW_CAPE;
                 pic = new Cosmetics.CapePicture("", MEOW_FRAMES, MEOW_DELAY, "");
             }
             boolean picture = tex != null;
-            out.submitCustomGeometry(poses, TYPE, (pose, vc) -> cape(new Mesh(pose, vc, light, overlay), look.cape().color(), look.capeTrim(), look.capeStyle(), swingDeg, sideDeg, picture, bend, ct));
+            int edge = meow ? MEOW_EDGE : look.cape().color();
+            String line = meow ? capeLine(look.capeLine(), seed) : null;
+            out.submitCustomGeometry(poses, TYPE, (pose, vc) -> cape(new Mesh(pose, vc, light, overlay), edge, look.capeTrim(), look.capeStyle(), swingDeg, sideDeg, picture, bend, ct));
             if (picture) {
                 int frames = pic.frames();
                 int frame = (int) ((System.currentTimeMillis() / pic.delay()) % frames);
-                out.submitCustomGeometry(poses, RenderTypes.entityCutoutNoCull(tex), (pose, vc) -> capePicture(new Mesh(pose, vc, light, overlay), swingDeg, sideDeg, frame, frames, bend, ct));
+                out.submitCustomGeometry(poses, RenderTypes.entityCutoutNoCull(tex), (pose, vc) -> capePicture(new Mesh(pose, vc, light, overlay), swingDeg, sideDeg, frame, frames, bend, ct, meow ? 0xFFFFFFFF : 0xFFE0E0E0));
+                if (line != null && !line.isEmpty()) out.submitCustomGeometry(poses, RenderTypes.entityCutoutNoCull(LINES_TEX), (pose, vc) -> capeText(new Mesh(pose, vc, light, overlay), line, swingDeg, sideDeg, bend, ct));
             }
             poses.popPose();
         }
@@ -283,7 +291,7 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
     }
 
     /** Your own picture or GIF on the back of the cape (and, a little darker, on the inside). */
-    private static void capePicture(Mesh m, float swingDeg, float sideDeg, int frame, int frames, float bend, float t) {
+    private static void capePicture(Mesh m, float swingDeg, float sideDeg, int frame, int frames, float bend, float t, int inside) {
         capePose(m, swingDeg, sideDeg, bend, t);
         float v0 = frame / (float) frames, v1 = (frame + 1) / (float) frames;
         // Cut into slices so the picture bends with the cloth. Seen from behind, the picture's
@@ -292,7 +300,7 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             float ya = 16F * i / CAPE_SLICES, yb = 16F * (i + 1) / CAPE_SLICES;
             float va = v0 + (v1 - v0) * i / CAPE_SLICES, vb = v0 + (v1 - v0) * (i + 1) / CAPE_SLICES;
             m.texQuad(0xFFFFFFFF, new float[]{5F, ya, 1.02F}, new float[]{-5F, ya, 1.02F}, new float[]{-5F, yb, 1.02F}, new float[]{5F, yb, 1.02F}, 0F, va, 1F, vb, 0F, ya, 0F);
-            m.texQuad(0xFFB8B8B8, new float[]{-4.8F, ya, -0.1F}, new float[]{4.8F, ya, -0.1F}, new float[]{4.8F, yb, -0.1F}, new float[]{-4.8F, yb, -0.1F}, 0F, va, 1F, vb, 0F, ya, 1F);
+            m.texQuad(inside, new float[]{-4.8F, ya, -0.1F}, new float[]{4.8F, ya, -0.1F}, new float[]{4.8F, yb, -0.1F}, new float[]{-4.8F, yb, -0.1F}, 0F, va, 1F, vb, 0F, ya, 1F);
         }
     }
 
@@ -316,6 +324,32 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
                 i = j;
             }
         }
+    }
+
+    /** Which line the catgirl says right now ("cycle" changes every 2.5 seconds). */
+    static String capeLine(String chosen, int seed) {
+        if ("none".equals(chosen)) return "";
+        for (String l : CAPE_LINES) if (l.equals(chosen)) return l;
+        return CAPE_LINES[(int) (((System.currentTimeMillis() / 2500) + seed) % CAPE_LINES.length)];
+    }
+
+    /** The catgirl's line near the bottom of the cape (from lines.png), bouncing and wiggling. */
+    private static void capeText(Mesh m, String line, float swingDeg, float sideDeg, float bend, float t) {
+        int row = 0;
+        for (int i = 0; i < CAPE_LINES.length; i++) if (CAPE_LINES[i].equals(line)) row = i;
+        capePose(m, swingDeg, sideDeg, bend, t);
+        float w = 9.4F, h = w * 80F / 256F;
+        float cx = 0F, cy = 13.6F - Math.abs((float) Math.sin(t * 0.35F)) * 0.5F;
+        float a = (float) Math.sin(t * 0.18F) * 0.12F, c = (float) Math.cos(a), sn = (float) Math.sin(a);
+        // Seen from behind, the left of the text is on the player's left (+x).
+        float[][] corners = {{w / 2, -h / 2}, {-w / 2, -h / 2}, {-w / 2, h / 2}, {w / 2, h / 2}};
+        float[][] v = new float[4][];
+        for (int i = 0; i < 4; i++) {
+            float x = corners[i][0], y = corners[i][1];
+            v[i] = new float[]{cx + x * c - y * sn, cy + x * sn + y * c, 1.12F};
+        }
+        float v0 = row / (float) CAPE_LINES.length, v1 = (row + 1) / (float) CAPE_LINES.length;
+        m.texQuad(0xFFFFFFFF, v[0], v[1], v[2], v[3], 0F, v0, 1F, v1, 0F, cy, 0F);
     }
 
     /** f < 1 darkens, f > 1 mixes towards white. */

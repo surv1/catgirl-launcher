@@ -13,7 +13,7 @@ const DEFAULTS = {
   halo: { on: false, color: '#ffd34d' },
   horns: { on: false, color: '#5a1a1a' },
   pet: { on: false, color: '#ffb3d9' },
-  cape: { on: false, color: '#ff7eb6', trim: '#ffffff', style: 'paw' },
+  cape: { on: false, color: '#ff7eb6', trim: '#ffffff', style: 'paw', line: 'cycle' },
 };
 const ITEMS = Object.keys(DEFAULTS);
 const UA = 'CatgirlLauncher (+https://catgirlclient.lol)';
@@ -30,6 +30,7 @@ function normalize(input) {
     if (k === 'cape') {
       out[k].trim = hexColor(v.trim, '#ffffff');
       out[k].style = ['plain', 'paw', 'heart', 'meow', 'catmeow'].includes(v.style) ? v.style : 'paw';
+      out[k].line = [...["meow!", "nya~", "nyaa~!", "mrrp?", "purr~", "mew!", ":3", "uwu"], 'cycle', 'none'].includes(v.line) ? v.line : 'cycle';
       const c = v.custom;
       if (c && /^[0-9a-f]{64}$/.test(c.sha || '')) out[k].custom = { sha: c.sha, frames: clampInt(c.frames, 1, MAX_FRAMES, 1), delay: clampInt(c.delay, 20, 2000, 100) };
     }

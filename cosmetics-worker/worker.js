@@ -18,6 +18,7 @@ const DEFAULT_COLOR = { ears: '#3b2a2a', tail: '#3b2a2a', bow: '#ff7eb6', wings:
 const ITEMS = Object.keys(DEFAULT_COLOR);
 const WING_STYLES = ['angel', 'demon'];
 const CAPE_STYLES = ['plain', 'paw', 'heart', 'meow', 'catmeow'];
+const CAPE_LINES = [...["meow!", "nya~", "nyaa~!", "mrrp?", "purr~", "mew!", ":3", "uwu"], 'cycle', 'none'];
 const MAX_UUIDS = 60;
 const NONCE_TTL_MS = 2 * 60 * 1000;
 // Custom cape pictures: a PNG "film strip" of frames stacked top to bottom, each 60×96 (cape shape).
@@ -57,7 +58,7 @@ export function clean(input) {
     out[k] = { on: !!v.on, color: color(v.color, DEFAULT_COLOR[k]) };
     if (k === 'ears') out[k].inner = color(v.inner, '#ffb3d9');
     if (k === 'wings') out[k].style = WING_STYLES.includes(v.style) ? v.style : 'angel';
-    if (k === 'cape') { out[k].trim = color(v.trim, '#ffffff'); out[k].style = CAPE_STYLES.includes(v.style) ? v.style : 'paw'; }
+    if (k === 'cape') { out[k].trim = color(v.trim, '#ffffff'); out[k].style = CAPE_STYLES.includes(v.style) ? v.style : 'paw'; out[k].line = CAPE_LINES.includes(v.line) ? v.line : 'cycle'; }
   }
   return out;
 }

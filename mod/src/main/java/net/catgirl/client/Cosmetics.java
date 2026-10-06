@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class Cosmetics {
     public record Item(boolean on, int color) {}
     public record Look(Item ears, int earsInner, Item tail, Item bow, Item wings, boolean demonWings, Item halo, Item horns, Item pet,
-                       Item cape, int capeTrim, int capeStyle, CapePicture capePicture) {
+                       Item cape, int capeTrim, int capeStyle, CapePicture capePicture, String capeLine) {
         boolean any() { return ears.on || tail.on || bow.on || wings.on || halo.on || horns.on || pet.on || cape.on; }
     }
     /** A custom cape picture: sha256 of the PNG, how many frames, ms per frame, and (for you) the local file. */
@@ -83,7 +83,7 @@ public final class Cosmetics {
         if (c == null || c.look == null) return null;
         if (!showOthersPictures && c.look.capePicture() != null) {
             Look l = c.look;
-            return new Look(l.ears(), l.earsInner(), l.tail(), l.bow(), l.wings(), l.demonWings(), l.halo(), l.horns(), l.pet(), l.cape(), l.capeTrim(), l.capeStyle(), null);
+            return new Look(l.ears(), l.earsInner(), l.tail(), l.bow(), l.wings(), l.demonWings(), l.halo(), l.horns(), l.pet(), l.cape(), l.capeTrim(), l.capeStyle(), null, l.capeLine());
         }
         return c.look;
     }
@@ -154,7 +154,7 @@ public final class Cosmetics {
             item(o, "wings", 0xffffff), wings != null && "demon".equals(str(wings, "style")),
             item(o, "halo", 0xffd34d), item(o, "horns", 0x5a1a1a), item(o, "pet", 0xffb3d9),
             item(o, "cape", 0xff7eb6), color(cape, "trim", 0xffffff), cape == null ? 1 : switch (str(cape, "style")) { case "plain" -> 0; case "heart" -> 2; case "meow" -> 3; case "catmeow" -> 4; default -> 1; },
-            picture(cape));
+            picture(cape), cape == null ? "cycle" : str(cape, "line"));
     }
 
     private static CapePicture picture(JsonObject cape) {
