@@ -45,11 +45,13 @@ jobs:
         run: gradle compileJava --no-daemon -q || true
       - name: Collect signatures
         shell: bash
+        env:
+          CLASSES: ${{ inputs.classes }}
         run: |
           set +e
           JARS=$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*loom*' -o -path '*minecraftMaven*' \) 2>/dev/null | grep -Ei 'minecraft-(merged|client|common)|fabric-(rendering|api-base|lifecycle|entity|renderer)' | tr '\n' ':')
           mkdir -p /tmp/out
-          for C in ${{ inputs.classes }}; do
+          for C in $CLASSES; do
             F=/tmp/out/all.txt
             echo "##### $C" >> $F
             case "$C" in
