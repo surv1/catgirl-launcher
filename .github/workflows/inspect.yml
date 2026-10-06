@@ -1,0 +1,57 @@
+# Developer tool: prints the method signatures of Minecraft/Fabric classes we build on,
+# as build annotations, so the mod can be written against the exact current API.
+# It doesn't build or publish anything.
+name: Inspect API
+
+on:
+  workflow_dispatch:
+    inputs:
+      mc:
+        description: "Minecraft version"
+        default: "1.21.11"
+      classes:
+        description: "Space-separated class names to inspect"
+        required: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+      - name: Pick Fabric versions
+        working-directory: mod
+        run: |
+          set -euo pipefail
+          MC='${{ inputs.mc }}'
+          LOADER=$(curl -fsSL "https://meta.fabricmc.net/v2/versions/loader/$MC" | jq -r '([.[] | select(.loader.stable)][0] // .[0]).loader.version')
+          FAPI=$(curl -fsSL -A 'catgirl-launcher-ci' "https://api.modrinth.com/v2/project/fabric-api/version?game_versions=%5B%22$MC%22%5D&loaders=%5B%22fabric%22%5D" | jq -r '.[0].version_number')
+          LOOM=$(curl -fsSL https://maven.fabricmc.net/fabric-loom/fabric-loom.gradle.plugin/maven-metadata.xml | sed -n 's:.*<release>\(.*\)</release>.*:\1:p')
+          sed -i "s/^minecraft_version=.*/minecraft_version=$MC/; s/^loader_version=.*/loader_version=$LOADER/; s/^fabric_version=.*/fabric_version=$FAPI/; s/^loom_version=.*/loom_version=$LOOM/" gradle.properties
+      - name: Prepare Minecraft
+        working-directory: mod
+        run: gradle compileJava --no-daemon -q || true
+      - name: Print signatures
+        shell: bash
+        run: |
+          set -uo pipefail
+          # every remapped jar loom produced (Minecraft + Fabric API modules)
+          JARS=$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*loom*' -o -path '*minecraftMaven*' \) 2>/dev/null | grep -Ei 'minecraft-(merged|client|common)|fabric-(rendering|api-base|lifecycle|entity)' | tr '\n' ':')
+          for C in ${{ inputs.classes }}; do
+            OUT=$(javap -p -cp "$JARS" "$C" 2>&1 | head -c 60000)
+            [ "${C##*.}" = "Deadmau5EarsLayer" -o "${C##*.}" = "CapeLayer" -o "${C##*.}" = "WingsLayer" ] && OUT=$(javap -p -c -cp "$JARS" "$C" 2>&1 | grep -E 'invoke|getfield|class |public|protected|private' | head -c 60000)
+            ESC=$(printf '%s' "$OUT" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::notice title=$C::$ESC"
+          done
