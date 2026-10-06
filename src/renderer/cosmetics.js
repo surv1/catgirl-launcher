@@ -9,6 +9,7 @@ const COS_ITEMS = [
   { id: 'halo', name: 'Halo', emoji: '😇', colors: [['color', 'Colour']] },
   { id: 'horns', name: 'Devil horns', emoji: '😈', colors: [['color', 'Colour']] },
   { id: 'pet', name: 'Angel buddy', emoji: '👼', colors: [['color', 'Colour']] },
+  { id: 'cape', name: 'Cape', emoji: '🧣', colors: [['color', 'Cape'], ['trim', 'Trim']], styles: [['plain', 'Plain'], ['paw', 'Paw'], ['heart', 'Heart']] },
 ];
 const COS_DEFAULTS = {
   ears: { on: false, color: '#3b2a2a', inner: '#ffb3d9' },
@@ -18,6 +19,7 @@ const COS_DEFAULTS = {
   halo: { on: false, color: '#ffd34d' },
   horns: { on: false, color: '#5a1a1a' },
   pet: { on: false, color: '#ffb3d9' },
+  cape: { on: false, color: '#ff7eb6', trim: '#ffffff', style: 'paw' },
 };
 const WING_DEFAULT = { angel: '#ffffff', demon: '#8b1a1a' };
 const FUR_PRESETS = ['#3b2a2a', '#1b1b1f', '#f5f0e6', '#c98a4b', '#f2c879', '#9a9aa3', '#ff7eb6', '#b48cff'];
@@ -28,9 +30,11 @@ const PRESETS = {
   halo: ['#ffd34d', '#ffffff', '#ff7eb6', '#7ec8ff', '#b48cff', '#e5383b'],
   horns: ['#5a1a1a', '#e5383b', '#1b1b1f', '#3a1f5c', '#f5f0e6', '#ff7eb6'],
   pet: ['#ffb3d9', '#ffffff', '#ffd34d', '#7ec8ff', '#b48cff', '#6fe3b5'],
+  cape: ['#ff7eb6', '#b48cff', '#1b1b1f', '#ffffff', '#8b1a1a', '#3a1f5c', '#7ec8ff', '#6fe3b5'],
+  'cape.trim': ['#ffffff', '#ffd34d', '#1b1b1f', '#ff7eb6', '#b48cff', '#e5383b'],
 };
 
-const cos = { items: structuredClone(COS_DEFAULTS), skin: null, variant: 'classic', loaded: false, dirty: false, anim: 0, saving: false };
+const cos = { view2: 'back', items: structuredClone(COS_DEFAULTS), skin: null, variant: 'classic', loaded: false, dirty: false, anim: 0, saving: false };
 
 /* ---------- shared shape maths (model pixels, y points down, -x is the player's right, -z the front) ---------- */
 const TAIL = { N: 9, LEN: 1.35, A0: -0.7, CURL: 0.2, BASE: [0, 10.5, 2] };
@@ -73,6 +77,7 @@ const NECK = 15;                   // y of the neck on the grid
 const VIEW = {
   front: { cx: 15, at: ([x, y]) => [15 + x, NECK + y] },
   side: { cx: 19, at: ([, y, z]) => [19 - z, NECK + y] },
+  back: { cx: 15, at: ([x, y]) => [15 - x, NECK + y] },
 };
 
 // [sx, sy, w, h, dx, dy, mirror] with dx/dy in grid pixels from the view's centre line / the neck
@@ -85,6 +90,17 @@ function skinParts(img, variant, view) {
       ...(modern ? [[0, 36, 4, 12, -2, 12], [16, 36, 4, 12, -2, 0]] : []),
       [40, 20, 4, 12, -2, 0], ...(modern ? [[40, 36, 4, 12, -2, 0]] : []),
       [0, 8, 8, 8, -4, -8], [32, 8, 8, 8, -4, -8],
+    ];
+  }
+  if (view === 'back') {
+    const rBack = 48 + aw, lBack = 40 + aw; // x of the back of each arm on the skin (rows 20 and 52)
+    return [
+      [12, 20, 4, 12, 0, 12], modern ? [28, 52, 4, 12, -4, 12] : [12, 20, 4, 12, -4, 12, 1],
+      [32, 20, 8, 12, -4, 0],
+      [rBack, 20, aw, 12, 4, 0], modern ? [lBack, 52, aw, 12, -4 - aw, 0] : [rBack, 20, aw, 12, -4 - aw, 0, 1],
+      [24, 8, 8, 8, -4, -8],
+      ...(modern ? [[12, 36, 4, 12, 0, 12], [12, 52, 4, 12, -4, 12], [32, 36, 8, 12, -4, 0], [rBack, 36, aw, 12, 4, 0], [lBack + 16, 52, aw, 12, -4 - aw, 0]] : []),
+      [56, 8, 8, 8, -4, -8],
     ];
   }
   return [
@@ -134,7 +150,7 @@ function drawEars(ctx, it, view, t) {
     const pivot = [s * 2.75, -8];
     const a = s * earFlick(t + (s > 0 ? 0 : 40));
     poly(ctx, view, at3(rot2([e.base[0], e.tip, e.base[1]], pivot, a), 0), it.color);
-    poly(ctx, view, at3(rot2(e.inner, pivot, a), 0), it.inner);
+    if (view === 'front') poly(ctx, view, at3(rot2(e.inner, pivot, a), 0), it.inner);
   }
 }
 
@@ -268,8 +284,37 @@ function petFaces(F, it, t) {
   F.p = saved;
 }
 
+// Pixel-art emblems for the back of the cape (X = filled), shared with the mod.
+const EMBLEMS = {
+  paw: ['..XX.XX..', '..XX.XX..', 'XX.....XX', 'XX.XXX.XX', '..XXXXX..', '.XXXXXXX.', '.XXXXXXX.', '..XX.XX..'],
+  heart: ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'],
+};
+function emblemBoxes(F, color, rows, cell, top, z) {
+  rows.forEach((row, r) => {
+    for (let i = 0; i < row.length;) {
+      if (row[i] !== 'X') { i++; continue; }
+      let j = i; while (j < row.length && row[j] === 'X') j++;
+      const x0 = (i - row.length / 2) * cell, x1 = (j - row.length / 2) * cell;
+      F.box(color, x0, top + r * cell, z, x1, top + (r + 1) * cell, z + 0.12);
+      i = j;
+    }
+  });
+}
+const capeSwing = (t) => (6 + Math.sin(t * 0.05) * 3) * Math.PI / 180;
+function capeFaces(F, it, t) {
+  const saved = F.p.copy();
+  F.p.translate(0, 0, 2.1).rotate(rx(capeSwing(t)));
+  F.box(it.color, -5, 0, 0, 5, 16, 1);
+  F.box(it.trim, -5, 0, 1, -4.2, 16, 1.1);
+  F.box(it.trim, 4.2, 0, 1, 5, 16, 1.1);
+  F.box(it.trim, -5, 15.2, 1, 5, 16, 1.1);
+  if (EMBLEMS[it.style]) emblemBoxes(F, it.trim, EMBLEMS[it.style], 0.75, 4.5, 1);
+  F.p = saved;
+}
+
 function cosmeticFaces(t) {
   const F = new Faces(), it = cos.items;
+  if (it.cape.on) capeFaces(F, it.cape, t);
   if (it.wings.on) wingFaces(F, it.wings, t);
   if (it.halo.on) haloFaces(F, it.halo, t);
   if (it.horns.on) hornFaces(F, it.horns, t);
@@ -279,8 +324,10 @@ function cosmeticFaces(t) {
 
 // Paint faces back to front. "behind" picks the ones hidden behind the player's body.
 function drawFaces(ctx, faces, view, behind) {
-  const depth = (f) => f.pts.reduce((a, p) => a + (view === 'side' ? p[0] : p[2]), 0) / f.pts.length; // bigger = further away
-  const list = faces.filter((f) => (depth(f) > (view === 'side' ? 0.5 : 1.5)) === behind).sort((a, b) => depth(b) - depth(a));
+  const depth = (f) => f.pts.reduce((a, p) => a + (view === 'side' ? p[0] : view === 'back' ? -p[2] : p[2]), 0) / f.pts.length; // bigger = further away
+  // Sort by each face's farthest corner so small details (trim, emblems) land on top of the big face they sit on.
+  const far = (f) => Math.max(...f.pts.map((p) => (view === 'side' ? p[0] : view === 'back' ? -p[2] : p[2])));
+  const list = faces.filter((f) => (depth(f) > (view === 'side' ? 0.5 : 1.5)) === behind).sort((a, b) => far(b) - far(a));
   for (const f of list) {
     const [a, b, c] = f.pts;
     const n = [(b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1]), (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]), (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])];
@@ -291,8 +338,8 @@ function drawFaces(ctx, faces, view, behind) {
 }
 
 function drawPreview(t) {
-  for (const view of ['front', 'side']) {
-    const cv = $(view === 'side' ? '#cosSide' : '#cosFront');
+  for (const view of ['front', cos.view2]) {
+    const cv = $(view === 'front' ? '#cosFront' : '#cosSide');
     if (!cv) continue;
     if (cv.width !== GRID[0] * S) { cv.width = GRID[0] * S; cv.height = GRID[1] * S; }
     const ctx = cv.getContext('2d');
@@ -300,8 +347,9 @@ function drawPreview(t) {
     const it = cos.items;
     const faces = cosmeticFaces(t);
     drawFaces(ctx, faces, view, true);
-    if (it.tail.on) drawTail(ctx, it.tail, view, t); // behind the body
+    if (it.tail.on && view !== 'back') drawTail(ctx, it.tail, view, t); // behind the body
     drawSkin(ctx, cos.skin, cos.variant, view);
+    if (it.tail.on && view === 'back') drawTail(ctx, it.tail, view, t);
     if (it.ears.on) drawEars(ctx, it.ears, view, t);
     if (it.bow.on) drawBow(ctx, it.bow, view);
     drawFaces(ctx, faces, view, false);
@@ -319,7 +367,7 @@ function animate() {
 }
 
 /* ---------- controls ---------- */
-function presetsFor(item, key) { return PRESETS[item] || (item === 'bow' ? BOW_PRESETS : key === 'inner' ? INNER_PRESETS : FUR_PRESETS); }
+function presetsFor(item, key) { return PRESETS[`${item}.${key}`] || PRESETS[item] || (item === 'bow' ? BOW_PRESETS : key === 'inner' ? INNER_PRESETS : FUR_PRESETS); }
 
 function renderCosItems() {
   $('#cosItems').innerHTML = COS_ITEMS.map((d) => {
@@ -421,3 +469,8 @@ async function renderCosmetics() {
   renderCosItems();
   $('#cosStatus').textContent = data.synced ? 'Saved ✓' : COS_ITEMS.some((d) => data.items[d.id]?.on) ? "Saved on this PC (not shared online yet)" : '';
 }
+
+$$('#cosView2 button').forEach((b) => b.addEventListener('click', () => {
+  cos.view2 = b.dataset.v;
+  $$('#cosView2 button').forEach((x) => x.classList.toggle('on', x === b));
+}));

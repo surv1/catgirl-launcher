@@ -1,4 +1,4 @@
-// Free Catgirl cosmetics (cat ears, tail, bow, wings, halo, horns, angel buddy). Saved on this PC per account, and sent to the
+// Free Catgirl cosmetics (cat ears, tail, bow, wings, halo, horns, angel buddy, cape). Saved on this PC per account, and sent to the
 // Catgirl cosmetics service so every Catgirl Client player can see them in game.
 const crypto = require('crypto');
 const fs = require('fs');
@@ -13,6 +13,7 @@ const DEFAULTS = {
   halo: { on: false, color: '#ffd34d' },
   horns: { on: false, color: '#5a1a1a' },
   pet: { on: false, color: '#ffb3d9' },
+  cape: { on: false, color: '#ff7eb6', trim: '#ffffff', style: 'paw' },
 };
 const ITEMS = Object.keys(DEFAULTS);
 const UA = 'CatgirlLauncher (+https://catgirlclient.lol)';
@@ -26,6 +27,7 @@ function normalize(input) {
     out[k] = { on: !!v.on, color: hexColor(v.color, DEFAULTS[k].color) };
     if (k === 'ears') out[k].inner = hexColor(v.inner, DEFAULTS.ears.inner);
     if (k === 'wings') out[k].style = ['angel', 'demon'].includes(v.style) ? v.style : 'angel';
+    if (k === 'cape') { out[k].trim = hexColor(v.trim, '#ffffff'); out[k].style = ['plain', 'paw', 'heart'].includes(v.style) ? v.style : 'paw'; }
   }
   return out;
 }

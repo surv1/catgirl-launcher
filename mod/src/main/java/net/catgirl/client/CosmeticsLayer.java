@@ -14,7 +14,7 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
 
 /**
- * Draws Catgirl cosmetics (cat ears, tail, bow, wings, halo, horns, angel buddy) on players.
+ * Draws Catgirl cosmetics (cat ears, tail, bow, wings, halo, horns, angel buddy, cape) on players.
  * Shapes are plain coloured geometry, in model pixels (y points down, -x is the player's right,
  * -z is the front). They match the preview on the launcher's Cosmetics page.
  */
@@ -50,6 +50,14 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
                 if (look.horns().on()) horns(new Mesh(pose, vc, light, overlay), look.horns().color());
                 if (look.halo().on()) halo(new Mesh(pose, vc, FULL_BRIGHT, overlay), look.halo().color(), t + (seed % 60));
             });
+            poses.popPose();
+        }
+        if (look.cape().on() && model.body.visible) {
+            float swingDeg = 6F + s.capeLean / 2F + s.capeFlap;
+            float sideDeg = s.capeLean2 / 2F;
+            poses.pushPose();
+            model.body.translateAndRotate(poses);
+            out.submitCustomGeometry(poses, TYPE, (pose, vc) -> cape(new Mesh(pose, vc, light, overlay), look.cape().color(), look.capeTrim(), look.capeStyle(), swingDeg, sideDeg));
             poses.popPose();
         }
         if (look.wings().on() && model.body.visible) {
@@ -231,6 +239,35 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         glow.p.translate(0F, -3.3F, 0F);
         glow.p.rotate(Axis.XP.rotation(0.3F));
         ring(glow, 0xFFFFD34D, 1.3F, 8, 0.5F);
+    }
+
+    // ---- cape: hangs from the shoulders and swings like the vanilla cape, with a trim and an emblem
+    private static final String[][] EMBLEMS = {
+        {},
+        {"..XX.XX..", "..XX.XX..", "XX.....XX", "XX.XXX.XX", "..XXXXX..", ".XXXXXXX.", ".XXXXXXX.", "..XX.XX.."},
+        {".XX.XX.", "XXXXXXX", "XXXXXXX", ".XXXXX.", "..XXX..", "...X..."},
+    };
+
+    private static void cape(Mesh m, int color, int trim, int style, float swingDeg, float sideDeg) {
+        m.p.translate(0F, 0F, 2.1F);
+        m.p.rotate(Axis.XP.rotationDegrees(swingDeg));
+        m.p.rotate(Axis.ZP.rotationDegrees(sideDeg));
+        m.box(color, -5F, 0F, 0F, 5F, 16F, 1F);
+        m.box(trim, -5F, 0F, 1F, -4.2F, 16F, 1.1F);
+        m.box(trim, 4.2F, 0F, 1F, 5F, 16F, 1.1F);
+        m.box(trim, -5F, 15.2F, 1F, 5F, 16F, 1.1F);
+        String[] rows = EMBLEMS[Math.max(0, Math.min(EMBLEMS.length - 1, style))];
+        float cell = 0.75F, top = 4.5F;
+        for (int r = 0; r < rows.length; r++) {
+            String row = rows[r];
+            for (int i = 0; i < row.length(); ) {
+                if (row.charAt(i) != 'X') { i++; continue; }
+                int j = i;
+                while (j < row.length() && row.charAt(j) == 'X') j++;
+                m.box(trim, (i - row.length() / 2F) * cell, top + r * cell, 1F, (j - row.length() / 2F) * cell, top + (r + 1) * cell, 1.12F);
+                i = j;
+            }
+        }
     }
 
     /** f < 1 darkens, f > 1 mixes towards white. */

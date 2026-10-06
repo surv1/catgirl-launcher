@@ -453,3 +453,5 @@ body.nav-top.nav-icons .sidebar, body.nav-bottom.nav-icons .sidebar { width: aut
 .cos-actions { display: flex; align-items: center; gap: 12px; }
 .cos-actions .primary { min-width: 120px; }
 @media (max-width: 1050px) { .cos-wrap { grid-template-columns: 1fr; } }
+.cos-view { display: inline-flex; padding: 2px; }
+.cos-view button { padding: 3px 12px; font-size: 11px; letter-spacing: .08em; }
