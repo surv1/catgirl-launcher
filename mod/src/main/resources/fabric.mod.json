@@ -3,7 +3,7 @@
   "id": "catgirl",
   "version": "${version}",
   "name": "Catgirl Client",
-  "description": "The Catgirl Launcher title screen: pink branding, CatGirl Client window title, catgirl splash texts and a quick-access menu.",
+  "description": "The Catgirl Launcher title screen: pink branding, CatGirl Client window title, catgirl splash texts, a quick-access menu and free cosmetics (cat ears, tail, bow).",
   "authors": [
     "Jerrix"
   ],
@@ -20,6 +20,7 @@
     "minecraft": "~${minecraft_version}",
     "java": ">=21",
     "fabric-screen-api-v1": "*",
-    "fabric-lifecycle-events-v1": "*"
+    "fabric-lifecycle-events-v1": "*",
+    "fabric-rendering-v1": "*"
   }
 }

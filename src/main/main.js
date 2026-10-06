@@ -14,6 +14,7 @@ const { DiscordPresence, buildActivity } = require('./discord');
 const sharedOptions = require('./sharedOptions');
 const skins = require('./skins');
 const wardrobe = require('./wardrobe');
+const cosmetics = require('./cosmetics');
 const launcher = require('./launch');
 
 let autoUpdater = null;
@@ -217,6 +218,10 @@ function registerIpc() {
       discord: { enabled: s.discordPresence && presence.configured, clientId: config.discordClientId, showServer: s.discordShowServer, downloadUrl: downloadUrl() },
       launcherCommand: launcherCommand(),
     }, (line) => send('launch:log', { instId: id, line }));
+    if (inst.loader === 'fabric' && s.catgirlMenu) {
+      try { cosmetics.writeForGame(instances.gameDir(id), config.cosmeticsApi, account); } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't write cosmetics: ${e.message}` }); }
+      cosmetics.retryIfNeeded(config.cosmeticsApi, account);
+    }
     await launcher.launch(id, account, s, {
       progress: (p) => send('launch:progress', p),
       log: (l) => send('launch:log', l),
@@ -258,6 +263,22 @@ function registerIpc() {
     return skins.history(acc.uuid);
   });
   handle('skins:remove', async (id) => { let acc = null; try { acc = await auth.getLaunchAccount(); } catch {} skins.removeFromHistory(id, acc?.uuid || ''); return true; });
+  // ---------- cosmetics ----------
+  handle('cosmetics:get', async () => {
+    const acc = await auth.getLaunchAccount();
+    let skin = null;
+    try { const cur = await skins.currentSkin(acc.mcToken); if (cur) skin = { dataUrl: skins.toDataUrl(cur.buf), variant: cur.variant }; } catch {}
+    return { account: { uuid: acc.uuid, name: acc.name }, ...cosmetics.get(acc.uuid), skin, online: !!config.cosmeticsApi };
+  });
+  handle('cosmetics:save', async (items) => {
+    const acc = await auth.getLaunchAccount();
+    const r = await cosmetics.saveAndSync(config.cosmeticsApi, acc, items);
+    // Show them straight away in any game that's already running.
+    for (const id of launcher.runningIds()) {
+      try { cosmetics.writeForGame(instances.gameDir(id), config.cosmeticsApi, acc); } catch {}
+    }
+    return r;
+  });
   handle('skins:fromUrl', (url) => skins.fromUrl(url));
   handle('skins:fromPlayer', (name) => skins.fromPlayer(name));
   handle('skins:pickFile', async () => {

@@ -1,0 +1,12 @@
+# Cloudflare Worker that stores Catgirl Client cosmetics.
+# Deploy with:  npx wrangler deploy   (after filling in the KV namespace id below)
+name = "catgirl-cosmetics"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[[kv_namespaces]]
+binding = "COSMETICS"
+id = "PUT_YOUR_KV_NAMESPACE_ID_HERE"
+
+# Then add the secret once:  npx wrangler secret put NONCE_SECRET
+# And route it to api.catgirlclient.lol in the dashboard (Worker → Settings → Domains & Routes).

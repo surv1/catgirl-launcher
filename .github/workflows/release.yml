@@ -53,7 +53,14 @@ jobs:
           cat gradle.properties
       - name: Build
         working-directory: mod
-        run: gradle build --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          gradle build --no-daemon --stacktrace 2>&1 | tee /tmp/build.log
+      - name: Show compile errors
+        if: failure()
+        run: |
+          grep -A3 -E ': error:|FAILURE|What went wrong' /tmp/build.log | head -c 3900 > /tmp/err.txt || true
+          echo "::error title=Mod build failed::$(sed 's/%/%25/g' /tmp/err.txt | sed ':a;N;$!ba;s/\n/%0A/g')"
       - name: Rename jar
         run: cp "$(ls mod/build/libs/*.jar | grep -v -- '-sources' | head -1)" "catgirl-client-mc${{ matrix.mc }}.jar"
       - uses: actions/upload-artifact@v4

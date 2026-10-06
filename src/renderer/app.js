@@ -49,6 +49,7 @@ function go(page) {
   if (page === 'console') renderConsole();
   if (page === 'accounts') renderAccounts();
   if (page === 'settings') loadSettings();
+  if (page === 'cosmetics') renderCosmetics();
 }
 document.addEventListener('click', (e) => {
   const nav = e.target.closest('[data-page]');

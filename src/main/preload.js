@@ -56,6 +56,10 @@ contextBridge.exposeInMainWorld('cat', {
     fromPlayer: (name) => call('skins:fromPlayer', name),
     pickFile: () => call('skins:pickFile'),
   },
+  cosmetics: {
+    get: () => call('cosmetics:get'),
+    save: (items) => call('cosmetics:save', items),
+  },
   update: {
     check: () => call('update:check'),
     install: () => call('update:install'),

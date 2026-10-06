@@ -418,3 +418,38 @@ body.nav-top.nav-icons .sidebar, body.nav-bottom.nav-icons .sidebar { width: aut
 .mem-box { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 600; }
 .range-row .mem-box input { flex: none; width: 74px; text-align: right; padding: 6px 10px; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; }
 .mem-warn { color: #ffd479; }
+
+/* ---------- cosmetics ---------- */
+.cos-intro { margin: -8px 0 18px; }
+.cos-signin { padding: 22px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.cos-signin p { margin: 0; }
+.cos-wrap { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 420px); gap: 20px; align-items: start; }
+.cos-stage { background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--pink) 22%, var(--panel)), var(--panel) 70%); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.cos-views { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+.cos-views figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.cos-views canvas { width: 168px; height: 280px; image-rendering: auto; filter: drop-shadow(0 8px 14px rgba(0,0,0,.35)); }
+.cos-views figcaption { font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+.cos-side { display: flex; flex-direction: column; gap: 12px; }
+.cos-items { display: flex; flex-direction: column; gap: 12px; }
+.cos-item { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; transition: border-color .15s; }
+.cos-item.on { border-color: color-mix(in srgb, var(--pink) 60%, var(--line)); }
+.cos-item header { display: flex; align-items: center; gap: 10px; }
+.cos-item header .emoji { font-size: 22px; }
+.cos-item header b { flex: 1; font: 600 16px var(--display); }
+.cos-item .colors { display: flex; flex-direction: column; gap: 8px; }
+.cos-item:not(.on) .colors { opacity: .45; pointer-events: none; }
+.cos-color { display: flex; align-items: center; gap: 10px; }
+.cos-color > span { min-width: 64px; font-size: 13px; color: var(--muted); }
+.cos-color input[type=color] { width: 30px; height: 30px; border: 0; padding: 0; background: none; cursor: pointer; }
+.cos-color input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+.cos-color input[type=color]::-webkit-color-swatch { border: 2px solid var(--line); border-radius: 8px; }
+.cos-color .presets-dots button { width: 18px; height: 18px; }
+.switch { position: relative; width: 42px; height: 24px; flex: none; }
+.switch input { position: absolute; opacity: 0; inset: 0; cursor: pointer; margin: 0; z-index: 1; }
+.switch i { position: absolute; inset: 0; border-radius: 99px; background: var(--panel-2); border: 1px solid var(--line); transition: background .15s; }
+.switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+.switch input:checked + i { background: var(--pink); border-color: var(--pink); }
+.switch input:checked + i::after { transform: translateX(18px); background: var(--on-accent, #fff); }
+.cos-actions { display: flex; align-items: center; gap: 12px; }
+.cos-actions .primary { min-width: 120px; }
+@media (max-width: 1050px) { .cos-wrap { grid-template-columns: 1fr; } }

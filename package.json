@@ -8,7 +8,7 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "test": "node test/rules.test.js && node test/v3.test.js && node test/discord.test.js && node test/shared.test.js && node test/skins.test.js && node test/wardrobe.test.js",
+    "test": "node test/rules.test.js && node test/v3.test.js && node test/discord.test.js && node test/shared.test.js && node test/skins.test.js && node test/wardrobe.test.js && node test/cosmetics.test.js",
     "dist": "electron-builder --publish never",
     "dist:win": "electron-builder --win --publish never",
     "dist:mac": "electron-builder --mac --publish never",

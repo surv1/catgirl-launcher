@@ -1,0 +1,106 @@
+// Free Catgirl cosmetics (cat ears, tail, bow). Saved on this PC per account, and sent to the
+// Catgirl cosmetics service so every Catgirl Client player can see them in game.
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const paths = require('./paths');
+
+const ITEMS = ['ears', 'tail', 'bow'];
+const DEFAULTS = {
+  ears: { on: false, color: '#3b2a2a', inner: '#ffb3d9' },
+  tail: { on: false, color: '#3b2a2a' },
+  bow: { on: false, color: '#ff7eb6' },
+};
+const UA = 'CatgirlLauncher (+https://catgirlclient.lol)';
+const hexColor = (c, d) => (/^#[0-9a-fA-F]{6}$/.test(c || '') ? c.toLowerCase() : d);
+
+// Only known items, booleans and #rrggbb colours. Same rules as the online service.
+function normalize(input) {
+  const out = {};
+  for (const k of ITEMS) {
+    const v = input && typeof input === 'object' && input[k] && typeof input[k] === 'object' ? input[k] : {};
+    out[k] = { on: !!v.on, color: hexColor(v.color, DEFAULTS[k].color) };
+    if (k === 'ears') out[k].inner = hexColor(v.inner, DEFAULTS.ears.inner);
+  }
+  return out;
+}
+
+const file = () => path.join(paths.dirs().base, 'cosmetics.json');
+const store = () => paths.readJson(file(), {});
+
+function get(uuid) {
+  const e = store()[uuid];
+  return { items: normalize(e?.items), synced: !!e?.synced };
+}
+
+function save(uuid, items, synced = false) {
+  const all = store();
+  all[uuid] = { items: normalize(items), synced };
+  paths.writeJson(file(), all);
+  return all[uuid];
+}
+
+const serverIdFor = (nonce) => crypto.createHash('sha1').update(nonce).digest('hex');
+
+async function asJson(res) { return res.json().catch(() => null); }
+
+// Prove we own the account (like joining a server), then save the cosmetics online.
+async function upload(api, account, items) {
+  if (!api) throw new Error('No cosmetics service is set up yet.');
+  const base = api.replace(/\/+$/, '');
+  let res;
+  try {
+    res = await fetch(`${base}/v1/challenge`, { method: 'POST', headers: { 'User-Agent': UA } });
+  } catch {
+    throw new Error("Couldn't reach the Catgirl cosmetics service.");
+  }
+  const ch = await asJson(res);
+  if (!res.ok || !ch?.nonce) throw new Error(`The cosmetics service isn't answering right now (${res.status}).`);
+
+  const join = await fetch('https://sessionserver.mojang.com/session/minecraft/join', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'User-Agent': UA },
+    body: JSON.stringify({ accessToken: account.mcToken, selectedProfile: String(account.uuid).replace(/-/g, ''), serverId: serverIdFor(ch.nonce) }),
+  });
+  if (join.status === 401 || join.status === 403) throw new Error('Your login has expired. Remove and re-add your account.');
+  if (!join.ok) throw new Error(`Minecraft's login service said no (${join.status}).`);
+
+  const put = await fetch(`${base}/v1/me`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'User-Agent': UA },
+    body: JSON.stringify({ username: account.name, nonce: ch.nonce, cosmetics: normalize(items) }),
+  });
+  const body = await asJson(put);
+  if (!put.ok) throw new Error(body?.error || `The cosmetics service said no (${put.status}).`);
+  return body;
+}
+
+// Save locally first (so you always see them yourself), then try to share them online.
+async function saveAndSync(api, account, items) {
+  save(account.uuid, items, false);
+  try {
+    await upload(api, account, items);
+    save(account.uuid, items, true);
+    return { items: normalize(items), synced: true };
+  } catch (e) {
+    return { items: normalize(items), synced: false, error: e.message };
+  }
+}
+
+// Quietly retry an earlier save that couldn't reach the service.
+async function retryIfNeeded(api, account) {
+  const cur = get(account.uuid);
+  if (cur.synced || !ITEMS.some((k) => cur.items[k].on)) return;
+  try { await upload(api, account, cur.items); save(account.uuid, cur.items, true); } catch { /* next time */ }
+}
+
+// What the in-game mod reads: <game>/config/catgirl-cosmetics.json. The mod watches this file,
+// so changes show up while you're playing.
+function writeForGame(gameDir, api, account) {
+  const f = path.join(gameDir, 'config', 'catgirl-cosmetics.json');
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  const uuid = account ? String(account.uuid).replace(/-/g, '').toLowerCase() : '';
+  fs.writeFileSync(f, JSON.stringify({ api: api || '', uuid, items: uuid ? get(account.uuid).items : normalize({}) }, null, 2));
+}
+
+module.exports = { ITEMS, DEFAULTS, normalize, get, save, upload, saveAndSync, retryIfNeeded, writeForGame, serverIdFor };

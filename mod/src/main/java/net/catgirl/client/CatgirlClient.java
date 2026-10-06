@@ -3,6 +3,7 @@ package net.catgirl.client;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
@@ -16,6 +17,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -36,6 +38,8 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Catgirl Client: brands Minecraft for Catgirl Launcher.
@@ -43,11 +47,13 @@ import java.util.Locale;
  * - the game window is called "CatGirl Client <version>"
  * - a styled quick menu (right / left / top / bottom / hidden, text or icons only)
  * - catgirl splash texts (assets/minecraft/texts/splashes.txt in this mod)
+ * - free cosmetics: cat ears, tail and bow (see Cosmetics / CosmeticsLayer)
  *
  * Settings come from config/catgirl-client.json, written by the launcher before each launch.
  * Only Fabric API events are used (no mixins), so it ports to new versions easily.
  */
 public class CatgirlClient implements ClientModInitializer {
+    static final Logger LOG = LoggerFactory.getLogger("catgirl");
     private static final int GAP = 4;
     private static final int H = 20;
     private static final int TEXT_W = 120;
@@ -78,8 +84,15 @@ public class CatgirlClient implements ClientModInitializer {
             discord.start();
         }
 
+        // Free cosmetics (cat ears, tail, bow) on every player who picked some in Catgirl Launcher.
+        Cosmetics.init(FabricLoader.getInstance().getConfigDir().resolve("catgirl-cosmetics.json").toFile());
+        LivingEntityFeatureRendererRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {
+            if (renderer instanceof AvatarRenderer<?> avatar) helper.register(new CosmeticsLayer(avatar));
+        });
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             tick++;
+            Cosmetics.tick(tick);
             // Minecraft re-sets its own title now and then; put ours back a few times a second.
             if (tick % 5 == 0 && client.getWindow() != null) client.getWindow().setTitle(title);
             if (discord != null && tick % 40 == 0) discord.setActivity(DiscordRpc.activity(whatAmIDoing(client), versionLine, startedMs, config.downloadUrl));
