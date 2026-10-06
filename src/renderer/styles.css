@@ -409,3 +409,12 @@ body.nav-top.nav-icons .sidebar, body.nav-bottom.nav-icons .sidebar { width: aut
 /* ---------- modpacks ---------- */
 .modal.wide { width: min(760px, 94vw); }
 .pack-list { max-height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+/* memory picker */
+.mem-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.mem-presets button { padding: 5px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; background: var(--panel); border: 1px solid var(--line); color: var(--muted); }
+.mem-presets button:hover { border-color: var(--pink); color: var(--text); }
+.mem-presets button.on { background: var(--pink); border-color: var(--pink); color: var(--on-accent); }
+.mem-box { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 600; }
+.range-row .mem-box input { flex: none; width: 74px; text-align: right; padding: 6px 10px; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; }
+.mem-warn { color: #ffd479; }

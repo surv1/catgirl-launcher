@@ -127,6 +127,7 @@ function registerIpc() {
   handle('app:info', () => ({
     version: app.getVersion(), config, dataDir: paths.dirs().base, running: launcher.runningIds(),
     canUpdate: !!autoUpdater && app.isPackaged, update: updateState,
+    totalMemMB: Math.round(require('os').totalmem() / 1048576),
   }));
   handle('app:openExternal', (url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); });
   handle('app:copy', (text) => clipboard.writeText(String(text)));

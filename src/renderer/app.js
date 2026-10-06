@@ -279,7 +279,11 @@ async function instanceModal(existing = null) {
       <button data-v="vanilla" class="${inst.loader === 'vanilla' ? 'on' : ''}">Vanilla</button>
       <button data-v="fabric" class="${inst.loader === 'fabric' ? 'on' : ''}">Fabric</button></div></div>
     <div class="field ${inst.loader === 'fabric' ? '' : 'hidden'}" id="iLoaderVerWrap"><label>Fabric loader <small>Latest stable is picked automatically</small></label><select id="iLoaderVer"><option value="">Latest stable</option></select></div>
-    <div class="field"><label>Memory</label><div class="range-row"><input type="range" id="iMem" min="1024" max="16384" step="512" value="${inst.memoryMB}" /><b id="iMemVal"></b></div></div>
+    <div class="field"><label>Memory (RAM) <small id="iMemHint"></small></label>
+      <div class="mem-presets" id="iMemPresets"></div>
+      <div class="range-row"><input type="range" id="iMem" min="1024" step="512" /><span class="mem-box"><input type="number" id="iMemGb" min="1" step="0.5" /> GB</span></div>
+      <small class="mem-warn hidden" id="iMemWarn"></small>
+    </div>
     <div class="field"><label>Join a server on launch <small>Optional, e.g. play.example.net</small></label><input id="iServer" value="${esc(inst.joinServer)}" /></div>
     <div class="field"><label class="check"><input type="checkbox" id="iShare" ${inst.shareSettings === false ? '' : 'checked'} /> Use my shared Minecraft settings</label></div>
     <div class="field"><label>Java arguments <small>Optional</small></label><input id="iArgs" value="${esc(inst.javaArgs || '')}" placeholder="-XX:+UseG1GC" /></div>
@@ -291,7 +295,31 @@ async function instanceModal(existing = null) {
 
   $('#iPack')?.addEventListener('click', modpackModal);
   let loader = inst.loader, icon = inst.icon;
-  const memLabel = () => { $('#iMemVal').textContent = `${(+$('#iMem').value / 1024).toFixed(1)} GB`; };
+  // Memory: the slider goes up to what this PC has (leaving 2 GB for Windows), with quick picks.
+  const totalMB = state.info?.totalMemMB || 16384;
+  const maxMB = Math.max(4096, Math.floor((totalMB - 2048) / 512) * 512);
+  const totalGB = Math.round(totalMB / 1024);
+  $('#iMem').max = String(maxMB);
+  $('#iMemHint').textContent = `This PC has ${totalGB} GB. Most modpacks run well with 6–8 GB; huge modpacks and shaders like 10–16 GB.`;
+  $('#iMemPresets').innerHTML = [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 48, 64]
+    .filter((g) => g * 1024 <= maxMB)
+    .map((g) => `<button type="button" data-gb="${g}">${g} GB</button>`).join('');
+  const setMem = (mb) => {
+    mb = Math.max(1024, Math.min(maxMB, Math.round(mb / 512) * 512));
+    $('#iMem').value = String(mb);
+    $('#iMemGb').value = String(+(mb / 1024).toFixed(1));
+    $$('#iMemPresets button').forEach((b) => b.classList.toggle('on', +b.dataset.gb * 1024 === mb));
+    const warn = $('#iMemWarn');
+    const share = mb / totalMB;
+    warn.classList.toggle('hidden', share <= 0.6);
+    warn.textContent = share > 0.75
+      ? `⚠️ That's most of your PC's memory. Windows and Discord may slow down. Try ${Math.max(4, Math.floor(totalGB * 0.5))} GB or less.`
+      : `Heads up: that's over half your PC's memory. Fine if Minecraft is the only big thing running.`;
+  };
+  const memLabel = () => setMem(+$('#iMem').value);
+  $('#iMemPresets').addEventListener('click', (e) => { const b = e.target.closest('[data-gb]'); if (b) setMem(+b.dataset.gb * 1024); });
+  $('#iMemGb').addEventListener('change', (e) => setMem((parseFloat(e.target.value) || 4) * 1024));
+  setMem(inst.memoryMB || 4096);
   memLabel();
   $('#iMem').addEventListener('input', memLabel);
   $$('#iIcon button').forEach((b) => b.addEventListener('click', () => { icon = b.dataset.v; $$('#iIcon button').forEach((x) => x.classList.toggle('on', x === b)); }));
