@@ -89,9 +89,12 @@ public class CatgirlClient implements ClientModInitializer {
             if (!(screen instanceof TitleScreen)) return;
             client.getWindow().setTitle(title);
             if (config.splashes) applyCatgirlSplash(screen);
-            Layout layout = addMenu(client, screen, width, height);
+            // Place the menu on the first frame, after every mod has added its own buttons.
+            Layout[] layout = {null};
+            boolean[] placed = {false};
 
             ScreenEvents.afterRender(screen).register((s, g, mouseX, mouseY, delta) -> {
+                if (!placed[0]) { placed[0] = true; layout[0] = addMenu(client, screen, width, height); }
                 int accent = config.accent;
                 int soft = 0xFF000000 | blend(config.accent & 0xFFFFFF, 0xFFFFFF, 0.55f);
 
@@ -101,7 +104,7 @@ public class CatgirlClient implements ClientModInitializer {
                 Component sub = Component.literal("playing as " + client.getUser().getName());
                 g.drawString(client.font, sub, width - client.font.width(sub) - 8, 20, soft, true);
 
-                if (layout != null) drawMenuDecor(client, g, layout, mouseX, mouseY, accent, soft);
+                if (layout[0] != null) drawMenuDecor(client, g, layout[0], mouseX, mouseY, accent, soft);
             });
         });
     }
@@ -180,33 +183,56 @@ public class CatgirlClient implements ClientModInitializer {
         );
     }
 
+    /**
+     * Finds a free spot for the menu: tries the chosen side first, then the others, with text
+     * buttons and then icon-only buttons. A spot is free when it doesn't touch any button already
+     * on the screen (vanilla or other mods like Essential), the Minecraft logo, or our title.
+     */
     private static Layout addMenu(Minecraft client, Screen screen, int width, int height) {
-        String pos = config.menuPosition;
-        if (pos.equals("hidden")) return null;
+        String preferred = config.menuPosition;
+        if (preferred.equals("hidden")) return null;
         List<Entry> list = entries();
         int n = list.size();
-        boolean icons = config.iconsOnly;
-        int vanillaBottom = height / 4 + 48 + 72 + 12 + H; // bottom edge of vanilla's buttons
 
-        // Work out where the menu goes, falling back gracefully on small windows.
-        for (int attempt = 0; attempt < 3; attempt++) {
-            int bw = icons ? H : TEXT_W;
-            boolean vertical = pos.equals("right") || pos.equals("left");
-            int total = vertical ? n * H + (n - 1) * GAP : n * bw + (n - 1) * GAP;
-            int x, y;
-            boolean fits;
-            switch (pos) {
-                case "left" -> { x = 14; y = height / 4 + 48; fits = x + bw <= width / 2 - 112; }
-                case "top" -> { x = 10; y = 8; fits = x + total <= width - 130; }
-                case "bottom" -> { x = (width - total) / 2; y = height - H - 16; fits = y >= vanillaBottom + 6 && total <= width - 20; }
-                default -> { x = width - bw - 14; y = height / 4 + 48; fits = x >= width / 2 + 112; }
+        List<int[]> blocked = new ArrayList<>();
+        for (Object o : Screens.getButtons(screen)) {
+            if (o instanceof net.minecraft.client.gui.components.AbstractWidget w && w.visible) {
+                blocked.add(new int[] {w.getX(), w.getY(), w.getWidth(), w.getHeight()});
             }
-            if (fits) return place(client, screen, list, x, y, bw, vertical, icons);
-            if (!icons) { icons = true; continue; }   // try smaller icon buttons first
-            if (!pos.equals("right")) { pos = "right"; icons = config.iconsOnly; continue; }
-            return null;                               // window too small: skip the menu
         }
-        return null;
+        blocked.add(new int[] {width / 2 - 140, 24, 280, 56});   // MINECRAFT logo + "Java Edition"
+        blocked.add(new int[] {width - 150, 0, 150, 34});         // our "CatGirl Launcher" title
+
+        List<String> order = new ArrayList<>(List.of(preferred));
+        for (String p : List.of("left", "right", "bottom", "top")) if (!order.contains(p)) order.add(p);
+
+        for (String pos : order) {
+            for (boolean icons : config.iconsOnly ? new boolean[] {true} : new boolean[] {false, true}) {
+                int bw = icons ? H : TEXT_W;
+                boolean vertical = pos.equals("right") || pos.equals("left");
+                int total = vertical ? n * H + (n - 1) * GAP : n * bw + (n - 1) * GAP;
+                int x, y;
+                switch (pos) {
+                    case "left" -> { x = 14; y = height / 4 + 48; }
+                    case "top" -> { x = 10; y = 6; }
+                    case "bottom" -> { x = (width - total) / 2; y = height - H - 16; }
+                    default -> { x = width - bw - 14; y = height / 4 + 48; }
+                }
+                // area the menu covers, including its decorations
+                int[] area = vertical
+                    ? new int[] {x - 8, y - 24, bw + 16, total + 30}
+                    : new int[] {x - 6, y - 2, total + 12, H + 8};
+                if (area[0] < 0 || area[1] < 0 || area[0] + area[2] > width || area[1] + area[3] > height) continue;
+                boolean clash = false;
+                for (int[] r : blocked) if (overlaps(area, r)) { clash = true; break; }
+                if (!clash) return place(client, screen, list, x, y, bw, vertical, icons);
+            }
+        }
+        return null; // no free space at this window size: skip the menu
+    }
+
+    private static boolean overlaps(int[] a, int[] b) {
+        return a[0] < b[0] + b[2] && b[0] < a[0] + a[2] && a[1] < b[1] + b[3] && b[1] < a[1] + a[3];
     }
 
     private static Layout place(Minecraft client, Screen screen, List<Entry> list, int x, int y, int bw, boolean vertical, boolean icons) {
@@ -247,15 +273,14 @@ public class CatgirlClient implements ClientModInitializer {
             g.fill(sx, l.y - 5, sx + 3, l.y + l.h + 5, dimAccent);
             g.fill(sx, l.y + l.h + 3, l.x + l.w + 6, l.y + l.h + 5, dimAccent);
         } else {
-            g.fill(l.x - 4, l.y + l.h + 3, l.x + l.w + 4, l.y + l.h + 5, dimAccent);
-            g.fill(l.x - 4, l.y - 5, l.x + l.w + 4, l.y - 3, dimAccent);
+            g.fill(l.x - 4, l.y + l.h + 2, l.x + l.w + 4, l.y + l.h + 4, dimAccent);
         }
         for (Placed p : l.placed) {
             Button b = p.button();
             boolean hover = mouseX >= b.getX() && mouseX < b.getX() + b.getWidth() && mouseY >= b.getY() && mouseY < b.getY() + b.getHeight();
             if (hover) {
                 if (l.vertical) g.fill(l.x - 6, b.getY(), l.x - 3, b.getY() + b.getHeight(), accent);
-                else g.fill(b.getX(), b.getY() + b.getHeight() + 3, b.getX() + b.getWidth(), b.getY() + b.getHeight() + 5, accent);
+                else g.fill(b.getX(), b.getY() + b.getHeight() + 2, b.getX() + b.getWidth(), b.getY() + b.getHeight() + 4, accent);
             }
             int ix = l.iconsOnly ? b.getX() + (b.getWidth() - 16) / 2 : b.getX() + 3;
             g.renderItem(p.icon(), ix, b.getY() + 2);
