@@ -87,6 +87,46 @@ const serverIdFor = (nonce) => crypto.createHash('sha1').update(nonce).digest('h
 async function asJson(res) { return res.json().catch(() => null); }
 
 // Prove we own the account (like joining a server), then save the cosmetics online.
+// Your Minecraft "player certificate": the key pair Minecraft uses to sign chat, plus Mojang's
+// signature saying it belongs to you. Kept in memory and reused until Mojang says to refresh it.
+const certCache = new Map();
+const pemBody = (pem) => String(pem || '').replace(/-----[^-]+-----|\s/g, '');
+function isoToMillis(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z$/.exec(String(iso || ''));
+  if (!m) return NaN;
+  const ms = m[7] ? Number(m[7].slice(0, 3).padEnd(3, '0')) : 0;
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) + ms;
+}
+async function playerCertificate(account) {
+  const hit = certCache.get(account.uuid);
+  if (hit && hit.refreshAt > Date.now()) return hit;
+  const res = await fetch('https://api.minecraftservices.com/player/certificates', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${account.mcToken}`, 'Content-Type': 'application/json', 'User-Agent': UA },
+  });
+  if (res.status === 401 || res.status === 403) throw new Error('Your login has expired. Remove and re-add your account.');
+  const body = await asJson(res);
+  if (!res.ok || !body?.keyPair?.privateKey || !body.publicKeySignatureV2) throw new Error(`Minecraft's key service said no (${res.status}).`);
+  const der = Buffer.from(pemBody(body.keyPair.privateKey), 'base64');
+  let privateKey;
+  try { privateKey = crypto.createPrivateKey({ key: der, format: 'der', type: 'pkcs8' }); } catch { privateKey = crypto.createPrivateKey({ key: der, format: 'der', type: 'pkcs1' }); }
+  const cert = {
+    privateKey,
+    publicKey: pemBody(body.keyPair.publicKey),
+    signature: body.publicKeySignatureV2,
+    expiresAt: isoToMillis(body.expiresAt),
+    refreshAt: Math.min(isoToMillis(body.refreshedAfter) || Infinity, isoToMillis(body.expiresAt) - 60000),
+  };
+  certCache.set(account.uuid, cert);
+  return cert;
+}
+function signWithPlayerKey(cert, nonce) {
+  return {
+    cert: { publicKey: cert.publicKey, expiresAt: cert.expiresAt, signature: cert.signature },
+    sig: crypto.sign('sha256', Buffer.from(String(nonce)), cert.privateKey).toString('base64'),
+  };
+}
+
 async function upload(api, account, items) {
   if (!api) throw new Error('No cosmetics service is set up yet.');
   const base = api.replace(/\/+$/, '');
@@ -99,18 +139,13 @@ async function upload(api, account, items) {
   const ch = await asJson(res);
   if (!res.ok || !ch?.nonce) throw new Error(`The cosmetics service isn't answering right now (${res.status}).`);
 
-  const join = await fetch('https://sessionserver.mojang.com/session/minecraft/join', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'User-Agent': UA },
-    body: JSON.stringify({ accessToken: account.mcToken, selectedProfile: String(account.uuid).replace(/-/g, ''), serverId: serverIdFor(ch.nonce) }),
-  });
-  if (join.status === 401 || join.status === 403) throw new Error('Your login has expired. Remove and re-add your account.');
-  if (!join.ok) throw new Error(`Minecraft's login service said no (${join.status}).`);
-
+  // Prove it's really you: sign the one-time code with your Minecraft chat-signing key, which Mojang
+  // has vouched for. Your login never leaves this PC.
+  const proof = signWithPlayerKey(await playerCertificate(account), ch.nonce);
   const put = await fetch(`${base}/v1/me`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'User-Agent': UA },
-    body: JSON.stringify({ username: account.name, nonce: ch.nonce, cosmetics: normalize(items), capeImage: capeUpload(normalize(items).cape.custom) }),
+    body: JSON.stringify({ uuid: String(account.uuid).replace(/-/g, ''), nonce: ch.nonce, ...proof, cosmetics: normalize(items), capeImage: capeUpload(normalize(items).cape.custom) }),
   });
   const body = await asJson(put);
   if (!put.ok) throw new Error(body?.error || `The cosmetics service said no (${put.status}).`);
@@ -154,4 +189,4 @@ function writeForGame(gameDir, api, account, { showCapePictures = true } = {}) {
   fs.writeFileSync(f, JSON.stringify({ api: api || '', uuid, showCapePictures: showCapePictures !== false, items }, null, 2));
 }
 
-module.exports = { ITEMS, DEFAULTS, normalize, get, save, upload, saveAndSync, retryIfNeeded, writeForGame, serverIdFor, saveCapePicture, capePictureDataUrl, CAPE_W, CAPE_H, MAX_FRAMES };
+module.exports = { isoToMillis, ITEMS, DEFAULTS, normalize, get, save, upload, saveAndSync, retryIfNeeded, writeForGame, serverIdFor, saveCapePicture, capePictureDataUrl, CAPE_W, CAPE_H, MAX_FRAMES };

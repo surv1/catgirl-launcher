@@ -5,14 +5,22 @@
 // POST /v1/admin/remove-cape { uuid }       → takes down someone's cape picture (needs ADMIN_TOKEN)
 // GET  /v1/cosmetics?uuids=<uuid>,<uuid>…  → { "<uuid>": { ears, tail, bow, wings, halo, horns, pet, cape } }   (public, cached)
 // POST /v1/challenge                        → { nonce }   (one-time code, valid 2 minutes)
-// PUT  /v1/me  { username, nonce, cosmetics } → saves your cosmetics
+// PUT  /v1/me  { uuid, nonce, cert, sig, cosmetics, capeImage? } → saves your cosmetics
 //
-// Proving you own an account without ever sending us your login: the launcher tells Mojang
-// "I'm joining server <sha1(nonce)>" with the player's own token (like joining a real server),
-// then this service asks Mojang "did <username> join <sha1(nonce)>?". Only the real account
-// owner can make that true.
+// Proving you own an account without ever sending us your login: the launcher asks Mojang for the
+// player's chat-signing key (the same one Minecraft uses to sign chat). Mojang hands out a key pair
+// plus Mojang's own signature saying "this key belongs to <uuid> until <time>". The launcher signs
+// our one-time code with that key. We check Mojang's signature with Mojang's public keys and the
+// player's signature with their key — no call to Mojang needed (Mojang blocks Cloudflare servers).
 //
 // Setup: a KV namespace bound as COSMETICS, and a secret NONCE_SECRET (any long random text).
+
+// Mojang's player-certificate keys (from https://api.minecraftservices.com/publickeys). Used if that
+// page can't be reached from here; the live list is cached for a day when it can.
+const MOJANG_CERT_KEYS = [
+  "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAylB4B6m5lz7jwrcFz6Fd/fnfUhcvlxsTSn5kIK/2aGG1C3kMy4VjhwlxF6BFUSnfxhNswPjh3ZitkBxEAFY25uzkJFRwHwVA9mdwjashXILtR6OqdLXXFVyUPIURLOSWqGNBtb08EN5fMnG8iFLgEJIBMxs9BvF3s3/FhuHyPKiVTZmXY0WY4ZyYqvoKR+XjaTRPPvBsDa4WI2u1zxXMeHlodT3lnCzVvyOYBLXL6CJgByuOxccJ8hnXfF9yY4F0aeL080Jz/3+EBNG8RO4ByhtBf4Ny8NQ6stWsjfeUIvH7bU/4zCYcYOq4WrInXHqS8qruDmIl7P5XXGcabuzQstPf/h2CRAUpP/PlHXcMlvewjmGU6MfDK+lifScNYwjPxRo4nKTGFZf/0aqHCh/EAsQyLKrOIYRE0lDG3bzBh8ogIMLAugsAfBb6M3mqCqKaTMAf/VAjh5FFJnjS+7bE+bZEV0qwax1CEoPPJL1fIQjOS8zj086gjpGRCtSy9+bTPTfTR/SJ+VUB5G2IeCItkNHpJX2ygojFZ9n5Fnj7R9ZnOM+L8nyIjPu3aePvtcrXlyLhH/hvOfIOjPxOlqW+O5QwSFP4OEcyLAUgDdUgyW36Z5mB285uKW/ighzZsOTevVUG2QwDItObIV6i8RCxFbN2oDHyPaO5j1tTaBNyVt8CAwEAAQ==",
+  "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAt4t9NPuu7cktclnaH7eZj0omkLcJHeLz5MKsyJEntHZ0INtuBjSSul3Pp3pBeJN8k3ADdcdBLUN90bcAi7WsQqTx3Ft363q3W7TbM8j2iTEdp/0uVspoRt/DP1tkaWFs/w2WwUv9jbVoBUzfUc4pSTIxRwdjmqjZQfvjwKNDbOx3IhP2H0WXodbISejPi1wBZqNW4m1rnZAXp/EpUguxA8mobCa4vUCBkyFDyXdl69/wUSJHyCPmgcMJ364OlAhIqtwVPShBZObvrK/f0BYk6ShJD3N7TFDatSYsIIdcTKRknaIm91s+EsMrdB9U4Yw+ZJ/pyCB4S3vk8zfDCnb0DWIxYH3/EMzaxl77djmTmMzi/JDITup5z3jfWtRZmrAhU2/+W5IO5hEpo3/bCS9PXIY5xb41Lmp2ZO8dXKtyD66Chchy0W129n8vPl2GIruOdrxsjZAHnneyAb9jm0uaGaphwnEnuecX/qgHY6ZMtayvLLsPst8PO6R1vufMy8WqjK+j7LnC1krL7CPDg0NEhyQTmw5l+NCNjSlvB1juM9V4PARg0bYCOkGXm7ydRCjSSH8CJXZpwnd5cBB5WKAX3KPzutRgMi/LFwNSMZzFuUyXaYOZPpD259yqph1LmGqegEdDriACVU+dVEONFMm8eIuBofe7ljmsAFKW9BINwK0CAwEAAQ=="
+];
 
 const DEFAULT_COLOR = { ears: '#3b2a2a', tail: '#3b2a2a', bow: '#ff7eb6', wings: '#ffffff', halo: '#ffd34d', horns: '#5a1a1a', pet: '#ffb3d9', cape: '#ff7eb6', trim: '#7ec8ff' };
 const ITEMS = Object.keys(DEFAULT_COLOR);
@@ -83,6 +91,49 @@ export function checkCapeImage(img) {
   return { bytes, frames, delay };
 }
 
+const b64 = (s) => Uint8Array.from(atob(String(s || '').replace(/-----[^-]+-----|\s/g, '')), (c) => c.charCodeAt(0));
+
+async function mojangKeys(env) {
+  try {
+    const cached = await env.COSMETICS.get('mojangkeys', 'json');
+    if (cached?.length) return cached;
+    const res = await fetch('https://api.minecraftservices.com/publickeys', { headers: { 'User-Agent': 'CatgirlClient-Cosmetics/1.0' } });
+    if (res.ok) {
+      const keys = ((await res.json()).playerCertificateKeys || []).map((k) => k.publicKey).filter(Boolean);
+      if (keys.length) { await env.COSMETICS.put('mojangkeys', JSON.stringify(keys), { expirationTtl: 86400 }); return keys; }
+    }
+  } catch { /* use the built-in ones */ }
+  return MOJANG_CERT_KEYS;
+}
+
+// Checks Mojang's signature on the player's key, then the player's signature on our code.
+// Returns the verified uuid, or throws a readable error.
+export async function verifyPlayer(keys, { uuid, nonce, cert, sig }, now = Date.now()) {
+  uuid = String(uuid || '').toLowerCase().replace(/-/g, '');
+  if (!/^[0-9a-f]{32}$/.test(uuid) || !cert || typeof cert !== 'object') throw new Error('Bad request');
+  const expiresAt = Number(cert.expiresAt);
+  if (!Number.isSafeInteger(expiresAt) || expiresAt < now) throw new Error('Your Minecraft key has expired. Try again.');
+  const der = b64(cert.publicKey);
+  const payload = new Uint8Array(24 + der.length);
+  for (let i = 0; i < 16; i++) payload[i] = parseInt(uuid.substr(i * 2, 2), 16);
+  new DataView(payload.buffer).setBigUint64(16, BigInt(expiresAt));
+  payload.set(der, 24);
+  const mojangSig = b64(cert.signature);
+  let trusted = false;
+  for (const k of keys) {
+    try {
+      const key = await crypto.subtle.importKey('spki', b64(k), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-1' }, false, ['verify']);
+      if (await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, mojangSig, payload)) { trusted = true; break; }
+    } catch { /* try the next key */ }
+  }
+  if (!trusted) throw new Error("Couldn't confirm you own that Minecraft account.");
+  const playerKey = await crypto.subtle.importKey('spki', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+  if (!(await crypto.subtle.verify('RSASSA-PKCS1-v1_5', playerKey, b64(sig), new TextEncoder().encode(String(nonce))))) {
+    throw new Error("Couldn't confirm you own that Minecraft account.");
+  }
+  return uuid;
+}
+
 const normUuid = (u) => String(u || '').toLowerCase().replace(/-/g, '');
 
 async function getMany(env, uuids) {
@@ -116,22 +167,12 @@ export default {
 
       if (request.method === 'PUT' && url.pathname === '/v1/me') {
         const body = await request.json().catch(() => null);
-        if (!body || !/^[A-Za-z0-9_]{2,16}$/.test(body.username || '')) return json({ error: 'Bad request' }, 400);
+        if (!body) return json({ error: 'Bad request' }, 400);
         if (!(await checkNonce(env.NONCE_SECRET, body.nonce))) return json({ error: 'That code expired. Try again.' }, 400);
         const used = `n:${body.nonce}`;
         if (await env.COSMETICS.get(used)) return json({ error: 'That code was already used. Try again.' }, 400);
-        // Ask Mojang if this player really "joined" our one-time code. Try a few times: Mojang can
-        // take a moment to see the join.
-        const joinedUrl = `https://sessionserver.mojang.com/session/minecraft/hasJoined?username=${encodeURIComponent(body.username)}&serverId=${await serverIdFor(body.nonce)}`;
-        let check = null;
-        for (let attempt = 0; attempt < 4; attempt++) {
-          if (attempt) await new Promise((r) => setTimeout(r, 600 * attempt));
-          check = await fetch(joinedUrl, { headers: { 'User-Agent': 'CatgirlClient-Cosmetics/1.0 (+https://catgirlclient.lol)', Accept: 'application/json' } });
-          if (check.status === 200) break;
-        }
-        if (check.status !== 200) return json({ error: `Couldn't confirm you own that Minecraft account (Mojang said ${check.status}).` }, 403);
-        const profile = await check.json();
-        const uuid = normUuid(profile.id);
+        let uuid;
+        try { uuid = await verifyPlayer(await mojangKeys(env), body); } catch (e) { return json({ error: e.message }, e.message === 'Bad request' ? 400 : 403); }
         await env.COSMETICS.put(used, '1', { expirationTtl: 300 });
         const cosmetics = clean(body.cosmetics);
         if (body.capeImage && cosmetics.cape) {

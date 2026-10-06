@@ -35,7 +35,8 @@ const cosmetics = require('../src/main/cosmetics');
   assert.ok(!(await worker.checkNonce('other-secret', nonce)), 'nonce signed with another secret');
   assert.ok(!(await worker.checkNonce(SECRET, nonce, Date.now() + 3 * 60 * 1000)), 'nonce expires');
   assert.ok(!(await worker.checkNonce(SECRET, nonce.replace(/.$/, (c) => (c === '0' ? '1' : '0')))), 'tampered nonce');
-  assert.strictEqual(await worker.serverIdFor('abc'), cosmetics.serverIdFor('abc'), 'launcher and worker agree on serverId');
+  assert.strictEqual(cosmetics.isoToMillis('2026-10-08T01:02:03.123456Z'), Date.UTC(2026, 9, 8, 1, 2, 3, 123));
+  assert.strictEqual(cosmetics.isoToMillis('2026-10-08T01:02:03Z'), Date.UTC(2026, 9, 8, 1, 2, 3));
 
   // ---- fake Cloudflare (KV + cache) and Mojang
   const kv = new Map();
@@ -50,24 +51,35 @@ const cosmetics = require('../src/main/cosmetics');
   global.caches = { default: { match: async () => undefined, put: async () => {} } };
   const ctx = { waitUntil: () => {} };
   const realFetch = global.fetch;
-  const joined = new Map(); // serverId -> profile
-  const PROFILES = { TOKEN: { id: '0123456789abcdef0123456789abcdef', name: 'Jerrix' } };
-  let joinCalls = 0;
+  // Fake Mojang: a "Mojang" signing key, and per-account player certificates signed by it,
+  // exactly like https://api.minecraftservices.com/player/certificates.
+  const mojang = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const mojangPub = mojang.publicKey.export({ type: 'spki', format: 'der' }).toString('base64');
+  const PROFILES = { TOKEN: '0123456789abcdef0123456789abcdef', OTHER: 'ffffffffffffffffffffffffffffffff' };
+  const pem = (label, der) => `-----BEGIN ${label}-----\n${der.toString('base64').match(/.{1,64}/g).join('\n')}\n-----END ${label}-----\n`;
+  function certFor(uuid, expiresAt = Date.now() + 48 * 3600e3) {
+    const kp = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+    const spki = kp.publicKey.export({ type: 'spki', format: 'der' });
+    const payload = Buffer.alloc(24 + spki.length);
+    Buffer.from(uuid, 'hex').copy(payload, 0);
+    payload.writeBigUInt64BE(BigInt(expiresAt), 16);
+    spki.copy(payload, 24);
+    const iso = new Date(expiresAt).toISOString().replace('Z', '456Z'); // Mojang sends microseconds
+    return {
+      keyPair: { privateKey: pem('RSA PRIVATE KEY', kp.privateKey.export({ type: 'pkcs8', format: 'der' })), publicKey: pem('RSA PUBLIC KEY', spki) },
+      publicKeySignatureV2: crypto.sign('sha1', payload, mojang.privateKey).toString('base64'),
+      expiresAt: iso, refreshedAfter: iso,
+    };
+  }
+  let certCalls = 0;
   global.fetch = async (url, opts = {}) => {
     const u = String(url);
     if (u.startsWith('https://api.example.test/')) return worker.default.fetch(new Request(u, opts), env, ctx);
-    if (u === 'https://sessionserver.mojang.com/session/minecraft/join') {
-      joinCalls++;
-      const b = JSON.parse(opts.body);
-      const prof = PROFILES[b.accessToken];
-      if (!prof || prof.id !== b.selectedProfile) return new Response('', { status: 403 });
-      joined.set(b.serverId, prof);
-      return new Response(null, { status: 204 });
-    }
-    if (u.startsWith('https://sessionserver.mojang.com/session/minecraft/hasJoined')) {
-      const q = new URL(u).searchParams;
-      const prof = joined.get(q.get('serverId'));
-      return prof && prof.name === q.get('username') ? Response.json(prof) : new Response(null, { status: 204 });
+    if (u === 'https://api.minecraftservices.com/publickeys') return Response.json({ playerCertificateKeys: [{ publicKey: mojangPub }] });
+    if (u === 'https://api.minecraftservices.com/player/certificates') {
+      certCalls++;
+      const uuid = PROFILES[String(opts.headers?.Authorization || '').replace('Bearer ', '')];
+      return uuid ? Response.json(certFor(uuid)) : new Response('', { status: 401 });
     }
     throw new Error(`unexpected fetch ${u}`);
   };
@@ -89,28 +101,53 @@ const cosmetics = require('../src/main/cosmetics');
   assert.strictEqual(all[acc.uuid].halo.on, true);
 
   // ---- someone else can't save as you
-  const ch = await (await fetch(`${API}/v1/challenge`, { method: 'POST' })).json();
-  let bad = await fetch(`${API}/v1/me`, { method: 'PUT', body: JSON.stringify({ username: 'Jerrix', nonce: ch.nonce, cosmetics: { bow: { on: true } } }) });
-  assert.strictEqual(bad.status, 403, 'no Mojang join = not allowed');
+  const signNonce = (c, nonce) => {
+    const key = crypto.createPrivateKey({ key: Buffer.from(c.keyPair.privateKey.replace(/-----[^-]+-----|\s/g, ''), 'base64'), format: 'der', type: 'pkcs8' });
+    return crypto.sign('sha256', Buffer.from(nonce), key).toString('base64');
+  };
+  const certBody = (c) => ({ publicKey: c.keyPair.publicKey.replace(/-----[^-]+-----|\s/g, ''), expiresAt: cosmetics.isoToMillis(c.expiresAt), signature: c.publicKeySignatureV2 });
+  let ch = await (await fetch(`${API}/v1/challenge`, { method: 'POST' })).json();
+  const other = certFor(PROFILES.OTHER);
+  // their own valid key, but claiming to be you
+  let bad = await fetch(`${API}/v1/me`, { method: 'PUT', body: JSON.stringify({ uuid: acc.uuid, nonce: ch.nonce, cert: certBody(other), sig: signNonce(other, ch.nonce), cosmetics: { bow: { on: true } } }) });
+  assert.strictEqual(bad.status, 403, "another player's key can't save as you");
+  // a key Mojang never signed
+  const forged = certFor(acc.uuid); forged.publicKeySignatureV2 = other.publicKeySignatureV2;
+  bad = await fetch(`${API}/v1/me`, { method: 'PUT', body: JSON.stringify({ uuid: acc.uuid, nonce: ch.nonce, cert: certBody(forged), sig: signNonce(forged, ch.nonce), cosmetics: {} }) });
+  assert.strictEqual(bad.status, 403, 'forged key');
+  // the right key but signing a different code
+  const mine = certFor(acc.uuid);
+  bad = await fetch(`${API}/v1/me`, { method: 'PUT', body: JSON.stringify({ uuid: acc.uuid, nonce: ch.nonce, cert: certBody(mine), sig: signNonce(mine, 'something else'), cosmetics: {} }) });
+  assert.strictEqual(bad.status, 403, 'signature must cover the code');
+  // an expired key
+  const old = certFor(acc.uuid, Date.now() - 1000);
+  bad = await fetch(`${API}/v1/me`, { method: 'PUT', body: JSON.stringify({ uuid: acc.uuid, nonce: ch.nonce, cert: certBody(old), sig: signNonce(old, ch.nonce), cosmetics: {} }) });
+  assert.strictEqual(bad.status, 403, 'expired key');
   // ...and a code can't be used twice
-  const sid = cosmetics.serverIdFor(ch.nonce);
-  joined.set(sid, PROFILES.TOKEN);
-  const ok = await fetch(`${API}/v1/me`, { method: 'PUT', body: JSON.stringify({ username: 'Jerrix', nonce: ch.nonce, cosmetics: items }) });
-  assert.strictEqual(ok.status, 200);
-  bad = await fetch(`${API}/v1/me`, { method: 'PUT', body: JSON.stringify({ username: 'Jerrix', nonce: ch.nonce, cosmetics: items }) });
+  const ok = await fetch(`${API}/v1/me`, { method: 'PUT', body: JSON.stringify({ uuid: acc.uuid, nonce: ch.nonce, cert: certBody(mine), sig: signNonce(mine, ch.nonce), cosmetics: items }) });
+  assert.strictEqual(ok.status, 200, await ok.clone().text());
+  bad = await fetch(`${API}/v1/me`, { method: 'PUT', body: JSON.stringify({ uuid: acc.uuid, nonce: ch.nonce, cert: certBody(mine), sig: signNonce(mine, ch.nonce), cosmetics: items }) });
   assert.strictEqual(bad.status, 400, 'nonce reuse');
+  // the built-in Mojang keys parse, and the live list gets cached
+  assert.ok(JSON.parse(kv.get('mojangkeys')).includes(mojangPub));
 
   // ---- wrong token: saved locally, not online, with a readable reason
-  const r2 = await cosmetics.saveAndSync(API, { ...acc, mcToken: 'EXPIRED' }, { ...items, bow: { on: true, color: '#ffffff' } });
+  PROFILES.TOKEN3 = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+  const acc3 = { uuid: PROFILES.TOKEN3, name: 'Friend', mcToken: 'EXPIRED' };
+  const r2 = await cosmetics.saveAndSync(API, acc3, { ...items, bow: { on: true, color: '#ffffff' } });
   assert.strictEqual(r2.synced, false);
   assert.match(r2.error, /login has expired/);
-  assert.strictEqual(cosmetics.get(acc.uuid).items.bow.on, true);
-  assert.strictEqual(cosmetics.get(acc.uuid).synced, false);
+  assert.strictEqual(cosmetics.get(acc3.uuid).items.bow.on, true);
+  assert.strictEqual(cosmetics.get(acc3.uuid).synced, false);
   // the launch-time retry fixes it once the login works
-  await cosmetics.retryIfNeeded(API, acc);
-  assert.strictEqual(cosmetics.get(acc.uuid).synced, true);
-  const after = await (await fetch(`${API}/v1/cosmetics?uuids=${acc.uuid}`)).json();
-  assert.strictEqual(after[acc.uuid].bow.color, '#ffffff');
+  await cosmetics.retryIfNeeded(API, { ...acc3, mcToken: 'TOKEN3' });
+  assert.strictEqual(cosmetics.get(acc3.uuid).synced, true);
+  const after = await (await fetch(`${API}/v1/cosmetics?uuids=${acc3.uuid}`)).json();
+  assert.strictEqual(after[acc3.uuid].bow.color, '#ffffff');
+  // the signed key is reused while it's valid, even if the login token has expired since
+  const calls = certCalls;
+  assert.strictEqual((await cosmetics.saveAndSync(API, { ...acc, mcToken: 'EXPIRED' }, items)).synced, true);
+  assert.strictEqual(certCalls, calls);
 
   // ---- service offline: still saved for you
   const r3 = await cosmetics.saveAndSync('https://offline.example.test', acc, items);
@@ -172,6 +209,6 @@ const cosmetics = require('../src/main/cosmetics');
   assert.throws(() => worker.checkCapeImage({ png: png(60, 100).toString('base64'), frames: 1 }), /wrong size/);
 
   global.fetch = realFetch;
-  assert.ok(joinCalls >= 2);
+  assert.ok(certCalls >= 2);
   console.log('cosmetics tests passed');
 })().catch((e) => { console.error(e); process.exit(1); });
