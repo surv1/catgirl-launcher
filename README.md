@@ -8,7 +8,7 @@
 
 Play any version, add mods in one click, and make the whole launcher your own. Nya~ 🐾
 
-### [⬇️ Download for Windows](https://github.com/surv1/catgirl-launcher/releases/latest)
+### [⬇️ Download for Windows](https://github.com/surv1/catgirl-launcher/releases/latest) · [🌸 Website](https://surv1.github.io/catgirl-launcher/)
 
 <img src="docs/home.png" width="820" alt="Catgirl Client home screen" />
 
