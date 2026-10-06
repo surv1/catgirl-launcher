@@ -1,16 +1,20 @@
-// Free Catgirl cosmetics (cat ears, tail, bow). Saved on this PC per account, and sent to the
+// Free Catgirl cosmetics (cat ears, tail, bow, wings, halo, horns, angel buddy). Saved on this PC per account, and sent to the
 // Catgirl cosmetics service so every Catgirl Client player can see them in game.
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const paths = require('./paths');
 
-const ITEMS = ['ears', 'tail', 'bow'];
 const DEFAULTS = {
   ears: { on: false, color: '#3b2a2a', inner: '#ffb3d9' },
   tail: { on: false, color: '#3b2a2a' },
   bow: { on: false, color: '#ff7eb6' },
+  wings: { on: false, color: '#ffffff', style: 'angel' },
+  halo: { on: false, color: '#ffd34d' },
+  horns: { on: false, color: '#5a1a1a' },
+  pet: { on: false, color: '#ffb3d9' },
 };
+const ITEMS = Object.keys(DEFAULTS);
 const UA = 'CatgirlLauncher (+https://catgirlclient.lol)';
 const hexColor = (c, d) => (/^#[0-9a-fA-F]{6}$/.test(c || '') ? c.toLowerCase() : d);
 
@@ -21,6 +25,7 @@ function normalize(input) {
     const v = input && typeof input === 'object' && input[k] && typeof input[k] === 'object' ? input[k] : {};
     out[k] = { on: !!v.on, color: hexColor(v.color, DEFAULTS[k].color) };
     if (k === 'ears') out[k].inner = hexColor(v.inner, DEFAULTS.ears.inner);
+    if (k === 'wings') out[k].style = ['angel', 'demon'].includes(v.style) ? v.style : 'angel';
   }
   return out;
 }

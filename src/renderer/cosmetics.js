@@ -1,19 +1,34 @@
-/* Catgirl Launcher – Cosmetics page (cat ears, tail, bow) with a live front/back preview.
-   The shapes and the tail animation match the in-game mod (CosmeticsLayer.java). */
+/* Catgirl Launcher – Cosmetics page with a live front/side preview.
+   The shapes and animations match the in-game mod (CosmeticsLayer.java). */
 
 const COS_ITEMS = [
   { id: 'ears', name: 'Cat ears', emoji: '🐱', colors: [['color', 'Fur'], ['inner', 'Inside']] },
   { id: 'tail', name: 'Cat tail', emoji: '🐈', colors: [['color', 'Fur']] },
   { id: 'bow', name: 'Hair bow', emoji: '🎀', colors: [['color', 'Colour']] },
+  { id: 'wings', name: 'Wings', emoji: '🪽', colors: [['color', 'Colour']], styles: [['angel', 'Angel'], ['demon', 'Demon']] },
+  { id: 'halo', name: 'Halo', emoji: '😇', colors: [['color', 'Colour']] },
+  { id: 'horns', name: 'Devil horns', emoji: '😈', colors: [['color', 'Colour']] },
+  { id: 'pet', name: 'Angel buddy', emoji: '👼', colors: [['color', 'Colour']] },
 ];
 const COS_DEFAULTS = {
   ears: { on: false, color: '#3b2a2a', inner: '#ffb3d9' },
   tail: { on: false, color: '#3b2a2a' },
   bow: { on: false, color: '#ff7eb6' },
+  wings: { on: false, color: '#ffffff', style: 'angel' },
+  halo: { on: false, color: '#ffd34d' },
+  horns: { on: false, color: '#5a1a1a' },
+  pet: { on: false, color: '#ffb3d9' },
 };
+const WING_DEFAULT = { angel: '#ffffff', demon: '#8b1a1a' };
 const FUR_PRESETS = ['#3b2a2a', '#1b1b1f', '#f5f0e6', '#c98a4b', '#f2c879', '#9a9aa3', '#ff7eb6', '#b48cff'];
 const INNER_PRESETS = ['#ffb3d9', '#ffd6e8', '#ff8fc7', '#f5f0e6', '#b48cff'];
 const BOW_PRESETS = ['#ff7eb6', '#e5383b', '#ffffff', '#1b1b1f', '#b48cff', '#7ec8ff', '#ffd166', '#6fe3b5'];
+const PRESETS = {
+  wings: ['#ffffff', '#fff3c4', '#ffd6e8', '#b48cff', '#8b1a1a', '#1b1b1f', '#3a1f5c', '#7ec8ff'],
+  halo: ['#ffd34d', '#ffffff', '#ff7eb6', '#7ec8ff', '#b48cff', '#e5383b'],
+  horns: ['#5a1a1a', '#e5383b', '#1b1b1f', '#3a1f5c', '#f5f0e6', '#ff7eb6'],
+  pet: ['#ffb3d9', '#ffffff', '#ffd34d', '#7ec8ff', '#b48cff', '#6fe3b5'],
+};
 
 const cos = { items: structuredClone(COS_DEFAULTS), skin: null, variant: 'classic', loaded: false, dirty: false, anim: 0, saving: false };
 
@@ -44,7 +59,7 @@ function tailJoints(t) {
 function shade(hex, f) {
   const n = parseInt(hex.slice(1), 16);
   const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(f >= 1 ? v + (255 - v) * (f - 1) : v * f));
-  return `rgb(${c.join(',')})`;
+  return '#' + c.map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('');
 }
 function rot2(pts, [cx, cy], a) {
   const c = Math.cos(a), s = Math.sin(a);
@@ -53,11 +68,11 @@ function rot2(pts, [cx, cy], a) {
 
 /* ---------- drawing: a front view and a side view (the player's right side) ---------- */
 const S = 14;                      // canvas pixels per skin pixel
-const GRID = [24, 40];             // canvas size in skin pixels
+const GRID = [30, 40];             // canvas size in skin pixels
 const NECK = 15;                   // y of the neck on the grid
 const VIEW = {
-  front: { cx: 12, at: ([x, y]) => [12 + x, NECK + y] },
-  side: { cx: 16, at: ([, y, z]) => [16 - z, NECK + y] },
+  front: { cx: 15, at: ([x, y]) => [15 + x, NECK + y] },
+  side: { cx: 19, at: ([, y, z]) => [19 - z, NECK + y] },
 };
 
 // [sx, sy, w, h, dx, dy, mirror] with dx/dy in grid pixels from the view's centre line / the neck
@@ -143,6 +158,138 @@ function drawTail(ctx, it, view, t) {
   }
 }
 
+/* ---------- 3D shapes (wings, halo, horns, angel buddy) ---------- */
+// A tiny copy of Minecraft's PoseStack.Pose: every call works in the current local space,
+// exactly like the mod, so the preview and the game share the same numbers.
+class Pose {
+  constructor(m = [[1, 0, 0], [0, 1, 0], [0, 0, 1]], o = [0, 0, 0]) { this.m = m; this.o = o; }
+  copy() { return new Pose(this.m.map((r) => [...r]), [...this.o]); }
+  apply([x, y, z]) { const m = this.m; return [this.o[0] + m[0][0] * x + m[0][1] * y + m[0][2] * z, this.o[1] + m[1][0] * x + m[1][1] * y + m[1][2] * z, this.o[2] + m[2][0] * x + m[2][1] * y + m[2][2] * z]; }
+  translate(x, y, z) { this.o = this.apply([x, y, z]); return this; }
+  rotate(r) { this.m = mmul(this.m, r); return this; }
+  rotateAround(r, x, y, z) { return this.translate(x, y, z).rotate(r).translate(-x, -y, -z); }
+  scale(k) { this.m = this.m.map((r) => r.map((v) => v * k)); return this; }
+}
+const rz = (a) => [[Math.cos(a), -Math.sin(a), 0], [Math.sin(a), Math.cos(a), 0], [0, 0, 1]];
+
+// Collects coloured faces in model space.
+class Faces {
+  constructor() { this.list = []; this.p = new Pose(); }
+  face(color, pts, glow = false) { this.list.push({ color, pts: pts.map((q) => this.p.apply(q)), glow }); }
+  box(color, x0, y0, z0, x1, y1, z1, glow) {
+    const c = (x, y, z) => [x, y, z];
+    const [a, b, cc, d, e, f, g, h] = [c(x0, y0, z0), c(x1, y0, z0), c(x1, y1, z0), c(x0, y1, z0), c(x0, y0, z1), c(x1, y0, z1), c(x1, y1, z1), c(x0, y1, z1)];
+    for (const q of [[a, b, cc, d], [e, f, g, h], [a, b, f, e], [d, cc, g, h], [a, d, h, e], [b, cc, g, f]]) this.face(color, q, glow);
+  }
+  slab(color, poly, z0, z1) { // a flat shape (x/y) with a little thickness
+    this.face(color, poly.map(([x, y]) => [x, y, z0]));
+    this.face(color, poly.map(([x, y]) => [x, y, z1]));
+  }
+}
+
+const WING = {
+  angelArm: [[0, -0.6], [7.2, -5.8], [7.6, -4.6], [0, 0.8]],
+  feathers: [3.5, 4.5, 5.5, 6.2, 6.5, 6.0],
+  demonBone: [[0, -0.4], [7.5, -6.4], [8.0, -5.6], [0, 0.6]],
+  claw: [[7.3, -6.0], [8.3, -6.2], [8.4, -8.0]],
+  wrist: [7.7, -5.9],
+  fingers: [[9.6, 1.6], [6.5, 3.5], [3.5, 4.5]],
+};
+function featherPoly(k) {
+  const t = k / 5, a = [0.6 + 6.6 * t, 0.3 - 5.3 * t], L = WING.feathers[k];
+  const d = [0.287, 0.958]; // (0.3, 1) normalised: feathers hang down and a little out
+  return [[a[0] - 0.75, a[1]], [a[0] + 0.75, a[1]], [a[0] + 0.75 + d[0] * L * 0.85, a[1] + d[1] * L * 0.85], [a[0] + d[0] * L, a[1] + d[1] * L], [a[0] - 0.75 + d[0] * L * 0.85, a[1] + d[1] * L * 0.85]];
+}
+function boneQuad([ax, ay], [bx, by], w0, w1) {
+  const l = Math.hypot(bx - ax, by - ay), px = -(by - ay) / l, py = (bx - ax) / l;
+  return [[ax + px * w0, ay + py * w0], [bx + px * w1, by + py * w1], [bx - px * w1, by - py * w1], [ax - px * w0, ay - py * w0]];
+}
+const flap = (t, style) => (style === 'demon' ? Math.sin(t * 0.09) * 0.12 : Math.sin(t * 0.12) * 0.15);
+
+function wingFaces(F, it, t) {
+  for (const s of [-1, 1]) {
+    const saved = F.p.copy();
+    F.p.translate(s * 1.5, 2.5, 2.1).rotate(ry(-s * (0.4 + flap(t, it.style)))).scale(1.5);
+    const m = (poly) => poly.map(([u, v]) => [s * u, v]);
+    if (it.style === 'demon') {
+      const mem = shade(it.color, 0.7);
+      for (const f of [[[0, 0.6], WING.wrist, WING.fingers[2]], [WING.wrist, WING.fingers[1], WING.fingers[2]], [WING.wrist, WING.fingers[0], WING.fingers[1]]]) F.slab(mem, m(f), -0.1, 0.1);
+      for (const f of WING.fingers) F.slab(it.color, m(boneQuad(WING.wrist, f, 0.3, 0.15)), -0.2, 0.2);
+      F.slab(it.color, m(WING.demonBone), -0.25, 0.25);
+      F.slab(shade(it.color, 1.3), m(WING.claw), -0.2, 0.2);
+    } else {
+      for (let k = 5; k >= 0; k--) F.slab(k % 2 ? shade(it.color, 0.92) : it.color, m(featherPoly(k)), -0.2 + k * 0.03, 0.2 + k * 0.03);
+      F.slab(it.color, m(WING.angelArm), -0.3, 0.3);
+    }
+    F.p = saved;
+  }
+}
+
+function ring(F, color, r, n, w, glow) {
+  for (let i = 0; i < n; i++) {
+    const saved = F.p.copy();
+    F.p.rotate(ry((i / n) * Math.PI * 2)).translate(0, 0, r);
+    F.box(color, -w, -0.3, -0.3, w, 0.3, 0.3, glow);
+    F.p = saved;
+  }
+}
+function haloFaces(F, it, t) {
+  const saved = F.p.copy();
+  F.p.translate(0, -11 + Math.sin(t * 0.1) * 0.3, 0).rotate(rx(0.3));
+  ring(F, it.color, 3.4, 14, 0.8, true);
+  F.p = saved;
+}
+function hornFaces(F, it) {
+  for (const s of [-1, 1]) {
+    const saved = F.p.copy();
+    F.p.translate(s * 2.3, -7.6, -1.8).rotate(rz(s * 0.35)).rotate(rx(Math.PI / 2));
+    for (let i = 0; i < 4; i++) {
+      const w = (1.4 - 0.25 * i) / 2;
+      F.box(i === 3 ? shade(it.color, 1.3) : it.color, -w, -w, -0.1, w, w, 1.1);
+      F.p.translate(0, 0, 1).rotate(rx(-0.3));
+    }
+    F.p = saved;
+  }
+}
+function petFaces(F, it, t) {
+  const saved = F.p.copy();
+  F.p.translate(-11, -3 + Math.sin(t * 0.1) * 0.6, 1).rotate(ry(Math.sin(t * 0.03) * 0.4));
+  F.box(it.color, -2, -2, -2, 2, 2, 2);
+  F.box('#1b1b1f', -1.3, -0.6, -2.1, -0.5, 0.3, -2.0);
+  F.box('#1b1b1f', 0.5, -0.6, -2.1, 1.3, 0.3, -2.0);
+  for (const s of [-1, 1]) {
+    const w = F.p.copy();
+    F.p.translate(s * 1.9, 0, 0.8).rotate(ry(-s * (0.6 + Math.sin(t * 0.6) * 0.35)));
+    F.slab('#ffffff', [[0, -0.5], [s * 2.2, -1.6], [s * 2.0, 0.3], [0, 0.6]], -0.1, 0.1);
+    F.p = w;
+  }
+  F.p.translate(0, -3.3, 0).rotate(rx(0.3));
+  ring(F, '#ffd34d', 1.3, 8, 0.5, true);
+  F.p = saved;
+}
+
+function cosmeticFaces(t) {
+  const F = new Faces(), it = cos.items;
+  if (it.wings.on) wingFaces(F, it.wings, t);
+  if (it.halo.on) haloFaces(F, it.halo, t);
+  if (it.horns.on) hornFaces(F, it.horns, t);
+  if (it.pet.on) petFaces(F, it.pet, t);
+  return F.list;
+}
+
+// Paint faces back to front. "behind" picks the ones hidden behind the player's body.
+function drawFaces(ctx, faces, view, behind) {
+  const depth = (f) => f.pts.reduce((a, p) => a + (view === 'side' ? p[0] : p[2]), 0) / f.pts.length; // bigger = further away
+  const list = faces.filter((f) => (depth(f) > (view === 'side' ? 0.5 : 1.5)) === behind).sort((a, b) => depth(b) - depth(a));
+  for (const f of list) {
+    const [a, b, c] = f.pts;
+    const n = [(b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1]), (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]), (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])];
+    const len = Math.hypot(...n) || 1;
+    const facing = Math.abs((view === 'side' ? n[0] : n[2]) / len);
+    poly(ctx, view, f.pts, f.glow ? f.color : shade(f.color, 0.72 + 0.28 * facing));
+  }
+}
+
 function drawPreview(t) {
   for (const view of ['front', 'side']) {
     const cv = $(view === 'side' ? '#cosSide' : '#cosFront');
@@ -151,10 +298,13 @@ function drawPreview(t) {
     const ctx = cv.getContext('2d');
     ctx.clearRect(0, 0, cv.width, cv.height);
     const it = cos.items;
+    const faces = cosmeticFaces(t);
+    drawFaces(ctx, faces, view, true);
     if (it.tail.on) drawTail(ctx, it.tail, view, t); // behind the body
     drawSkin(ctx, cos.skin, cos.variant, view);
     if (it.ears.on) drawEars(ctx, it.ears, view, t);
     if (it.bow.on) drawBow(ctx, it.bow, view);
+    drawFaces(ctx, faces, view, false);
   }
 }
 
@@ -169,7 +319,7 @@ function animate() {
 }
 
 /* ---------- controls ---------- */
-function presetsFor(item, key) { return item === 'bow' ? BOW_PRESETS : key === 'inner' ? INNER_PRESETS : FUR_PRESETS; }
+function presetsFor(item, key) { return PRESETS[item] || (item === 'bow' ? BOW_PRESETS : key === 'inner' ? INNER_PRESETS : FUR_PRESETS); }
 
 function renderCosItems() {
   $('#cosItems').innerHTML = COS_ITEMS.map((d) => {
@@ -177,7 +327,7 @@ function renderCosItems() {
     return `<div class="cos-item ${v.on ? 'on' : ''}" data-item="${d.id}">
       <header><span class="emoji">${d.emoji}</span><b>${d.name}</b>
         <label class="switch" title="Wear ${d.name.toLowerCase()}"><input type="checkbox" data-on="${d.id}" ${v.on ? 'checked' : ''} /><i></i></label></header>
-      <div class="colors">${d.colors.map(([key, label]) => `
+      <div class="colors">${d.styles ? `<div class="seg cos-style">${d.styles.map(([k, l]) => `<button data-style="${d.id}" data-v="${k}" class="${v.style === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}${d.colors.map(([key, label]) => `
         <div class="cos-color"><span>${label}</span><input type="color" data-color="${d.id}.${key}" value="${esc(v[key])}" />
           <div class="presets-dots">${presetsFor(d.id, key).map((c) => `<button style="background:${c}" data-preset="${d.id}.${key}" data-c="${c}" title="${c}"></button>`).join('')}</div></div>`).join('')}
       </div></div>`;
@@ -194,7 +344,18 @@ function setCos(item, key, value) {
 
 $('#cosItems').addEventListener('change', (e) => { const on = e.target.closest('[data-on]'); if (on) setCos(on.dataset.on, 'on', on.checked); });
 $('#cosItems').addEventListener('input', (e) => { const c = e.target.closest('[data-color]'); if (c) { const [i, k] = c.dataset.color.split('.'); setCos(i, k, c.value); } });
-$('#cosItems').addEventListener('click', (e) => { const p = e.target.closest('[data-preset]'); if (p) { const [i, k] = p.dataset.preset.split('.'); setCos(i, k, p.dataset.c); } });
+$('#cosItems').addEventListener('click', (e) => {
+  const p = e.target.closest('[data-preset]');
+  if (p) { const [i, k] = p.dataset.preset.split('.'); setCos(i, k, p.dataset.c); }
+  const st = e.target.closest('[data-style]');
+  if (st) {
+    const item = st.dataset.style, old = cos.items[item].style;
+    setCos(item, 'style', st.dataset.v);
+    // Swap to the new style's usual colour if you hadn't picked your own.
+    if (item === 'wings' && cos.items.wings.color === WING_DEFAULT[old]) setCos('wings', 'color', WING_DEFAULT[st.dataset.v]);
+    $$(`[data-style="${item}"]`).forEach((b) => b.classList.toggle('on', b === st));
+  }
+});
 
 // The top of the head (or the hat layer, if the skin has one there) is usually hair.
 function hairColor(img) {
@@ -252,7 +413,8 @@ async function renderCosmetics() {
   }
   $('#cosSignin').classList.add('hidden');
   $('#cosWrap').classList.remove('hidden');
-  cos.items = { ...structuredClone(COS_DEFAULTS), ...data.items };
+  cos.items = structuredClone(COS_DEFAULTS);
+  for (const k of Object.keys(COS_DEFAULTS)) Object.assign(cos.items[k], data.items?.[k] || {});
   cos.variant = data.skin?.variant || 'classic';
   cos.skin = data.skin ? await loadImg(data.skin.dataUrl).catch(() => null) : null;
   cos.loaded = true;

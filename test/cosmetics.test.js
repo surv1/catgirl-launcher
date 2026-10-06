@@ -14,7 +14,13 @@ const cosmetics = require('../src/main/cosmetics');
 
   // ---- pure bits
   const n = cosmetics.normalize({ ears: { on: 1, color: '#ABCDEF', inner: 'red' }, tail: { on: true, color: 'nope' }, hat: { on: true } });
-  assert.deepStrictEqual(n, { ears: { on: true, color: '#abcdef', inner: '#ffb3d9' }, tail: { on: true, color: '#3b2a2a' }, bow: { on: false, color: '#ff7eb6' } });
+  assert.deepStrictEqual(n, {
+    ears: { on: true, color: '#abcdef', inner: '#ffb3d9' }, tail: { on: true, color: '#3b2a2a' }, bow: { on: false, color: '#ff7eb6' },
+    wings: { on: false, color: '#ffffff', style: 'angel' }, halo: { on: false, color: '#ffd34d' }, horns: { on: false, color: '#5a1a1a' }, pet: { on: false, color: '#ffb3d9' },
+  });
+  assert.strictEqual(cosmetics.normalize({ wings: { on: true, style: 'demon', color: '#8B1A1A' } }).wings.style, 'demon');
+  assert.strictEqual(cosmetics.normalize({ wings: { on: true, style: 'dragon' } }).wings.style, 'angel');
+  assert.deepStrictEqual(worker.clean({ wings: { on: true, style: 'demon' }, pet: { on: true } }), { wings: { on: true, color: '#ffffff', style: 'demon' }, pet: { on: true, color: '#ffb3d9' } });
   assert.deepStrictEqual(worker.clean({ ears: { on: true, color: '#00FF00' }, evil: { on: true }, bow: 'x' }), { ears: { on: true, color: '#00ff00', inner: '#ffb3d9' } });
   const nonce = await worker.makeNonce(SECRET);
   assert.ok(await worker.checkNonce(SECRET, nonce));
@@ -59,7 +65,7 @@ const cosmetics = require('../src/main/cosmetics');
 
   const API = 'https://api.example.test';
   const acc = { uuid: '0123456789abcdef0123456789abcdef', name: 'Jerrix', mcToken: 'TOKEN' };
-  const items = { ears: { on: true, color: '#3b2a2a', inner: '#ffb3d9' }, tail: { on: true, color: '#3b2a2a' }, bow: { on: false, color: '#ff7eb6' } };
+  const items = cosmetics.normalize({ ears: { on: true }, tail: { on: true }, wings: { on: true, style: 'demon', color: '#8b1a1a' }, halo: { on: true } });
 
   // ---- saving works end to end
   const r = await cosmetics.saveAndSync(API, acc, items);
@@ -70,6 +76,8 @@ const cosmetics = require('../src/main/cosmetics');
   assert.deepStrictEqual(Object.keys(all), [acc.uuid]);
   assert.strictEqual(all[acc.uuid].ears.on, true);
   assert.strictEqual(all[acc.uuid].bow.on, false);
+  assert.strictEqual(all[acc.uuid].wings.style, 'demon');
+  assert.strictEqual(all[acc.uuid].halo.on, true);
 
   // ---- someone else can't save as you
   const ch = await (await fetch(`${API}/v1/challenge`, { method: 'POST' })).json();

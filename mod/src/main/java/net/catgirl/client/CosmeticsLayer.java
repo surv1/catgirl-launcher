@@ -14,7 +14,7 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
 
 /**
- * Draws Catgirl cosmetics (cat ears, tail, bow) on players.
+ * Draws Catgirl cosmetics (cat ears, tail, bow, wings, halo, horns, angel buddy) on players.
  * Shapes are plain coloured geometry, in model pixels (y points down, -x is the player's right,
  * -z is the front). They match the preview on the launcher's Cosmetics page.
  */
@@ -26,6 +26,7 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
     private static final float TAIL_LEN = 1.35F;
     private static final float TAIL_A0 = -0.7F;
     private static final float TAIL_CURL = 0.2F;
+    private static final int FULL_BRIGHT = 0xF000F0;
 
     public CosmeticsLayer(RenderLayerParent<AvatarRenderState, PlayerModel> parent) {
         super(parent);
@@ -42,6 +43,26 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         int seed = s.id;
         PlayerModel model = getParentModel();
 
+        if ((look.halo().on() || look.horns().on()) && model.head.visible) {
+            poses.pushPose();
+            model.head.translateAndRotate(poses);
+            out.submitCustomGeometry(poses, TYPE, (pose, vc) -> {
+                if (look.horns().on()) horns(new Mesh(pose, vc, light, overlay), look.horns().color());
+                if (look.halo().on()) halo(new Mesh(pose, vc, FULL_BRIGHT, overlay), look.halo().color(), t + (seed % 60));
+            });
+            poses.popPose();
+        }
+        if (look.wings().on() && model.body.visible) {
+            poses.pushPose();
+            model.body.translateAndRotate(poses);
+            out.submitCustomGeometry(poses, TYPE, (pose, vc) -> wings(new Mesh(pose, vc, light, overlay), look.wings().color(), look.demonWings(), t + (seed % 90)));
+            poses.popPose();
+        }
+        if (look.pet().on()) {
+            out.submitCustomGeometry(poses, TYPE, (pose, vc) -> {
+                pet(new Mesh(pose, vc, light, overlay), new Mesh(pose, vc, FULL_BRIGHT, overlay), look.pet().color(), t + (seed % 40));
+            });
+        }
         if ((look.ears().on() || look.bow().on()) && model.head.visible) {
             poses.pushPose();
             model.head.translateAndRotate(poses);
@@ -108,6 +129,110 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         }
     }
 
+    // ---- wings (on the back; angel = feathers, demon = bat wing). Local u goes outwards, v down.
+    private static final float[][] ANGEL_ARM = {{0F, -0.6F}, {7.2F, -5.8F}, {7.6F, -4.6F}, {0F, 0.8F}};
+    private static final float[] FEATHERS = {3.5F, 4.5F, 5.5F, 6.2F, 6.5F, 6.0F};
+    private static final float[][] DEMON_BONE = {{0F, -0.4F}, {7.5F, -6.4F}, {8.0F, -5.6F}, {0F, 0.6F}};
+    private static final float[][] CLAW = {{7.3F, -6.0F}, {8.3F, -6.2F}, {8.4F, -8.0F}};
+    private static final float[] WRIST = {7.7F, -5.9F};
+    private static final float[][] FINGERS = {{9.6F, 1.6F}, {6.5F, 3.5F}, {3.5F, 4.5F}};
+
+    private static float[][] feather(int k) {
+        float t = k / 5F, ax = 0.6F + 6.6F * t, ay = 0.3F - 5.3F * t, l = FEATHERS[k];
+        float dx = 0.287F, dy = 0.958F;
+        return new float[][]{{ax - 0.75F, ay}, {ax + 0.75F, ay}, {ax + 0.75F + dx * l * 0.85F, ay + dy * l * 0.85F}, {ax + dx * l, ay + dy * l}, {ax - 0.75F + dx * l * 0.85F, ay + dy * l * 0.85F}};
+    }
+
+    private static float[][] bone(float[] a, float[] b, float w0, float w1) {
+        float l = (float) Math.hypot(b[0] - a[0], b[1] - a[1]), px = -(b[1] - a[1]) / l, py = (b[0] - a[0]) / l;
+        return new float[][]{{a[0] + px * w0, a[1] + py * w0}, {b[0] + px * w1, b[1] + py * w1}, {b[0] - px * w1, b[1] - py * w1}, {a[0] - px * w0, a[1] - py * w0}};
+    }
+
+    private static float[][] mirror(float[][] poly, int s) {
+        float[][] out = new float[poly.length][];
+        for (int i = 0; i < poly.length; i++) out[i] = new float[]{s * poly[i][0], poly[i][1]};
+        return out;
+    }
+
+    private static void wings(Mesh m, int color, boolean demon, float t) {
+        float flap = demon ? (float) Math.sin(t * 0.09F) * 0.12F : (float) Math.sin(t * 0.12F) * 0.15F;
+        for (int s = -1; s <= 1; s += 2) {
+            PoseStack.Pose saved = m.p.copy();
+            m.p.translate(s * 1.5F, 2.5F, 2.1F);
+            m.p.rotate(Axis.YP.rotation(-s * (0.4F + flap)));
+            m.p.scale(1.5F, 1.5F, 1.5F);
+            if (demon) {
+                int mem = shade(color, 0.7F);
+                m.slab(mem, mirror(new float[][]{{0F, 0.6F}, WRIST, FINGERS[2]}, s), -0.1F, 0.1F);
+                m.slab(mem, mirror(new float[][]{WRIST, FINGERS[1], FINGERS[2]}, s), -0.1F, 0.1F);
+                m.slab(mem, mirror(new float[][]{WRIST, FINGERS[0], FINGERS[1]}, s), -0.1F, 0.1F);
+                for (float[] f : FINGERS) m.slab(color, mirror(bone(WRIST, f, 0.3F, 0.15F), s), -0.2F, 0.2F);
+                m.slab(color, mirror(DEMON_BONE, s), -0.25F, 0.25F);
+                m.slab(shade(color, 1.3F), mirror(CLAW, s), -0.2F, 0.2F);
+            } else {
+                for (int k = 5; k >= 0; k--) m.slab(k % 2 == 1 ? shade(color, 0.92F) : color, mirror(feather(k), s), -0.2F + k * 0.03F, 0.2F + k * 0.03F);
+                m.slab(color, mirror(ANGEL_ARM, s), -0.3F, 0.3F);
+            }
+            m.p = saved;
+        }
+    }
+
+    // ---- halo: a glowing ring floating above the head
+    private static void ring(Mesh m, int color, float r, int n, float w) {
+        for (int i = 0; i < n; i++) {
+            PoseStack.Pose saved = m.p.copy();
+            m.p.rotate(Axis.YP.rotation((float) (i * Math.PI * 2 / n)));
+            m.p.translate(0F, 0F, r);
+            m.box(color, -w, -0.3F, -0.3F, w, 0.3F, 0.3F);
+            m.p = saved;
+        }
+    }
+
+    private static void halo(Mesh m, int color, float t) {
+        m.p.translate(0F, -11F + (float) Math.sin(t * 0.1F) * 0.3F, 0F);
+        m.p.rotate(Axis.XP.rotation(0.3F));
+        ring(m, color, 3.4F, 14, 0.8F);
+    }
+
+    // ---- devil horns: short curved chains from the top of the head
+    private static void horns(Mesh m, int color) {
+        for (int s = -1; s <= 1; s += 2) {
+            PoseStack.Pose saved = m.p.copy();
+            m.p.translate(s * 2.3F, -7.6F, -1.8F);
+            m.p.rotate(Axis.ZP.rotation(s * 0.35F));
+            m.p.rotate(Axis.XP.rotation((float) (Math.PI / 2)));
+            for (int i = 0; i < 4; i++) {
+                float w = (1.4F - 0.25F * i) / 2F;
+                m.box(i == 3 ? shade(color, 1.3F) : color, -w, -w, -0.1F, w, w, 1.1F);
+                m.p.translate(0F, 0F, 1F);
+                m.p.rotate(Axis.XP.rotation(-0.3F));
+            }
+            m.p = saved;
+        }
+    }
+
+    // ---- angel buddy: a little winged cube with a halo, floating by your right shoulder
+    private static void pet(Mesh m, Mesh glow, int color, float t) {
+        PoseStack.Pose base = m.p.copy();
+        base.translate(-11F, -3F + (float) Math.sin(t * 0.1F) * 0.6F, 1F);
+        base.rotate(Axis.YP.rotation((float) Math.sin(t * 0.03F) * 0.4F));
+        m.p = base.copy();
+        m.box(color, -2F, -2F, -2F, 2F, 2F, 2F);
+        m.box(0xFF1B1B1F, -1.3F, -0.6F, -2.1F, -0.5F, 0.3F, -2.0F);
+        m.box(0xFF1B1B1F, 0.5F, -0.6F, -2.1F, 1.3F, 0.3F, -2.0F);
+        float flap = 0.6F + (float) Math.sin(t * 0.6F) * 0.35F;
+        for (int s = -1; s <= 1; s += 2) {
+            m.p = base.copy();
+            m.p.translate(s * 1.9F, 0F, 0.8F);
+            m.p.rotate(Axis.YP.rotation(-s * flap));
+            m.slab(0xFFFFFFFF, new float[][]{{0F, -0.5F}, {s * 2.2F, -1.6F}, {s * 2.0F, 0.3F}, {0F, 0.6F}}, -0.1F, 0.1F);
+        }
+        glow.p = base.copy();
+        glow.p.translate(0F, -3.3F, 0F);
+        glow.p.rotate(Axis.XP.rotation(0.3F));
+        ring(glow, 0xFFFFD34D, 1.3F, 8, 0.5F);
+    }
+
     /** f < 1 darkens, f > 1 mixes towards white. */
     static int shade(int argb, float f) {
         int[] c = {(argb >> 16) & 255, (argb >> 8) & 255, argb & 255};
@@ -145,13 +270,22 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
 
         /** A triangle (in x/y) pushed out between z0 and z1. */
         void prism(int color, float[][] t, float z0, float z1) {
-            float cx = (t[0][0] + t[1][0] + t[2][0]) / 3, cy = (t[0][1] + t[1][1] + t[2][1]) / 3, cz = (z0 + z1) / 2;
-            float[][] f = new float[3][], k = new float[3][];
-            for (int i = 0; i < 3; i++) { f[i] = new float[]{t[i][0], t[i][1], z0}; k[i] = new float[]{t[i][0], t[i][1], z1}; }
-            quad(color, f[0], f[1], f[2], f[2], cx, cy, cz);
-            quad(color, k[0], k[2], k[1], k[1], cx, cy, cz);
-            for (int i = 0; i < 3; i++) {
-                int j = (i + 1) % 3;
+            slab(color, t, z0, z1);
+        }
+
+        /** A flat convex shape (in x/y) with thickness between z0 and z1. */
+        void slab(int color, float[][] poly, float z0, float z1) {
+            int n = poly.length;
+            float cx = 0, cy = 0, cz = (z0 + z1) / 2;
+            for (float[] q : poly) { cx += q[0] / n; cy += q[1] / n; }
+            float[][] f = new float[n][], k = new float[n][];
+            for (int i = 0; i < n; i++) { f[i] = new float[]{poly[i][0], poly[i][1], z0}; k[i] = new float[]{poly[i][0], poly[i][1], z1}; }
+            for (int i = 1; i + 1 < n; i++) {
+                quad(color, f[0], f[i], f[i + 1], f[i + 1], cx, cy, cz);
+                quad(color, k[0], k[i + 1], k[i], k[i], cx, cy, cz);
+            }
+            for (int i = 0; i < n; i++) {
+                int j = (i + 1) % n;
                 quad(color, f[i], k[i], k[j], f[j], cx, cy, cz);
             }
         }

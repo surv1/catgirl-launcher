@@ -424,10 +424,10 @@ body.nav-top.nav-icons .sidebar, body.nav-bottom.nav-icons .sidebar { width: aut
 .cos-signin { padding: 22px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .cos-signin p { margin: 0; }
 .cos-wrap { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 420px); gap: 20px; align-items: start; }
-.cos-stage { background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--pink) 22%, var(--panel)), var(--panel) 70%); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.cos-views { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+.cos-stage { position: sticky; top: 0; background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--pink) 22%, var(--panel)), var(--panel) 70%); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.cos-views { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
 .cos-views figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.cos-views canvas { width: 168px; height: 280px; image-rendering: auto; filter: drop-shadow(0 8px 14px rgba(0,0,0,.35)); }
+.cos-views canvas { width: 210px; height: 280px; image-rendering: auto; filter: drop-shadow(0 8px 14px rgba(0,0,0,.35)); }
 .cos-views figcaption { font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
 .cos-side { display: flex; flex-direction: column; gap: 12px; }
 .cos-items { display: flex; flex-direction: column; gap: 12px; }
