@@ -10,7 +10,7 @@ on:
         description: "Minecraft version"
         default: "1.21.11"
       classes:
-        description: "Space-separated class names to inspect"
+        description: "Space-separated class names to inspect (end one with ! to see its code)"
         required: true
 
 permissions:
@@ -55,6 +55,7 @@ jobs:
             F=/tmp/out/all.txt
             echo "##### $C" >> $F
             case "$C" in
+              *!) javap -p -c -cp "$JARS" "${C%!}" 2>&1 | grep -E 'invoke|getfield|getstatic|class |public|protected|private|ldc|bipush|sipush' >> $F ;;
               *Layer) javap -p -c -cp "$JARS" "$C" 2>&1 | grep -E 'invoke|getfield|getstatic|class |public|protected|private' >> $F ;;
               *) javap -p -cp "$JARS" "$C" 2>&1 | grep -v '^Compiled' >> $F ;;
             esac
