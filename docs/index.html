@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Catgirl Client</title>
+  <meta name="description" content="Catgirl Client is a cute, cosy Minecraft launcher: instances, one-click mods, themes, catgirl splash facts and Discord status. Free for Windows." />
+  <meta property="og:title" content="Catgirl Client" />
+  <meta property="og:description" content="A cute, cosy Minecraft launcher. Free for Windows." />
+  <meta property="og:image" content="https://surv1.github.io/catgirl-launcher/home.png" />
+  <meta name="theme-color" content="#1d1026" />
+  <link rel="icon" href="favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --plum: #1d1026;
+      --berry: #2c1638;
+      --berry-2: #3a1f49;
+      --sakura: #ff7eb6;
+      --sakura-deep: #ff4f9a;
+      --milk: #fff4f8;
+      --haze: #c8b2d6;
+      --butter: #ffe14d;
+      --pop: "Mochiy Pop One", "M PLUS Rounded 1c", system-ui, sans-serif;
+      --body: "M PLUS Rounded 1c", system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; color: var(--milk); background: var(--plum);
+      font: 500 17px/1.65 var(--body);
+      background-image:
+        radial-gradient(60rem 40rem at 85% -10%, #4a1f55 0%, transparent 60%),
+        radial-gradient(40rem 30rem at -10% 30%, #2f1640 0%, transparent 70%);
+      background-repeat: no-repeat;
+      overflow-x: hidden;
+    }
+    a { color: inherit; }
+    img { max-width: 100%; height: auto; display: block; }
+    :focus-visible { outline: 3px solid var(--butter); outline-offset: 3px; border-radius: 6px; }
+    .wrap { width: min(1160px, 100% - 40px); margin: 0 auto; }
+
+    /* ---------- top bar ---------- */
+    .top { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; font: 400 20px var(--pop); }
+    .brand img { width: 40px; height: 40px; border-radius: 12px; }
+    .top nav { display: flex; gap: 26px; font-weight: 700; color: var(--haze); }
+    .top nav a { text-decoration: none; }
+    .top nav a:hover { color: var(--milk); }
+
+    /* ---------- hero ---------- */
+    .hero { display: grid; grid-template-columns: 1.02fr 1fr; gap: 64px; align-items: center; padding: 64px 0 130px; }
+    .title-block { position: relative; display: inline-block; }
+    h1 {
+      margin: 0; font: 400 clamp(54px, 8vw, 104px)/0.98 var(--pop); letter-spacing: -1px;
+      color: var(--milk);
+      text-shadow: 0 6px 0 var(--berry-2), 0 7px 0 #000;
+    }
+    h1 .line2 { display: block; color: var(--sakura); }
+    /* the Minecraft-style splash text: the one loud thing on the page */
+    .splash {
+      position: absolute; right: -18px; bottom: 6px; transform-origin: center;
+      transform: translate(30%, 20%) rotate(-17deg);
+      font: 400 clamp(15px, 1.9vw, 21px)/1.1 var(--pop); color: var(--butter);
+      text-shadow: 2px 2px 0 #3d3200; white-space: nowrap; cursor: pointer;
+      background: none; border: 0; padding: 4px; max-width: 380px;
+      animation: splash 0.9s ease-in-out infinite alternate;
+    }
+    @keyframes splash { from { scale: 1; } to { scale: 1.08; } }
+    .lede { max-width: 30em; color: var(--haze); font-size: 19px; margin: 34px 0 30px; }
+    .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; }
+    .download {
+      display: inline-flex; align-items: center; gap: 12px; padding: 17px 28px; border-radius: 18px;
+      background: var(--sakura); color: #2a0b1c; font: 800 18px var(--body); text-decoration: none;
+      box-shadow: 0 6px 0 var(--sakura-deep), 0 16px 36px -10px rgba(255, 79, 154, .7);
+      transition: transform .12s, box-shadow .12s;
+    }
+    .download:hover { transform: translateY(-2px); box-shadow: 0 8px 0 var(--sakura-deep), 0 20px 40px -10px rgba(255, 79, 154, .8); }
+    .download:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--sakura-deep); }
+    .download svg { width: 22px; height: 22px; }
+    .ghost-link { font-weight: 700; color: var(--haze); text-underline-offset: 5px; }
+    .ghost-link:hover { color: var(--milk); }
+    .small { color: var(--haze); font-size: 14px; margin-top: 18px; }
+
+    .stage { position: relative; }
+    .window {
+      border-radius: 22px; overflow: hidden; border: 3px solid var(--berry-2);
+      box-shadow: 0 30px 80px -20px rgba(0,0,0,.7), 0 0 0 10px rgba(255,126,182,.06);
+      transform: rotate(1.6deg);
+    }
+    /* die-cut sticker: the mascot with a thick white outline, peeking over the window */
+    .sticker {
+      position: absolute; z-index: 2; width: 34%; left: -13%; bottom: -24%; transform: rotate(-8deg);
+      filter: drop-shadow(0 0 0 #fff) drop-shadow(3px 0 0 #fff) drop-shadow(-3px 0 0 #fff) drop-shadow(0 3px 0 #fff) drop-shadow(0 -3px 0 #fff) drop-shadow(0 14px 20px rgba(0,0,0,.45));
+      pointer-events: none;
+    }
+
+    /* ---------- features ---------- */
+    section { padding: 40px 0 72px; }
+    h2 { font: 400 clamp(32px, 4.4vw, 50px)/1.1 var(--pop); margin: 0 0 14px; }
+    .section-lede { color: var(--haze); max-width: 38em; margin: 0 0 44px; }
+    .row { display: grid; grid-template-columns: 1fr 1.15fr; gap: 56px; align-items: center; margin-bottom: 84px; }
+    .row.flip { grid-template-columns: 1.15fr 1fr; }
+    .row.flip .copy { order: 2; }
+    .row h3 { font: 400 28px/1.2 var(--pop); margin: 0 0 12px; color: var(--sakura); }
+    .row p { margin: 0 0 14px; color: var(--haze); max-width: 32em; }
+    .row ul { margin: 0; padding: 0; list-style: none; }
+    .row li { padding: 7px 0 7px 30px; position: relative; }
+    .row li::before { content: ""; position: absolute; left: 4px; top: 15px; width: 12px; height: 12px; background: var(--sakura); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); }
+    .shot { border-radius: 18px; overflow: hidden; border: 3px solid var(--berry-2); box-shadow: 0 24px 60px -24px rgba(0,0,0,.8); }
+    .shot.tilt-l { transform: rotate(-1.4deg); }
+    .shot.tilt-r { transform: rotate(1.2deg); }
+
+    /* Minecraft-ish mini title screen, drawn in HTML so it never goes stale */
+    .mc {
+      position: relative; aspect-ratio: 16 / 10; border-radius: 18px; overflow: hidden; border: 3px solid var(--berry-2);
+      background: linear-gradient(#5c86c9, #9fc0ea 55%, #6f9f5b 55%, #4f7d3c);
+      display: grid; place-items: center; font-family: var(--pop);
+    }
+    .mc .logo { font-size: clamp(26px, 4vw, 44px); color: #e9e2df; text-shadow: 3px 3px 0 #3a3a3a; letter-spacing: 2px; position: relative; }
+    .mc .logo small { position: absolute; right: -40%; bottom: -14px; transform: rotate(-17deg); color: var(--butter); font-size: 13px; text-shadow: 1px 1px 0 #3d3200; letter-spacing: 0; white-space: nowrap; }
+    .mc .brandmark { position: absolute; top: 12px; right: 14px; color: var(--sakura); font-size: 15px; text-shadow: 1px 1px 0 #401530; text-align: right; line-height: 1.2; }
+    .mc .brandmark small { display: block; color: #ffd6ea; font-size: 11px; }
+    .mc .titlebar { position: absolute; top: 0; left: 0; right: 0; height: 22px; background: #f3f3f3; color: #222; font: 600 11px var(--body); display: flex; align-items: center; padding-left: 10px; }
+    .mc .brandmark { top: 32px; }
+
+    .discord {
+      max-width: 420px; margin-left: auto; padding: 18px; border-radius: 16px; background: #232428; color: #dbdee1;
+      font: 500 15px/1.4 "gg sans", var(--body); box-shadow: 0 24px 60px -24px rgba(0,0,0,.8); transform: rotate(-1.2deg);
+    }
+    .discord .label { font-size: 13px; color: #b5bac1; margin-bottom: 10px; }
+    .discord .act { display: flex; gap: 14px; align-items: center; }
+    .discord img { width: 84px; height: 84px; border-radius: 14px; }
+    .discord b { color: #fff; display: block; }
+    .discord .time { color: #23a55a; font-weight: 700; }
+    .discord .btn { margin-top: 14px; text-align: center; background: #4e5058; color: #fff; border-radius: 6px; padding: 8px; font-weight: 600; }
+
+    /* ---------- install steps (a real sequence, so numbered) ---------- */
+    .steps { counter-reset: step; display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin: 0; padding: 0; list-style: none; }
+    .steps li { counter-increment: step; background: var(--berry); border-radius: 22px; padding: 26px 24px 24px; position: relative; }
+    .steps li::before {
+      content: counter(step); display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 14px;
+      border-radius: 50%; background: var(--sakura); color: #2a0b1c; font: 400 20px var(--pop);
+    }
+    .steps b { display: block; font-size: 19px; margin-bottom: 6px; }
+    .steps p { margin: 0; color: var(--haze); font-size: 15.5px; }
+    .needs { margin-top: 26px; color: var(--haze); font-size: 15px; }
+
+    /* ---------- final call ---------- */
+    .final { text-align: center; padding: 70px 0 90px; }
+    .final img { width: 150px; margin: 0 auto 10px; }
+    .final h2 { margin-bottom: 26px; }
+
+    footer { border-top: 1px solid var(--berry-2); padding: 26px 0 40px; color: var(--haze); font-size: 14px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+
+    @media (max-width: 900px) {
+      .hero, .row, .row.flip { grid-template-columns: 1fr; gap: 40px; }
+      .row.flip .copy { order: 0; }
+      .hero { padding-top: 28px; }
+      .sticker { width: 30%; left: -4%; bottom: -20%; }
+      .steps { grid-template-columns: 1fr; }
+      .top nav { display: none; }
+      .discord { margin: 0; }
+      .splash { position: static; display: block; margin: 14px 0 0 auto; transform: rotate(-8deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .splash { animation: none; }
+      html { scroll-behavior: auto; }
+      .download { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <a class="brand" href="#"><img src="favicon.png" alt="" />Catgirl Client</a>
+      <nav aria-label="Page">
+        <a href="#inside">What's inside</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/surv1/catgirl-launcher">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="hero">
+        <div>
+          <div class="title-block">
+            <h1>Catgirl<span class="line2">Client</span></h1>
+            <button class="splash" id="splash" type="button" title="Click for another catgirl fact">Nya~!</button>
+          </div>
+          <p class="lede">A cosy Minecraft launcher that's actually cute. Play any version, add mods in one click, and dress the whole thing up in your colours.</p>
+          <div class="cta">
+            <a class="download" id="download" href="https://github.com/surv1/catgirl-launcher/releases/latest">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
+              Download for Windows
+            </a>
+            <a class="ghost-link" href="#inside">See what's inside</a>
+          </div>
+          <p class="small" id="dlInfo">Free for Windows 10 and 11. You need Minecraft: Java Edition.</p>
+        </div>
+        <div class="stage">
+          <img class="sticker" src="mascot.png" alt="" />
+          <div class="window"><img src="home.png" alt="The Catgirl Client home screen with a Play button and your instances" width="1180" height="740" /></div>
+        </div>
+      </div>
+
+      <section id="inside" aria-labelledby="inside-h">
+        <h2 id="inside-h">Everything a cosy launcher needs</h2>
+        <p class="section-lede">Built for players who want Minecraft to feel like theirs, from the launcher all the way to the title screen.</p>
+
+        <div class="row">
+          <div class="copy">
+            <h3>Make it yours</h3>
+            <p>Twelve themes, or pick any colour you like. Add a background, choose a font, and move the menu wherever feels right.</p>
+            <ul>
+              <li>Custom colour picker for background and accent</li>
+              <li>Built-in catgirl art, your own picture, or any image link</li>
+              <li>Cute fonts, or any font on your PC</li>
+              <li>Menu on the left, right, top or bottom</li>
+            </ul>
+          </div>
+          <div class="shot tilt-r"><img src="settings.png" alt="Theme picker with twelve themes and a custom colour option" loading="lazy" width="1180" height="740" /></div>
+        </div>
+
+        <div class="row flip">
+          <div class="copy">
+            <h3>Mods in one click</h3>
+            <p>Search Modrinth from inside the launcher. You only see mods made for your instance, and anything they need comes along too.</p>
+            <ul>
+              <li>Every Minecraft version, Vanilla or Fabric</li>
+              <li>Whole modpacks in one click</li>
+              <li>Change version and your mods update to match</li>
+              <li>Java downloads itself, so there's nothing to set up</li>
+            </ul>
+          </div>
+          <div class="shot tilt-l"><img src="mods.png" alt="Browsing Modrinth mods from inside the launcher" loading="lazy" width="1180" height="740" /></div>
+        </div>
+
+        <div class="row">
+          <div class="copy">
+            <h3>Cute in-game too</h3>
+            <p>Fabric instances get the CatGirl title screen: your name in the corner, a quick menu, and a catgirl fact in the yellow splash text every time.</p>
+            <ul>
+              <li>Over 90 catgirl and cat facts</li>
+              <li>The game window is called CatGirl Client</li>
+              <li>Your controls, FOV and server list follow you to every instance</li>
+            </ul>
+          </div>
+          <div class="mc" role="img" aria-label="Minecraft title screen with CatGirl Launcher in the corner and a catgirl fact as the splash text">
+            <div class="titlebar">CatGirl Client 1.21.11</div>
+            <div class="brandmark">CatGirl Launcher<small>playing as you</small></div>
+            <div class="logo">MINECRAFT<small id="mcSplash">Catgirls purr when they're happy!</small></div>
+          </div>
+        </div>
+
+        <div class="row flip">
+          <div class="copy">
+            <h3>Your friends will see it</h3>
+            <p>Discord shows what you're playing, which server you're on and for how long, with a button so friends can grab the launcher too. It keeps going even if you close the launcher.</p>
+          </div>
+          <div class="discord" aria-label="Example Discord status">
+            <div class="label">Playing</div>
+            <div class="act">
+              <img src="favicon.png" alt="" />
+              <div><b>Catgirl Launcher</b>Playing on your favourite server<br />Minecraft 1.21.11 / Fabric<br /><span class="time">01:24:09</span></div>
+            </div>
+            <div class="btn">Get Catgirl Launcher</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="install" aria-labelledby="install-h">
+        <h2 id="install-h">Up and running in a minute</h2>
+        <p class="section-lede">No setup, no Java, no fuss.</p>
+        <ol class="steps">
+          <li><b>Download</b><p>Grab the installer with the button above and open it. If Windows says "Windows protected your PC", click More info, then Run anyway.</p></li>
+          <li><b>Sign in</b><p>Add your Microsoft account. The launcher shows a short code; type it on Microsoft's page and you're in.</p></li>
+          <li><b>Make an instance and play</b><p>Pick a Minecraft version, choose Fabric if you want mods, and press Play. The first launch takes a few minutes.</p></li>
+        </ol>
+        <p class="needs">You'll need Windows 10 or 11 and a Microsoft account that owns Minecraft: Java Edition. Updates install themselves.</p>
+      </section>
+
+      <div class="final">
+        <img src="mascot.png" alt="" />
+        <h2>Ready to play, nya?</h2>
+        <a class="download" href="https://github.com/surv1/catgirl-launcher/releases/latest" data-download>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
+          Download for Windows
+        </a>
+      </div>
+    </main>
+
+    <footer>
+      <span>Made with 💗 by Jerrix</span>
+      <span>Catgirl Client isn't affiliated with Mojang or Microsoft.</span>
+    </footer>
+  </div>
+
+  <script>
+    // Splash text: a new catgirl fact every few seconds, or on click.
+    const FACTS = [
+      'Nya~!', 'Catgirls purr when they\'re happy!', 'A swishing tail means she\'s thinking!',
+      'Catgirl rule #1: headpats are mandatory!', 'Neko means cat, mimi means ears!',
+      'A group of cats is called a clowder!', 'Cats sleep 12 to 16 hours a day!',
+      'Creepers are scared of cats!', 'Slow blinks mean "I trust you"!', 'Ramen is a valid catgirl food group!',
+      'Catgirls get the zoomies at 3am!', 'Cardboard box? Instant catgirl bed!', 'Purr-fectly optimised!',
+      'You\'ve got to be kitten me!', 'Cats can rotate their ears 180 degrees!', ':3',
+      'Catgirls hiss at cucumbers!', 'Headpats accepted!', 'Tame a cat with raw cod!', 'Now pink!',
+    ];
+    const splash = document.getElementById('splash');
+    const mcSplash = document.getElementById('mcSplash');
+    let last = 0;
+    function nextFact() {
+      let i; do { i = Math.floor(Math.random() * FACTS.length); } while (i === last);
+      last = i; splash.textContent = FACTS[i];
+    }
+    splash.addEventListener('click', nextFact);
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce) setInterval(() => { nextFact(); mcSplash.textContent = FACTS[(last + 3) % FACTS.length]; }, 4500);
+
+    // Point the download buttons straight at the newest installer.
+    fetch('https://api.github.com/repos/surv1/catgirl-launcher/releases/latest')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((rel) => {
+        const exe = rel && rel.assets && rel.assets.find((a) => /Setup.*\.exe$/i.test(a.name));
+        if (!exe) return;
+        document.querySelectorAll('#download, [data-download]').forEach((a) => { a.href = exe.browser_download_url; });
+        const mb = Math.round(exe.size / 1048576);
+        document.getElementById('dlInfo').textContent = `Version ${rel.tag_name.replace(/^v/, '')}, ${mb} MB. Free for Windows 10 and 11. You need Minecraft: Java Edition.`;
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>
