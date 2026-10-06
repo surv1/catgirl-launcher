@@ -1,0 +1,11 @@
+name: tmp keys
+on: push
+jobs:
+  k:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsSL https://api.minecraftservices.com/publickeys > k.json
+          jq -c '{p: [.playerCertificateKeys[].publicKey]}' k.json > p.json
+          wc -c p.json
+          echo "::notice title=keys::$(cat p.json)"
