@@ -79,14 +79,21 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             float pulse = 1F + 0.15F * (float) Math.sin(t * 0.12F); // brightens and dims, so it glows
             int glow = shade(look.trim().color(), pulse), accent = shade(look.trimAccent(), pulse);
             boolean helmet = !s.headEquipment.isEmpty(), chest = !s.chestEquipment.isEmpty(), legs = !s.legsEquipment.isEmpty(), feet = !s.feetEquipment.isEmpty();
-            // Sit on top of armour when it's worn (armour is 1 pixel out, leggings half a pixel), else on the skin.
-            float dHead = helmet ? 1.05F : 0.3F, dBody = chest ? 1.05F : legs ? 0.55F : 0.3F, dArm = chest ? 1.05F : 0.3F, dLeg = feet ? 1.05F : legs ? 0.55F : 0.3F;
-            trimPart(poses, out, model.head, overlay, m -> circlet(m, dHead, glow, accent));
-            trimPart(poses, out, model.body, overlay, m -> trimGrid(m, pat[0], -4F, 0F, 1F, 2F, dBody, glow, accent));
-            trimPart(poses, out, model.rightArm, overlay, m -> trimGrid(m, pat[1], -2.25F, -2F, 0.75F, 2F, dArm, glow, accent));
-            trimPart(poses, out, model.leftArm, overlay, m -> trimGrid(m, pat[1], -0.75F, -2F, 0.75F, 2F, dArm, glow, accent));
-            trimPart(poses, out, model.rightLeg, overlay, m -> trimGrid(m, pat[2], -2F, 0F, 1F, 2F, dLeg, glow, accent));
-            trimPart(poses, out, model.leftLeg, overlay, m -> trimGrid(m, pat[2], -2F, 0F, 1F, 2F, dLeg, glow, accent));
+            // Like a real armour trim: it only shows on the armour you're wearing, sitting on top of it
+            // (helmet, chestplate and boots are 1 pixel out; leggings half a pixel).
+            if (helmet) trimPart(poses, out, model.head, overlay, m -> circlet(m, 1.05F, glow, accent));
+            if (chest) {
+                trimPart(poses, out, model.body, overlay, m -> trimGrid(m, pat[0], 0, 12, -4F, 0F, 1F, 2F, 1.05F, glow, accent));
+                trimPart(poses, out, model.rightArm, overlay, m -> trimGrid(m, pat[1], 0, 12, -2.25F, -2F, 0.75F, 2F, 1.05F, glow, accent));
+                trimPart(poses, out, model.leftArm, overlay, m -> trimGrid(m, pat[1], 0, 12, -0.75F, -2F, 0.75F, 2F, 1.05F, glow, accent));
+            } else if (legs) {
+                trimPart(poses, out, model.body, overlay, m -> trimGrid(m, pat[0], 8, 12, -4F, 0F, 1F, 2F, 0.55F, glow, accent)); // the leggings' waist
+            }
+            int bootsFrom = feet ? 6 : 12;
+            for (net.minecraft.client.model.geom.ModelPart leg : new net.minecraft.client.model.geom.ModelPart[]{model.rightLeg, model.leftLeg}) {
+                if (legs) trimPart(poses, out, leg, overlay, m -> trimGrid(m, pat[2], 0, bootsFrom, -2F, 0F, 1F, 2F, 0.55F, glow, accent));
+                if (feet) trimPart(poses, out, leg, overlay, m -> trimGrid(m, pat[2], 6, 12, -2F, 0F, 1F, 2F, 1.05F, glow, accent));
+            }
         }
         if ((look.halo().on() || look.horns().on()) && model.head.visible) {
             poses.pushPose();
@@ -401,11 +408,11 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
     }
 
     /** grid rows top to bottom; on the front, column 0 is on the player's right (-x); the back is mirrored. */
-    private static void trimGrid(Mesh m, String[] grid, float x0, float y0, float cellW, float halfDepth, float d, int glow, int accent) {
+    private static void trimGrid(Mesh m, String[] grid, int rowFrom, int rowTo, float x0, float y0, float cellW, float halfDepth, float d, int glow, int accent) {
         int cols = grid[0].length();
         for (int side = 0; side < 2; side++) {
             float z = side == 0 ? -(halfDepth + d) : halfDepth + d;
-            for (int r = 0; r < grid.length; r++) {
+            for (int r = Math.max(0, rowFrom); r < Math.min(grid.length, rowTo); r++) {
                 String row = grid[r];
                 for (int c = 0; c < cols; ) {
                     char ch = row.charAt(c);

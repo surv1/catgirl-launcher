@@ -9,7 +9,7 @@ const COS_ITEMS = [
   { id: 'halo', name: 'Halo', emoji: '😇', colors: [['color', 'Colour']] },
   { id: 'horns', name: 'Devil horns', emoji: '😈', colors: [['color', 'Colour']] },
   { id: 'pet', name: 'Angel buddy', emoji: '👼', colors: [['color', 'Colour']] },
-  { id: 'trim', name: 'Glow trim', emoji: '✨', colors: [['color', 'Glow'], ['accent', 'Accent']], styles: [['paws', 'Paws'], ['stars', 'Starlight'], ['hearts', 'Heartbeat'], ['circuit', 'Circuit']] },
+  { id: 'trim', name: 'Glow trim', emoji: '✨', hint: 'Shows on the armour you wear, like a real armour trim.', colors: [['color', 'Glow'], ['accent', 'Accent']], styles: [['paws', 'Paws'], ['stars', 'Starlight'], ['hearts', 'Heartbeat'], ['circuit', 'Circuit']] },
   { id: 'cape', name: 'Cape', emoji: '🧣', colors: [['color', 'Cape'], ['trim', 'Trim']], styles: [['plain', 'Plain'], ['paw', 'Paw'], ['heart', 'Heart'], ['meow', 'Meow'], ['catmeow', 'Catgirl meow ✨']] },
 ];
 const COS_DEFAULTS = {
@@ -358,11 +358,12 @@ const TRIM_PATTERNS = {"paws": {"body": ["########", "........", "..#..#..", ".#
 
 // Standing-pose pivots of each body part, as in the game.
 const PARTS = { head: [0, 0], body: [0, 0], rightArm: [-5, 2], leftArm: [5, 2], rightLeg: [-1.9, 12], leftLeg: [1.9, 12] };
-function trimGrid(F, grid, x0, y0, cellW, d, glow, accent) {
+function trimGrid(F, grid, x0, y0, cellW, d, glow, accent, rowFrom = 0, rowTo = 12) {
   const cols = grid[0].length;
   for (const side of [0, 1]) {
     const z = side === 0 ? -(2 + d) : 2 + d;
     grid.forEach((row, r) => {
+      if (r < rowFrom || r >= rowTo) return;
       for (let c = 0; c < cols;) {
         const ch = row[c];
         if (ch !== '#' && ch !== '+') { c++; continue; }
@@ -377,10 +378,19 @@ function trimGrid(F, grid, x0, y0, cellW, d, glow, accent) {
 function trimFaces(F, it, t) {
   const pat = TRIM_PATTERNS[it.style] || TRIM_PATTERNS.paws;
   const pulse = 1 + 0.15 * Math.sin(t * 0.12); // brightens and dims, so it glows
-  const glow = shade(it.color, pulse), accent = shade(it.accent, pulse), d = 0.3;
+  const glow = shade(it.color, pulse), accent = shade(it.accent, pulse), d = 1.05;
+  // Trims only show on armour, so the preview puts you in a dark armour set (like the game, 1 pixel out).
+  const ARMOR = '#3a3640', ARMOR2 = '#2c2931';
+  const shell = (part, x0, y0, z0, x1, y1, z1, col = ARMOR) => { const saved = F.p.copy(); F.p.translate(PARTS[part][0], PARTS[part][1], 0); F.box(col, x0, y0, z0, x1, y1, z1); F.p = saved; };
+  shell('head', -5, -9, -5, 5, -5.5, 5);
+  shell('body', -5, -1, -3, 5, 13, 3);
+  shell('rightArm', -4, -3, -3, 2, 11, 3, ARMOR2);
+  shell('leftArm', -2, -3, -3, 4, 11, 3, ARMOR2);
+  shell('rightLeg', -3, -1, -3, 3, 13, 3);
+  shell('leftLeg', -3, -1, -3, 3, 13, 3);
   const at = (part, fn) => { const saved = F.p.copy(); F.p.translate(PARTS[part][0], PARTS[part][1], 0); fn(); F.p = saved; };
   at('head', () => {
-    const o = 4 + d;
+    const o = 4 + d + 0.02;
     F.box(glow, -o, -6, -o - 0.06, o, -5.4, -o + 0.06, true);
     F.box(glow, -o, -6, o - 0.06, o, -5.4, o + 0.06, true);
     F.box(accent, -0.9, -6.6, -o - 0.14, 0.9, -4.8, -o + 0.02, true);
@@ -572,6 +582,7 @@ function renderCosItems() {
     return `<div class="cos-item ${v.on ? 'on' : ''}" data-item="${d.id}">
       <header><span class="emoji">${d.emoji}</span><b>${d.name}</b>
         <label class="switch" title="Wear ${d.name.toLowerCase()}"><input type="checkbox" data-on="${d.id}" ${v.on ? 'checked' : ''} /><i></i></label></header>
+      ${d.hint ? `<small class="muted cos-hint">${d.hint}</small>` : ''}
       <div class="colors">${d.styles ? `<div class="seg cos-style">${d.styles.map(([k, l]) => `<button data-style="${d.id}" data-v="${k}" class="${v.style === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}${d.colors.map(([key, label]) => `
         <div class="cos-color"><span>${label}</span><input type="color" data-color="${d.id}.${key}" value="${esc(v[key])}" />
           <div class="presets-dots">${presetsFor(d.id, key).map((c) => `<button style="background:${c}" data-preset="${d.id}.${key}" data-c="${c}" title="${c}"></button>`).join('')}</div></div>`).join('')}

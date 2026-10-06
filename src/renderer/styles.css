@@ -461,3 +461,4 @@ body.nav-top.nav-icons .sidebar, body.nav-bottom.nav-icons .sidebar { width: aut
 .cos-lines > span { font-size: 13px; color: var(--muted); }
 .seg.wrap { flex-wrap: wrap; }
 .seg.wrap button { flex: 0 0 auto; padding: 5px 10px; font-size: 13px; }
+.cos-hint { margin-top: -4px; }
