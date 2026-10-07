@@ -29,6 +29,7 @@ Play any version, add mods in one click, and make the whole launcher your own. N
 - Browse and install **mods from Modrinth** in one click. Anything a mod needs is installed too.
 - You only ever see mods made for **your instance's version**.
 - Change an instance's Minecraft version and its **mods update to match** automatically.
+- **Mods are checked every time you press Play:** any mod made for a different Minecraft version is updated to the right one (even mods you added yourself), and mods that can't work yet are switched off instead of crashing your game.
 - Install whole **Modrinth modpacks** in one click.
 - Turn mods on or off, or remove them, from the launcher.
 

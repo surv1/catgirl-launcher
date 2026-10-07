@@ -204,3 +204,150 @@ async function installPack(projectId, onProgress = () => {}) {
 module.exports.migrate = migrate;
 module.exports.searchPacks = searchPacks;
 module.exports.installPack = installPack;
+
+// ---------- before every launch: make every mod fit this Minecraft version ----------
+// Works for ALL jars in the mods folder, including ones dropped in by hand:
+//  1. Mods Modrinth knows (matched by file hash) that aren't made for this version are swapped
+//     for the newest build that is (and any new required mods are installed).
+//  2. Mods Modrinth has no build of, and unknown mods whose fabric.mod.json says they need a
+//     different Minecraft version (or Forge mods), are switched off so the game doesn't crash.
+const { sha1File } = require('./net');
+const { readFile } = require('./unzip');
+
+// Minecraft version maths for fabric.mod.json "depends.minecraft" (e.g. "1.21.x", ">=1.21 <1.22",
+// "~1.20.4", ["1.21", "1.21.1"]). Returns true/false, or null when we can't tell.
+function vparts(v) {
+  const m = /^(\d+)\.(\d+)(?:\.(\d+))?/.exec(String(v).trim());
+  return m ? [+m[1], +m[2], +(m[3] || 0)] : null;
+}
+function vcmp(a, b) { for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1; return 0; }
+function matchTerm(term, mc) {
+  const t = term.trim();
+  if (!t || t === '*') return true;
+  const v = vparts(mc);
+  if (!v) return null;
+  const wild = /^(\d+)\.(\d+|x|\*)(?:\.(\d+|x|\*))?$/.exec(t);
+  if (wild && /[x*]/.test(t)) {
+    if (+wild[1] !== v[0]) return false;
+    if (wild[2] === 'x' || wild[2] === '*') return true;
+    if (+wild[2] !== v[1]) return false;
+    return wild[3] === undefined || wild[3] === 'x' || wild[3] === '*' || +wild[3] === v[2];
+  }
+  const m = /^(>=|<=|>|<|=|~|\^)?\s*(.+)$/.exec(t);
+  const want = vparts(m[2]); // pre-release tags (-pre1, -alpha) are ignored: close enough
+  if (!want) return null;
+  const c = vcmp(v, want);
+  switch (m[1]) {
+    case '>=': return c >= 0;
+    case '<=': return c <= 0;
+    case '>': return c > 0;
+    case '<': return c < 0;
+    case '~': return c >= 0 && v[0] === want[0] && v[1] === want[1];
+    case '^': return c >= 0 && v[0] === want[0];
+    default: return c === 0;
+  }
+}
+function matchesMc(spec, mc) {
+  if (spec === undefined || spec === null) return true;
+  if (Array.isArray(spec)) {
+    let unknown = false;
+    for (const s of spec) { const r = matchesMc(s, mc); if (r) return true; if (r === null) unknown = true; }
+    return unknown ? null : false;
+  }
+  let result = true;
+  for (const term of String(spec).split(/\s+/).filter(Boolean)) {
+    const r = matchTerm(term, mc);
+    if (r === false) return false;
+    if (r === null) result = null;
+  }
+  return result;
+}
+
+// What a jar says about itself: { fabric: true, minecraft: <spec>, name } or { forge: true } or null.
+function jarInfo(file) {
+  try {
+    const fmj = readFile(file, 'fabric.mod.json');
+    if (fmj) {
+      const j = JSON.parse(fmj.toString('utf8').replace(/^﻿/, '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ' '));
+      return { fabric: true, minecraft: j.depends?.minecraft, name: j.name || j.id };
+    }
+    if (readFile(file, 'quilt.mod.json')) return { fabric: true };
+    if (readFile(file, 'META-INF/mods.toml') || readFile(file, 'META-INF/neoforge.mods.toml') || readFile(file, 'mcmod.info')) return { forge: true };
+  } catch { /* unreadable jar: leave it alone */ }
+  return null;
+}
+
+async function syncToVersion(instId, log = () => {}) {
+  const inst = instances.get(instId);
+  const result = { updated: [], disabled: [], ok: 0 };
+  if (inst.loader !== 'fabric') return result;
+  const dir = modsDir(instId);
+  const jars = fs.readdirSync(dir).filter((f) => f.endsWith('.jar') && !f.startsWith('catgirl-client-'));
+  if (!jars.length) return result;
+
+  const byHash = {};
+  for (const f of jars) { try { byHash[await sha1File(path.join(dir, f))] = f; } catch {} }
+  const hashes = Object.keys(byHash);
+  let known = {}, latest = {};
+  try {
+    known = await fetchJson(`${API}/version_files`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hashes, algorithm: 'sha1' }) });
+  } catch (e) { log(`[Catgirl] Couldn't check mods for updates (${e.message}). Starting anyway.`); }
+  const fits = (v) => v && (v.game_versions || []).includes(inst.mcVersion) && (v.loaders || []).some((l) => l === 'fabric' || l === 'quilt');
+  const outdated = hashes.filter((h) => known[h] && !fits(known[h]));
+  if (outdated.length) {
+    try {
+      latest = await fetchJson(`${API}/version_files/update`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hashes: outdated, algorithm: 'sha1', loaders: ['fabric'], game_versions: [inst.mcVersion] }),
+      });
+    } catch (e) { log(`[Catgirl] Couldn't look up mod updates (${e.message}).`); }
+  }
+
+  const idx = readIndex(instId);
+  const present = new Set(Object.values(known).map((v) => v.project_id));
+  const disable = (file, why) => {
+    try { fs.renameSync(path.join(dir, file), path.join(dir, file + '.disabled')); } catch { return; }
+    result.disabled.push(file);
+    log(`[Catgirl] Turned off ${file}: ${why}`);
+  };
+
+  for (const h of hashes) {
+    const file = byHash[h];
+    const v = known[h];
+    if (v) {
+      if (fits(v)) { result.ok++; continue; }
+      const nv = latest[h];
+      if (!fits(nv)) { disable(file, `there's no version of it for Minecraft ${inst.mcVersion} yet.`); continue; }
+      const nf = nv.files.find((x) => x.primary) || nv.files[0];
+      try {
+        await download(nf.url, path.join(dir, nf.filename), { sha1: nf.hashes?.sha1, size: nf.size });
+        if (nf.filename !== file) fs.rmSync(path.join(dir, file), { force: true });
+        let title = idx[nv.project_id]?.title || nf.filename.replace(/\.jar$/, '');
+        idx[nv.project_id] = { ...(idx[nv.project_id] || {}), file: nf.filename, title, version: nv.version_number };
+        result.updated.push(title);
+        log(`[Catgirl] Updated ${file} → ${nf.filename} for Minecraft ${inst.mcVersion}`);
+        for (const dep of nv.dependencies || []) {
+          if (dep.dependency_type !== 'required' || !dep.project_id || present.has(dep.project_id) || idx[dep.project_id]) continue;
+          present.add(dep.project_id);
+          try { writeIndex(instId, idx); const added = await install(instId, dep.project_id); Object.assign(idx, readIndex(instId)); if (added.length) log(`[Catgirl] Added ${added.join(', ')} (needed by ${title})`); } catch {}
+        }
+      } catch (e) {
+        disable(file, `couldn't download the ${inst.mcVersion} version (${e.message}).`);
+      }
+      continue;
+    }
+    // Not on Modrinth: trust what the mod itself says.
+    const info = jarInfo(path.join(dir, file));
+    if (info?.forge) { disable(file, "it's a Forge mod, and this instance uses Fabric."); continue; }
+    if (info?.fabric && matchesMc(info.minecraft, inst.mcVersion) === false) {
+      disable(file, `it's made for Minecraft ${Array.isArray(info.minecraft) ? info.minecraft.join(' / ') : info.minecraft}, not ${inst.mcVersion}.`);
+      continue;
+    }
+    result.ok++;
+  }
+  writeIndex(instId, idx);
+  return result;
+}
+
+module.exports.syncToVersion = syncToVersion;
+module.exports.matchesMc = matchesMc;

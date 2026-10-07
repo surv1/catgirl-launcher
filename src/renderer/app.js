@@ -724,6 +724,7 @@ function syncLookControls() {
   $('#menuIcons').checked = !!l.menuIconsOnly;
   $('#setSplashes').checked = l.splashes !== false;
   $('#setCapePictures').checked = l.showCapePictures !== false;
+  $('#setAutoFixMods').checked = l.autoFixMods !== false;
   $('#setShareOptions').checked = l.shareOptions !== false;
   $('#setShareServers').checked = l.shareServers !== false;
   $('#setShareServers').disabled = l.shareOptions === false;
@@ -816,6 +817,14 @@ $('#setShareOptions').addEventListener('change', (e) => setLook({ shareOptions: 
 $('#setShareServers').addEventListener('change', (e) => setLook({ shareServers: e.target.checked }));
 $('#setSplashes').addEventListener('change', (e) => setLook({ splashes: e.target.checked }));
 $('#setCapePictures').addEventListener('change', (e) => setLook({ showCapePictures: e.target.checked }));
+$('#setAutoFixMods').addEventListener('change', (e) => setLook({ autoFixMods: e.target.checked }));
+window.cat.mods.onFixed((r) => {
+  const parts = [];
+  if (r.updated.length) parts.push(`updated ${r.updated.length} mod${r.updated.length > 1 ? 's' : ''}`);
+  if (r.disabled.length) parts.push(`turned off ${r.disabled.length} that can't run on this version (see Console)`);
+  toast(`Mods checked: ${parts.join(', ')}.`, 'ok');
+  if ($('#page-mods').classList.contains('active')) renderMods();
+});
 $('#setDiscord').addEventListener('change', (e) => setLook({ discordPresence: e.target.checked }));
 $('#setDiscordServer').addEventListener('change', (e) => setLook({ discordShowServer: e.target.checked }));
 

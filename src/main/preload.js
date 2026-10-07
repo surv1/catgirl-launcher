@@ -99,6 +99,7 @@ contextBridge.exposeInMainWorld('cat', {
     remove: (id, file) => call('mods:remove', id, file),
     migrate: (id) => call('mods:migrate', id),
     onProgress: on('mods:progress'),
+    onFixed: on('mods:fixed'),
   },
   launch: {
     start: (id) => call('launch:start', id),

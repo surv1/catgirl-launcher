@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS = {
   font: 'default', fontName: '',
   background: 'none', bgDim: 55, bgBlur: 0, navPosition: 'left', navIcons: false,
   menuPosition: 'right', menuIconsOnly: false, splashes: true, accentHex: '#ff7eb6',
-  discordPresence: true, discordShowServer: true, shareOptions: true, shareServers: true, showCapePictures: true,
+  discordPresence: true, discordShowServer: true, shareOptions: true, shareServers: true, showCapePictures: true, autoFixMods: true,
 };
 
 let win = null;
@@ -206,6 +206,13 @@ function registerIpc() {
     const inst = instances.get(id);
     const s = settings();
     await installStarterMods(inst);
+    if (s.autoFixMods && inst.loader === 'fabric') {
+      send('launch:progress', { instId: id, stage: 'Checking your mods', done: 0, total: 0 });
+      try {
+        const r = await mods.syncToVersion(id, (line) => send('launch:log', { instId: id, line }));
+        if (r.updated.length || r.disabled.length) send('mods:fixed', { instId: id, ...r });
+      } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't check mods: ${e.message}` }); }
+    }
     send('launch:progress', { instId: id, stage: 'Checking Catgirl menu', done: 0, total: 0 });
     if (s.shareOptions) {
       try {
