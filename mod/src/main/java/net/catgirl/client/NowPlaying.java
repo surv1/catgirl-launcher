@@ -43,6 +43,11 @@ public final class NowPlaying {
     private static volatile boolean anchorPlaying = false;
     private static volatile long lastPlayingAt = 0;
     private static Identifier art = null;
+    private static volatile String artFor = "";      // which song the cover on screen belongs to
+    private static volatile String lookedUp = "";    // which song we've already searched Apple's catalogue for
+    private static volatile long songSince = 0;
+    private static final java.net.http.HttpClient HTTP = java.net.http.HttpClient.newBuilder()
+        .connectTimeout(java.time.Duration.ofSeconds(6)).followRedirects(java.net.http.HttpClient.Redirect.NORMAL).build();
     private static int artSerial = 0;
     private static String corner = "bottom-right";
     private static Process helper = null;
@@ -96,28 +101,80 @@ public final class NowPlaying {
             if (t.playing) lastPlayingAt = t.at;
             String key = t.title + "|" + t.artist;
             double predicted = anchorPos + (anchorPlaying ? (t.at - anchorAt) / 1000.0 : 0);
+            if (!key.equals(anchorKey)) { songSince = t.at; clearArt(); }
             if (!key.equals(anchorKey) || t.playing != anchorPlaying || Math.abs(t.pos - predicted) > 1.5) {
                 anchorPos = t.pos; anchorAt = t.at; anchorKey = key; anchorPlaying = t.playing;
             }
             track = t;
             if (o.has("artError")) CatgirlClient.LOG.info("[Catgirl] Now playing: no cover for this song ({})", str(o, "artError"));
-            if (o.has("art")) setArt(str(o, "art"));
+            if (o.has("art") && !str(o, "art").isEmpty()) setArt(Base64.getDecoder().decode(str(o, "art")), key);
+            // No cover from Windows after a few seconds? Look the song up in Apple's music catalogue.
+            if (!key.equals(artFor) && !key.equals(lookedUp) && t.at - songSince > 4000) {
+                lookedUp = key;
+                Thread th = new Thread(() -> lookupCover(t.title, t.artist, key), "catgirl-cover-lookup");
+                th.setDaemon(true);
+                th.start();
+            }
         } catch (Exception ignored) {
             // one bad line: wait for the next
         }
     }
 
-    private static void setArt(String b64) {
-        byte[] png = b64.isEmpty() ? null : Base64.getDecoder().decode(b64);
+    private static void lookupCover(String title, String artist, String key) {
+        try {
+            String term = java.net.URLEncoder.encode((artist + " " + title).trim(), StandardCharsets.UTF_8);
+            var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create("https://itunes.apple.com/search?entity=song&limit=1&term=" + term))
+                .timeout(java.time.Duration.ofSeconds(8)).header("User-Agent", "CatgirlClient").GET().build();
+            var res = HTTP.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+            var results = JsonParser.parseString(res.body()).getAsJsonObject().getAsJsonArray("results");
+            if (results == null || results.isEmpty()) { CatgirlClient.LOG.info("[Catgirl] Now playing: no cover found for {}", title); return; }
+            String url = results.get(0).getAsJsonObject().get("artworkUrl100").getAsString().replace("100x100", "200x200");
+            var img = HTTP.send(java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(8)).GET().build(),
+                java.net.http.HttpResponse.BodyHandlers.ofByteArray());
+            if (img.statusCode() == 200) setArt(img.body(), key);
+        } catch (Exception e) {
+            CatgirlClient.LOG.info("[Catgirl] Now playing: cover lookup failed: {}", e.toString());
+        }
+    }
+
+    /** Any picture (PNG/JPEG) → a 64×64 PNG, which is what the game's texture loader wants. */
+    private static byte[] toPng64(byte[] raw) {
+        try {
+            java.awt.image.BufferedImage src = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(raw));
+            if (src == null) return raw;
+            int side = Math.min(src.getWidth(), src.getHeight());
+            java.awt.image.BufferedImage out = new java.awt.image.BufferedImage(64, 64, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+            java.awt.Graphics2D g = out.createGraphics();
+            g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g.drawImage(src, 0, 0, 64, 64, (src.getWidth() - side) / 2, (src.getHeight() - side) / 2, (src.getWidth() + side) / 2, (src.getHeight() + side) / 2, null);
+            g.dispose();
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(out, "png", bos);
+            return bos.toByteArray();
+        } catch (Throwable e) {
+            return raw; // no image tools in this Java: try the bytes as they are
+        }
+    }
+
+    private static void clearArt() {
+        artFor = "";
         Minecraft.getInstance().execute(() -> {
+            if (art != null) { Minecraft.getInstance().getTextureManager().release(art); art = null; }
+        });
+    }
+
+    private static void setArt(byte[] raw, String key) {
+        byte[] png = toPng64(raw);
+        Minecraft.getInstance().execute(() -> {
+            if (!key.equals(anchorKey)) return; // the song changed meanwhile
             Minecraft mc = Minecraft.getInstance();
-            if (art != null) { mc.getTextureManager().release(art); art = null; }
-            if (png == null) return;
             try {
                 NativeImage img = NativeImage.read(png);
                 Identifier id = Identifier.fromNamespaceAndPath("catgirl", "nowplaying/art" + (artSerial++));
                 mc.getTextureManager().register(id, new DynamicTexture(() -> "Catgirl now playing art", img));
+                if (art != null) mc.getTextureManager().release(art);
                 art = id;
+                artFor = key;
                 CatgirlClient.LOG.info("[Catgirl] Now playing: cover loaded ({} bytes)", png.length);
             } catch (Exception e) {
                 CatgirlClient.LOG.warn("[Catgirl] Now playing: couldn't show the cover: {}", e.toString());
@@ -139,6 +196,11 @@ public final class NowPlaying {
         int sw = g.guiWidth(), sh = g.guiHeight();
         int x = corner.endsWith("left") ? MARGIN : sw - W - MARGIN;
         int y = corner.startsWith("top") ? MARGIN : sh - H - MARGIN;
+        if (corner.equals("hotbar")) { // just right of the hotbar, at the bottom
+            x = Math.min(sw / 2 + 91 + 12, sw - W - MARGIN);
+            y = sh - H - 4;
+            if (x < sw / 2 + 95) y = sh - H - 52; // small window: no room beside it, so sit just above the hotbar
+        }
 
         // soft blue-purple glow around the card (gently breathing)
         double breathe = 0.85 + 0.15 * Math.sin(now / 900.0);

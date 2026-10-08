@@ -42,7 +42,7 @@ function writeConfig(inst, settings = {}, discord = {}, launcherCommand = []) {
     splashes: settings.splashes !== false,
     nowPlaying: {
       enabled: settings.nowPlaying !== false,
-      position: ['bottom-right', 'bottom-left', 'top-right', 'top-left'].includes(settings.nowPlayingPos) ? settings.nowPlayingPos : 'bottom-right',
+      position: ['bottom-right', 'bottom-left', 'top-right', 'top-left', 'hotbar'].includes(settings.nowPlayingPos) ? settings.nowPlayingPos : 'bottom-right',
     },
     discord: {
       enabled: !!discord.enabled,
