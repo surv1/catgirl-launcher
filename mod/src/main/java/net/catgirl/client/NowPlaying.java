@@ -30,7 +30,7 @@ import java.util.Locale;
 public final class NowPlaying {
     // Card size and colours (dark see-through purple, thin lavender edge, rounded corners).
     private static final int W = 180, H = 52, ART = 40, MARGIN = 8, R = 5;
-    private static final int BG = 0xE01B1730, EDGE = 0xFF8C7FD9, BAR = 0xFF7D6BFF, TRACK = 0xFF4A4361;
+    private static final int BG = 0x8A1B1730, EDGE = 0xFFA99CFF, GLOW = 0x9C8CFF, BAR = 0xFF7D6BFF, TRACK = 0xFF4A4361;
     private static final int LABEL = 0xFF9A93B5, ARTIST = 0xFFC6C0DC, TIME = 0xFF8D86A8;
 
     private record Track(String title, String artist, String app, double pos, double dur, boolean playing, long at) {}
@@ -140,9 +140,17 @@ public final class NowPlaying {
         int x = corner.endsWith("left") ? MARGIN : sw - W - MARGIN;
         int y = corner.startsWith("top") ? MARGIN : sh - H - MARGIN;
 
-        // card: lavender edge, then the dark see-through inside
-        rounded(g, x, y, W, H, R, EDGE);
+        // soft blue-purple glow around the card (gently breathing)
+        double breathe = 0.85 + 0.15 * Math.sin(now / 900.0);
+        for (int i = 1; i <= 6; i++) {
+            int a = (int) Math.round((110 - i * 17) * breathe);
+            ring(g, x - i, y - i, W + 2 * i, H + 2 * i, R + i, (Math.max(0, a) << 24) | GLOW);
+        }
+        // card: bright edge, then a see-through frosted inside (a little lighter at the top, like glass)
         rounded(g, x + 1, y + 1, W - 2, H - 2, R - 1, BG);
+        ring(g, x, y, W, H, R, EDGE);
+        g.fillGradient(x + 2, y + R, x + W - 2, y + H / 2, 0x1EFFFFFF, 0x00FFFFFF);
+        g.fill(x + R, y + 2, x + W - R, y + 3, 0x22FFFFFF);
 
         // cover, with rounded corners (or a music note while there's none)
         int ax = x + 6, ay = y + (H - ART) / 2;
@@ -152,7 +160,6 @@ public final class NowPlaying {
             g.pose().scale(ART / 64F, ART / 64F);
             g.blit(RenderPipelines.GUI_TEXTURED, art, 0, 0, 0F, 0F, 64, 64, 64, 64);
             g.pose().popMatrix();
-            roundCorners(g, ax, ay, ART, ART, 3, BG);
         } else {
             rounded(g, ax, ay, ART, ART, 3, 0xFF2C2645);
             g.drawString(mc.font, "\u266B", ax + ART / 2 - 3, ay + ART / 2 - 4, EDGE, false);
@@ -197,6 +204,25 @@ public final class NowPlaying {
             int inset = inset(r, i);
             g.fill(x + inset, y + i, x + w - inset, y + i + 1, color);
             g.fill(x + inset, y + h - 1 - i, x + w - inset, y + h - i, color);
+        }
+    }
+
+    /** A 1-pixel rounded outline (one ring of the glow). */
+    private static void ring(GuiGraphics g, int x, int y, int w, int h, int r, int color) {
+        r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+        g.fill(x + r, y, x + w - r, y + 1, color);
+        g.fill(x + r, y + h - 1, x + w - r, y + h, color);
+        g.fill(x, y + r, x + 1, y + h - r, color);
+        g.fill(x + w - 1, y + r, x + w, y + h - r, color);
+        int prev = r;
+        for (int i = 0; i < r; i++) { // corners: walk the curve row by row
+            int in = inset(r, i), from = Math.min(in, prev), to = Math.max(in, prev) + 1;
+            if (i == 0) { from = in; to = r; }
+            g.fill(x + from, y + i, x + Math.min(to, r), y + i + 1, color);
+            g.fill(x + w - Math.min(to, r), y + i, x + w - from, y + i + 1, color);
+            g.fill(x + from, y + h - 1 - i, x + Math.min(to, r), y + h - i, color);
+            g.fill(x + w - Math.min(to, r), y + h - 1 - i, x + w - from, y + h - i, color);
+            prev = in;
         }
     }
 
