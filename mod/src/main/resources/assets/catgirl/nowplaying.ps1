@@ -1,5 +1,5 @@
 # Catgirl Client "Now playing": prints what Windows says is playing (Spotify, YouTube Music,
-# browsers, ...) as one JSON line per second. Uses Windows' own media controls, so no logins.
+# browsers, ...) as one JSON line twice a second. Uses Windows' own media controls, so no logins.
 # Album art is sent once per song, as a 64x64 PNG (base64).
 param([string]$TestArt = '')
 $ErrorActionPreference = 'SilentlyContinue'
@@ -97,12 +97,12 @@ while ($true) {
           # The art can show up a moment after the song changes, so try a few times.
           $art = Get-Art $p.Thumbnail
           if ($art) { $line.art = $art; $lastKey = $key; $artTries = 0 }
-          elseif (++$artTries -ge 4) { $line.art = ''; $line.artError = $script:artError; $lastKey = $key; $artTries = 0 }
+          elseif (++$artTries -ge 3) { $line.art = ''; $line.artError = $script:artError; $lastKey = $key; $artTries = 0 }
         }
       }
     }
   } catch {}
   [Console]::Out.WriteLine(($line | ConvertTo-Json -Compress))
   [Console]::Out.Flush()
-  Start-Sleep -Milliseconds 1000
+  Start-Sleep -Milliseconds 500
 }

@@ -109,7 +109,7 @@ public final class NowPlaying {
             if (o.has("artError")) CatgirlClient.LOG.info("[Catgirl] Now playing: no cover for this song ({})", str(o, "artError"));
             if (o.has("art") && !str(o, "art").isEmpty()) setArt(Base64.getDecoder().decode(str(o, "art")), key);
             // No cover from Windows after a few seconds? Look the song up in Apple's music catalogue.
-            if (!key.equals(artFor) && !key.equals(lookedUp) && t.at - songSince > 4000) {
+            if (!key.equals(artFor) && !key.equals(lookedUp) && t.at - songSince > 1200) {
                 lookedUp = key;
                 Thread th = new Thread(() -> lookupCover(t.title, t.artist, key), "catgirl-cover-lookup");
                 th.setDaemon(true);
@@ -196,6 +196,10 @@ public final class NowPlaying {
         int sw = g.guiWidth(), sh = g.guiHeight();
         int x = corner.endsWith("left") ? MARGIN : sw - W - MARGIN;
         int y = corner.startsWith("top") ? MARGIN : sh - H - MARGIN;
+        if (corner.equals("video")) { // the exact spot from the video: right of the crosshair, above the hotbar
+            x = Math.min((int) Math.round(sw * 0.595), sw - W - MARGIN);
+            y = Math.min((int) Math.round(sh * 0.69), sh - H - 26);
+        }
         if (corner.equals("hotbar")) { // just right of the hotbar, at the bottom
             x = Math.min(sw / 2 + 91 + 12, sw - W - MARGIN);
             y = sh - H - 4;
