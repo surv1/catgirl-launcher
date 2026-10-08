@@ -84,6 +84,14 @@ public class CatgirlClient implements ClientModInitializer {
             discord.start();
         }
 
+        // "Now playing" card for the song playing on this PC (can be turned off in the launcher).
+        if (config.nowPlaying) {
+            NowPlaying.start(config.nowPlayingPosition);
+            net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
+                net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", "now_playing"),
+                (graphics, delta) -> NowPlaying.render(graphics, config.accent));
+        }
+
         // Free cosmetics (cat ears, tail, bow) on every player who picked some in Catgirl Launcher.
         Cosmetics.init(FabricLoader.getInstance().getConfigDir().resolve("catgirl-cosmetics.json").toFile());
         LivingEntityFeatureRendererRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {
@@ -373,6 +381,8 @@ public class CatgirlClient implements ClientModInitializer {
         String discordClientId = "";
         String downloadUrl = null;
         List<String> launcherCommand = new ArrayList<>();
+        boolean nowPlaying = true;
+        String nowPlayingPosition = "bottom-right";
 
         static Config load(File file) {
             Config c = new Config();
@@ -383,6 +393,11 @@ public class CatgirlClient implements ClientModInitializer {
                 if (o.has("iconsOnly")) c.iconsOnly = o.get("iconsOnly").getAsBoolean();
                 if (o.has("windowTitle")) c.windowTitle = o.get("windowTitle").getAsString();
                 if (o.has("splashes")) c.splashes = o.get("splashes").getAsBoolean();
+                if (o.has("nowPlaying") && o.get("nowPlaying").isJsonObject()) {
+                    JsonObject np = o.get("nowPlaying").getAsJsonObject();
+                    if (np.has("enabled")) c.nowPlaying = np.get("enabled").getAsBoolean();
+                    if (np.has("position")) c.nowPlayingPosition = np.get("position").getAsString();
+                }
                 if (o.has("launcherCommand") && o.get("launcherCommand").isJsonArray()) {
                     for (com.google.gson.JsonElement e : o.get("launcherCommand").getAsJsonArray()) c.launcherCommand.add(e.getAsString());
                 }

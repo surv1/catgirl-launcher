@@ -40,6 +40,10 @@ function writeConfig(inst, settings = {}, discord = {}, launcherCommand = []) {
     windowTitle: 'CatGirl Client',
     launcherCommand: Array.isArray(launcherCommand) ? launcherCommand.map(String) : [],
     splashes: settings.splashes !== false,
+    nowPlaying: {
+      enabled: settings.nowPlaying !== false,
+      position: ['bottom-right', 'bottom-left', 'top-right', 'top-left'].includes(settings.nowPlayingPos) ? settings.nowPlayingPos : 'bottom-right',
+    },
     discord: {
       enabled: !!discord.enabled,
       clientId: String(discord.clientId || ''),

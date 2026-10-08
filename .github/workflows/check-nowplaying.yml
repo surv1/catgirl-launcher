@@ -1,0 +1,21 @@
+# Developer tool: runs the "Now playing" helper on Windows for a few seconds and shows what it
+# printed, to make sure the script runs. (Build servers have no music playing, so expect "none".)
+name: Check now-playing helper
+
+on: workflow_dispatch
+
+jobs:
+  run:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run helper for 8 seconds
+        shell: powershell
+        run: |
+          $p = Start-Process powershell.exe -ArgumentList '-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File','mod/src/main/resources/assets/catgirl/nowplaying.ps1' -RedirectStandardOutput out.txt -RedirectStandardError err.txt -PassThru -NoNewWindow
+          Start-Sleep -Seconds 8
+          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+          $out = (Get-Content out.txt -Raw) -replace "`r?`n", ' | '
+          $err = (Get-Content err.txt -Raw) -replace "`r?`n", ' | '
+          Write-Output "::notice title=stdout::$out"
+          Write-Output "::notice title=stderr::$err"

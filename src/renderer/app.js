@@ -725,6 +725,9 @@ function syncLookControls() {
   $('#setSplashes').checked = l.splashes !== false;
   $('#setCapePictures').checked = l.showCapePictures !== false;
   $('#setAutoFixMods').checked = l.autoFixMods !== false;
+  $('#setNowPlaying').checked = l.nowPlaying !== false;
+  $$('#nowPlayingPos button').forEach((b) => b.classList.toggle('on', b.dataset.v === (l.nowPlayingPos || 'bottom-right')));
+  $('#nowPlayingPos').classList.toggle('hidden', l.nowPlaying === false);
   $('#setShareOptions').checked = l.shareOptions !== false;
   $('#setShareServers').checked = l.shareServers !== false;
   $('#setShareServers').disabled = l.shareOptions === false;
@@ -818,6 +821,8 @@ $('#setShareServers').addEventListener('change', (e) => setLook({ shareServers: 
 $('#setSplashes').addEventListener('change', (e) => setLook({ splashes: e.target.checked }));
 $('#setCapePictures').addEventListener('change', (e) => setLook({ showCapePictures: e.target.checked }));
 $('#setAutoFixMods').addEventListener('change', (e) => setLook({ autoFixMods: e.target.checked }));
+$('#setNowPlaying').addEventListener('change', (e) => setLook({ nowPlaying: e.target.checked }));
+$('#nowPlayingPos').addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (b) setLook({ nowPlayingPos: b.dataset.v }); });
 window.cat.mods.onFixed((r) => {
   const parts = [];
   if (r.updated.length) parts.push(`updated ${r.updated.length} mod${r.updated.length > 1 ? 's' : ''}`);

@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS = {
   font: 'default', fontName: '',
   background: 'none', bgDim: 55, bgBlur: 0, navPosition: 'left', navIcons: false,
   menuPosition: 'right', menuIconsOnly: false, splashes: true, accentHex: '#ff7eb6',
-  discordPresence: true, discordShowServer: true, shareOptions: true, shareServers: true, showCapePictures: true, autoFixMods: true,
+  discordPresence: true, discordShowServer: true, shareOptions: true, shareServers: true, showCapePictures: true, autoFixMods: true, nowPlaying: true, nowPlayingPos: 'bottom-right',
 };
 
 let win = null;
