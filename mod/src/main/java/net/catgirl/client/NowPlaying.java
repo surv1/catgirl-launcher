@@ -8,6 +8,8 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import net.minecraft.resources.Identifier;
 
 import java.io.BufferedReader;
@@ -26,11 +28,19 @@ import java.util.Locale;
  * PowerShell helper (assets/catgirl/nowplaying.ps1), so there's nothing to log in to.
  */
 public final class NowPlaying {
-    private static final int W = 168, H = 44, ART = 32;
+    // Card size and colours (dark see-through purple, thin lavender edge, rounded corners).
+    private static final int W = 180, H = 52, ART = 40, MARGIN = 8, R = 5;
+    private static final int BG = 0xE01B1730, EDGE = 0xFF8C7FD9, BAR = 0xFF7D6BFF, TRACK = 0xFF4A4361;
+    private static final int LABEL = 0xFF9A93B5, ARTIST = 0xFFC6C0DC, TIME = 0xFF8D86A8;
 
     private record Track(String title, String artist, String app, double pos, double dur, boolean playing, long at) {}
 
     private static volatile Track track = null;
+    // The clock we show: it only jumps when you skip or change song, otherwise it ticks smoothly.
+    private static volatile double anchorPos = 0;
+    private static volatile long anchorAt = 0;
+    private static volatile String anchorKey = "";
+    private static volatile boolean anchorPlaying = false;
     private static volatile long lastPlayingAt = 0;
     private static Identifier art = null;
     private static int artSerial = 0;
@@ -84,7 +94,13 @@ public final class NowPlaying {
             Track t = new Track(str(o, "title"), str(o, "artist"), str(o, "app"),
                 num(o, "pos"), num(o, "dur"), o.has("playing") && o.get("playing").getAsBoolean(), System.currentTimeMillis());
             if (t.playing) lastPlayingAt = t.at;
+            String key = t.title + "|" + t.artist;
+            double predicted = anchorPos + (anchorPlaying ? (t.at - anchorAt) / 1000.0 : 0);
+            if (!key.equals(anchorKey) || t.playing != anchorPlaying || Math.abs(t.pos - predicted) > 1.5) {
+                anchorPos = t.pos; anchorAt = t.at; anchorKey = key; anchorPlaying = t.playing;
+            }
             track = t;
+            if (o.has("artError")) CatgirlClient.LOG.info("[Catgirl] Now playing: no cover for this song ({})", str(o, "artError"));
             if (o.has("art")) setArt(str(o, "art"));
         } catch (Exception ignored) {
             // one bad line: wait for the next
@@ -102,8 +118,9 @@ public final class NowPlaying {
                 Identifier id = Identifier.fromNamespaceAndPath("catgirl", "nowplaying/art" + (artSerial++));
                 mc.getTextureManager().register(id, new DynamicTexture(() -> "Catgirl now playing art", img));
                 art = id;
+                CatgirlClient.LOG.info("[Catgirl] Now playing: cover loaded ({} bytes)", png.length);
             } catch (Exception e) {
-                CatgirlClient.LOG.debug("[Catgirl] Couldn't show album art: {}", e.toString());
+                CatgirlClient.LOG.warn("[Catgirl] Now playing: couldn't show the cover: {}", e.toString());
             }
         });
     }
@@ -120,62 +137,88 @@ public final class NowPlaying {
         if (!t.playing && now - lastPlayingAt > 30_000) return; // paused for a while: tuck it away
 
         int sw = g.guiWidth(), sh = g.guiHeight();
-        int x = corner.endsWith("left") ? 6 : sw - W - 6;
-        int y = corner.startsWith("top") ? 6 : sh - H - 6;
+        int x = corner.endsWith("left") ? MARGIN : sw - W - MARGIN;
+        int y = corner.startsWith("top") ? MARGIN : sh - H - MARGIN;
 
-        // card
-        int bg = 0xD8140C1C, border = 0xFF000000 | (accent & 0xFFFFFF);
-        g.fill(x + 1, y, x + W - 1, y + H, bg);
-        g.fill(x, y + 1, x + W, y + H - 1, bg);
-        g.fill(x + 1, y, x + W - 1, y + 1, border);
-        g.fill(x + 1, y + H - 1, x + W - 1, y + H, border);
-        g.fill(x, y + 1, x + 1, y + H - 1, border);
-        g.fill(x + W - 1, y + 1, x + W, y + H - 1, border);
+        // card: lavender edge, then the dark see-through inside
+        rounded(g, x, y, W, H, R, EDGE);
+        rounded(g, x + 1, y + 1, W - 2, H - 2, R - 1, BG);
 
-        // album art (or a little note icon)
-        int ax = x + 6, ay = y + 6;
+        // cover, with rounded corners (or a music note while there's none)
+        int ax = x + 6, ay = y + (H - ART) / 2;
         if (art != null) {
             g.pose().pushMatrix();
             g.pose().translate(ax, ay);
             g.pose().scale(ART / 64F, ART / 64F);
             g.blit(RenderPipelines.GUI_TEXTURED, art, 0, 0, 0F, 0F, 64, 64, 64, 64);
             g.pose().popMatrix();
+            roundCorners(g, ax, ay, ART, ART, 3, BG);
         } else {
-            g.fill(ax, ay, ax + ART, ay + ART, 0xFF2A1F35);
-            g.drawString(mc.font, "♫", ax + 12, ay + 12, border, false);
+            rounded(g, ax, ay, ART, ART, 3, 0xFF2C2645);
+            g.drawString(mc.font, "\u266B", ax + ART / 2 - 3, ay + ART / 2 - 4, EDGE, false);
         }
 
         // text
         Font f = mc.font;
-        int tx = ax + ART + 6, tw = x + W - 6 - tx;
-        String label = (t.playing ? "now playing" : "paused") + (t.app.toLowerCase(Locale.ROOT).contains("spotify") ? " · Spotify" : "");
-        g.pose().pushMatrix();
-        g.pose().translate(tx, y + 5);
-        g.pose().scale(0.75F, 0.75F);
-        g.drawString(f, label, 0, 0, 0xFFB39BB8, false);
-        g.pose().popMatrix();
-        marquee(g, f, t.title, tx, y + 13, tw, 0xFFFFFFFF, now);
-        g.drawString(f, ellipsis(f, t.artist, tw), tx, y + 24, 0xFFC9B6CF, false);
+        int tx = ax + ART + 7, tw = x + W - 7 - tx;
+        String label = (t.playing ? "now playing" : "paused") + (t.app.toLowerCase(Locale.ROOT).contains("spotify") ? " \u00B7 Spotify" : "");
+        small(g, f, label, tx, y + 6, LABEL);
+        marquee(g, f, Component.literal(t.title).withStyle(ChatFormatting.BOLD), tx, y + 14, tw, 0xFFFFFFFF, now);
+        g.drawString(f, ellipsis(f, t.artist, tw), tx, y + 25, ARTIST, false);
 
-        // progress bar + times
-        double pos = t.pos + (t.playing ? (now - t.at) / 1000.0 : 0);
-        if (t.dur > 0) pos = Math.min(pos, t.dur);
-        int bx = x + 6, by = y + H - 6, bw = W - 12;
-        g.fill(bx, by, bx + bw, by + 2, 0xFF3A2F45);
-        if (t.dur > 0) g.fill(bx, by, bx + (int) Math.round(bw * Math.max(0, pos) / t.dur), by + 2, border);
+        // progress bar under the text, times underneath
+        double pos = anchorPos + (anchorPlaying ? (now - anchorAt) / 1000.0 : 0);
+        if (t.dur > 0) pos = Math.max(0, Math.min(pos, t.dur));
+        int by = y + 36;
+        rounded(g, tx, by, tw, 3, 1, TRACK);
         if (t.dur > 0) {
+            int fill = (int) Math.round(tw * pos / t.dur);
+            if (fill > 0) rounded(g, tx, by, Math.max(2, fill), 3, 1, BAR);
             String left = time(pos), right = "-" + time(t.dur - pos);
-            g.pose().pushMatrix();
-            g.pose().translate(tx, by - 7);
-            g.pose().scale(0.75F, 0.75F);
-            g.drawString(f, left, 0, 0, 0xFF9C8AA3, false);
-            g.drawString(f, right, (int) (tw / 0.75F) - f.width(right), 0, 0xFF9C8AA3, false);
-            g.pose().popMatrix();
+            small(g, f, left, tx, by + 6, TIME);
+            small(g, f, right, tx + tw - (int) Math.ceil(f.width(right) * 0.75F), by + 6, TIME);
         }
     }
 
+    private static void small(GuiGraphics g, Font f, String s, int x, int y, int color) {
+        g.pose().pushMatrix();
+        g.pose().translate(x, y);
+        g.pose().scale(0.75F, 0.75F);
+        g.drawString(f, s, 0, 0, color, false);
+        g.pose().popMatrix();
+    }
+
+    /** A filled rectangle with rounded corners of radius r. */
+    private static void rounded(GuiGraphics g, int x, int y, int w, int h, int r, int color) {
+        r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+        if (r == 0) { g.fill(x, y, x + w, y + h, color); return; }
+        g.fill(x, y + r, x + w, y + h - r, color);
+        for (int i = 0; i < r; i++) {
+            int inset = inset(r, i);
+            g.fill(x + inset, y + i, x + w - inset, y + i + 1, color);
+            g.fill(x + inset, y + h - 1 - i, x + w - inset, y + h - i, color);
+        }
+    }
+
+    /** Paints the bits outside rounded corners in the background colour (for the cover). */
+    private static void roundCorners(GuiGraphics g, int x, int y, int w, int h, int r, int bg) {
+        for (int i = 0; i < r; i++) {
+            int inset = inset(r, i);
+            if (inset <= 0) continue;
+            g.fill(x, y + i, x + inset, y + i + 1, bg);
+            g.fill(x + w - inset, y + i, x + w, y + i + 1, bg);
+            g.fill(x, y + h - 1 - i, x + inset, y + h - i, bg);
+            g.fill(x + w - inset, y + h - 1 - i, x + w, y + h - i, bg);
+        }
+    }
+
+    private static int inset(int r, int row) {
+        double dy = r - row - 0.5;
+        return (int) Math.round(r - Math.sqrt(Math.max(0, r * r - dy * dy)));
+    }
+
     /** Long titles slide back and forth inside their space. */
-    private static void marquee(GuiGraphics g, Font f, String s, int x, int y, int w, int color, long now) {
+    private static void marquee(GuiGraphics g, Font f, Component s, int x, int y, int w, int color, long now) {
         int sw = f.width(s);
         if (sw <= w) { g.drawString(f, s, x, y, color, false); return; }
         int over = sw - w;

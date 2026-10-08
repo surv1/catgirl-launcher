@@ -27,12 +27,21 @@ function Get-Art($ref) {
   try {
     if (-not $ref) { $script:artError = 'no thumbnail'; return $null }
     $st = Await ($ref.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
-    if (-not $st -or $st.Size -le 0) { $script:artError = 'empty thumbnail'; return $null }
-    $reader = [Windows.Storage.Streams.DataReader]::new($st.GetInputStreamAt(0))
-    $n = Await ($reader.LoadAsync([uint32]$st.Size)) ([uint32])
-    if (-not $n) { $script:artError = 'could not read thumbnail'; return $null }
-    $bytes = New-Object byte[] $n
-    $reader.ReadBytes($bytes)
+    if (-not $st) { $script:artError = 'could not open thumbnail'; return $null }
+    # Read the whole stream (some apps report a size of 0, so don't rely on it).
+    $bytes = $null
+    try {
+      $net = [System.IO.WindowsRuntimeStreamExtensions]::AsStreamForRead($st.GetInputStreamAt(0))
+      $ms = New-Object System.IO.MemoryStream
+      $net.CopyTo($ms)
+      $bytes = $ms.ToArray()
+    } catch {}
+    if ((-not $bytes -or $bytes.Length -eq 0) -and $st.Size -gt 0) {
+      $reader = [Windows.Storage.Streams.DataReader]::new($st.GetInputStreamAt(0))
+      $n = Await ($reader.LoadAsync([uint32]$st.Size)) ([uint32])
+      if ($n) { $bytes = New-Object byte[] $n; $reader.ReadBytes($bytes) }
+    }
+    if (-not $bytes -or $bytes.Length -eq 0) { $script:artError = 'empty thumbnail'; return $null }
     $img = [System.Drawing.Image]::FromStream((New-Object System.IO.MemoryStream(, $bytes)))
     $side = [Math]::Min($img.Width, $img.Height)
     $bmp = New-Object System.Drawing.Bitmap 64, 64
