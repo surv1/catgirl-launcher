@@ -1,6 +1,7 @@
 # Catgirl Client "Now playing": prints what Windows says is playing (Spotify, YouTube Music,
 # browsers, ...) as one JSON line per second. Uses Windows' own media controls, so no logins.
 # Album art is sent once per song, as a 64x64 PNG (base64).
+param([string]$TestArt = '')
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
@@ -20,14 +21,16 @@ $null = [Windows.Storage.Streams.DataReader, Windows.Storage.Streams, ContentTyp
 $mgr = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
 if (-not $mgr) { [Console]::Out.WriteLine('{"error":"no media controls"}'); exit 1 }
 
-function Get-Art($props) {
+$script:artError = ''
+# $ref is anything with OpenReadAsync() (the song's thumbnail, or a file when testing).
+function Get-Art($ref) {
   try {
-    if (-not $props.Thumbnail) { return $null }
-    $st = Await ($props.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
-    if (-not $st -or $st.Size -le 0) { return $null }
+    if (-not $ref) { $script:artError = 'no thumbnail'; return $null }
+    $st = Await ($ref.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
+    if (-not $st -or $st.Size -le 0) { $script:artError = 'empty thumbnail'; return $null }
     $reader = [Windows.Storage.Streams.DataReader]::new($st.GetInputStreamAt(0))
     $n = Await ($reader.LoadAsync([uint32]$st.Size)) ([uint32])
-    if (-not $n) { return $null }
+    if (-not $n) { $script:artError = 'could not read thumbnail'; return $null }
     $bytes = New-Object byte[] $n
     $reader.ReadBytes($bytes)
     $img = [System.Drawing.Image]::FromStream((New-Object System.IO.MemoryStream(, $bytes)))
@@ -42,7 +45,15 @@ function Get-Art($props) {
     $bmp.Save($out, [System.Drawing.Imaging.ImageFormat]::Png)
     $bmp.Dispose(); $img.Dispose()
     return [Convert]::ToBase64String($out.ToArray())
-  } catch { return $null }
+  } catch { $script:artError = $_.Exception.Message; return $null }
+}
+
+if ($TestArt) {
+  $null = [Windows.Storage.StorageFile, Windows.Storage, ContentType = WindowsRuntime]
+  $file = Await ([Windows.Storage.StorageFile]::GetFileFromPathAsync($TestArt)) ([Windows.Storage.StorageFile])
+  $art = Get-Art $file
+  if ($art) { [Console]::Out.WriteLine("art ok, $($art.Length) chars") } else { [Console]::Out.WriteLine("art failed: $script:artError") }
+  exit 0
 }
 
 $lastKey = ''
@@ -56,21 +67,28 @@ while ($true) {
       if ($p -and $p.Title) {
         $tl = $s.GetTimelineProperties()
         $pb = $s.GetPlaybackInfo()
+        # Apps only tell Windows the position now and then, along with when they did; move it on to "now".
+        $pos = $tl.Position.TotalSeconds
+        $isPlaying = ($pb.PlaybackStatus -eq [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionPlaybackStatus]::Playing)
+        if ($isPlaying -and $tl.LastUpdatedTime.Year -gt 2000) {
+          $age = ([DateTimeOffset]::Now - $tl.LastUpdatedTime).TotalSeconds
+          if ($age -gt 0 -and $age -lt 3600) { $pos += $age }
+        }
         $line = @{
           title   = [string]$p.Title
           artist  = [string]$p.Artist
           album   = [string]$p.AlbumTitle
           app     = [string]$s.SourceAppUserModelId
-          pos     = [Math]::Round($tl.Position.TotalSeconds, 2)
+          pos     = [Math]::Round($pos, 2)
           dur     = [Math]::Round(($tl.EndTime - $tl.StartTime).TotalSeconds, 2)
-          playing = ($pb.PlaybackStatus -eq [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionPlaybackStatus]::Playing)
+          playing = $isPlaying
         }
         $key = "$($p.Title)|$($p.Artist)"
         if ($key -ne $lastKey) {
           # The art can show up a moment after the song changes, so try a few times.
-          $art = Get-Art $p
+          $art = Get-Art $p.Thumbnail
           if ($art) { $line.art = $art; $lastKey = $key; $artTries = 0 }
-          elseif (++$artTries -ge 4) { $line.art = ''; $lastKey = $key; $artTries = 0 }
+          elseif (++$artTries -ge 4) { $line.art = ''; $line.artError = $script:artError; $lastKey = $key; $artTries = 0 }
         }
       }
     }

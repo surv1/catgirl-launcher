@@ -9,6 +9,15 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Album art conversion
+        shell: powershell
+        run: |
+          Add-Type -AssemblyName System.Drawing
+          $b = New-Object System.Drawing.Bitmap 300, 300
+          $g = [System.Drawing.Graphics]::FromImage($b); $g.Clear([System.Drawing.Color]::HotPink); $g.Dispose()
+          $b.Save("$PWD\cover.jpg", [System.Drawing.Imaging.ImageFormat]::Jpeg)
+          $r = powershell.exe -NoProfile -ExecutionPolicy Bypass -File mod/src/main/resources/assets/catgirl/nowplaying.ps1 -TestArt "$PWD\cover.jpg" 2>&1 | Out-String
+          Write-Output "::notice title=art::$($r -replace "`r?`n", ' | ')"
       - name: Run helper for 8 seconds
         shell: powershell
         run: |
