@@ -81,4 +81,9 @@ function readFile(zipPath, name) {
   return e ? readEntry(buf, e) : null;
 }
 
-module.exports = { extractZip, readFile };
+// All files in a zip held in memory: [{ name, read() }].
+function filesInZip(buf) {
+  return entries(buf).filter((e) => !e.name.endsWith('/')).map((e) => ({ name: e.name, read: () => readEntry(buf, e) }));
+}
+
+module.exports = { extractZip, readFile, filesInZip };

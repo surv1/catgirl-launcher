@@ -30,6 +30,7 @@
     .navbar button:disabled { opacity: .4; }
     .navbar span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-left: 4px; }
 
+    .grab { width: 100%; margin-top: 10px; padding: 10px; font-weight: 700; }
     .found { display: grid; grid-template-columns: 96px 1fr; gap: 12px; padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--pink) 12%, var(--panel)); border: 1px solid color-mix(in srgb, var(--pink) 45%, transparent); }
     .found canvas { width: 96px; height: 192px; image-rendering: pixelated; background: color-mix(in srgb, var(--bg) 60%, transparent); border-radius: 10px; }
     .found .info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -77,7 +78,8 @@
           <span id="where">minecraftskins.com</span>
           <button id="ext" title="Open in my browser">↗</button>
         </div>
-        <p class="hint">Click <b>Download</b> on any skin and it pops up here. You can also right-click a skin picture → "Use this picture as my skin".</p>
+        <button class="primary grab" id="grabSkin">✨ Use the skin on this page</button>
+        <p class="hint">Open any skin, then click the button above (or the site's <b>Download</b> button) and it pops up here. Works with Java and Bedrock skins.</p>
       </div>
 
       <div class="block hidden" id="foundBlock">

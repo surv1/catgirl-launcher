@@ -7,6 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const skins = require('./skins');
+const { filesInZip } = require('./unzip');
 
 const PANEL = 360;
 const enc = encodeURIComponent;
@@ -33,14 +34,77 @@ function nameFrom(fileOrUrl) {
   return /^[0-9a-f]{12,}$/i.test(clean) ? '' : clean.slice(0, 40);
 }
 
-function offer(buf, { name = '', source = '' } = {}) {
-  try {
-    skins.checkSkin(buf);
-    send('wardrobe:found', { dataUrl: skins.toDataUrl(buf), name, source });
-    if (win && !win.isDestroyed()) { win.show(); win.focus(); }
-  } catch (e) {
-    send('wardrobe:notice', { error: e.message });
+// Is this a skin we can use? Normal 64×64 skins as they are; "HD" skins (128×128, 256×256…, which
+// Bedrock allows) are shrunk to 64×64 by the Wardrobe page. Returns { buf, hd } or null.
+function asSkin(buf) {
+  const size = skins.pngSize(buf);
+  if (!size) return null;
+  if (size.width === 64 && (size.height === 64 || size.height === 32)) return { buf, hd: false };
+  const square = size.width === size.height || size.width === size.height * 2;
+  if (square && size.width > 64 && size.width <= 1024 && size.width % 64 === 0) return { buf, hd: true };
+  return null;
+}
+
+// Skin downloads can also be zipped skin packs (.zip / .mcpack, mostly from Bedrock): look inside.
+function findSkin(buf) {
+  const direct = asSkin(buf);
+  if (direct) return direct;
+  if (buf.length > 4 && buf.readUInt32LE(0) === 0x04034b50) {
+    let files = [];
+    try { files = filesInZip(buf).filter((f) => /\.png$/i.test(f.name) && !/pack_icon|preview|thumbnail/i.test(f.name)); } catch { return null; }
+    const score = (n) => (/skin/i.test(n) ? 0 : 1) + (/icon|preview|cape/i.test(n) ? 5 : 0);
+    files.sort((a, b) => score(a.name) - score(b.name));
+    for (const f of files.slice(0, 40)) {
+      try { const s = asSkin(f.read()); if (s) return s; } catch { /* next */ }
+    }
   }
+  return null;
+}
+
+function offer(buf, { name = '', source = '' } = {}) {
+  const skin = findSkin(buf);
+  if (!skin) {
+    let why = "That download isn't a skin we can use.";
+    try { skins.checkSkin(buf); } catch (e) { if (skins.pngSize(buf)) why = e.message; }
+    send('wardrobe:notice', { error: why });
+    return false;
+  }
+  send('wardrobe:found', { dataUrl: skins.toDataUrl(skin.buf), name, source, hd: skin.hd });
+  if (win && !win.isDestroyed()) { win.show(); win.focus(); }
+  return true;
+}
+
+async function fetchBytes(url, wc) {
+  const res = await wc.session.fetch(url);
+  if (!res.ok) throw new Error(`Couldn't download that (${res.status}).`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+// The "Use the skin on this page" button: find the skin's download link on the open page.
+async function grabFromPage() {
+  if (!view || view.webContents.isDestroyed()) throw new Error('Open a skin site first.');
+  const wc = view.webContents;
+  const links = await wc.executeJavaScript(`(() => {
+    const out = [];
+    const add = (h) => { if (h && !out.includes(h)) out.push(h); };
+    const all = [...document.querySelectorAll('a[href]')].map((a) => a.href);
+    all.filter((h) => /planetminecraft\.com\/skin\/.+\/download\/file\//.test(h)).forEach(add);
+    all.filter((h) => /minecraftskins\.com\/skin\/download\//.test(h)).forEach(add);
+    all.filter((h) => /namemc\.com\/texture\/[0-9a-f]+\.png/i.test(h)).forEach(add);
+    [...document.querySelectorAll('[src],[data-src]')].map((e) => e.getAttribute('data-src') || e.src)
+      .filter((h) => h && /texture\/[0-9a-f]+\.png|\/skins?\/.*\.png/i.test(h)).forEach((h) => add(new URL(h, location.href).href));
+    all.filter((h) => /download/i.test(h) && /skin/i.test(h) && !/remote|apply|bedrock-app/i.test(h)).forEach(add);
+    return out.slice(0, 8);
+  })()`, true);
+  if (!links.length) throw new Error("Couldn't find a skin on this page. Open one skin's own page first.");
+  let lastErr = null;
+  for (const url of links) {
+    try {
+      const buf = await fetchBytes(url, wc);
+      if (findSkin(buf)) return offer(buf, { name: nameFrom(url) || nameFrom(wc.getTitle() || ''), source: host(wc.getURL()) });
+    } catch (e) { lastErr = e; }
+  }
+  throw new Error(lastErr ? lastErr.message : "Found a download on this page, but it isn't a skin we can use.");
 }
 
 async function catchUrl(url, wc) {
@@ -168,4 +232,4 @@ function windowCmd(cmd) {
   return win.isAlwaysOnTop();
 }
 
-module.exports = { init, open, search, nav, windowCmd, SITES, isPng, nameFrom };
+module.exports = { init, open, search, nav, windowCmd, grabFromPage, findSkin, SITES, isPng, nameFrom };

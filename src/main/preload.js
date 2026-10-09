@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('cat', {
     open: () => call('wardrobe:open'),
     search: (site, q) => call('wardrobe:search', site, q),
     nav: (cmd) => call('wardrobe:nav', cmd),
+    grab: () => call('wardrobe:grab'),
     window: (cmd) => call('wardrobe:window', cmd),
     sites: () => call('wardrobe:sites'),
     onFound: on('wardrobe:found'),

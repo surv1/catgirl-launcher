@@ -88,8 +88,20 @@ function drawFace(canvas, img) {
 }
 
 /* ---------- found skin ---------- */
+// HD skins (128×128 and up) → a normal 64×64 skin, which is what Java Minecraft accepts.
+async function shrinkSkin(dataUrl) {
+  const img = await loadImage(dataUrl);
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = img.width === img.height ? 64 : 32;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/png');
+}
+
 async function showFound(found) {
   try {
+    if (found.hd) found = { ...found, dataUrl: await shrinkSkin(found.dataUrl), hd: false };
     const img = await loadImage(found.dataUrl);
     state.found = found;
     state.variant = found.variant || (detectSlim(img) ? 'slim' : 'classic');
@@ -223,3 +235,12 @@ $('#pin').addEventListener('click', async () => { const on = await window.cat.wa
   loadHistory();
   $('#q').focus();
 })();
+
+$('#grabSkin').addEventListener('click', async () => {
+  const b = $('#grabSkin');
+  if (b.disabled) return;
+  b.disabled = true;
+  status('Looking for the skin on this page…');
+  try { await window.cat.wardrobe.grab(); } catch (e) { status(e.message, 'err'); }
+  b.disabled = false;
+});

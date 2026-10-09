@@ -255,6 +255,7 @@ function registerIpc() {
   handle('wardrobe:open', () => openWardrobe({ fromGame: false }));
   handle('wardrobe:search', (site, q) => wardrobe.search(site, q));
   handle('wardrobe:nav', (cmd) => wardrobe.nav(cmd));
+  handle('wardrobe:grab', () => wardrobe.grabFromPage());
   handle('wardrobe:window', (cmd) => wardrobe.windowCmd(cmd));
   handle('wardrobe:sites', () => Object.fromEntries(Object.entries(wardrobe.SITES).map(([k, v]) => [k, v.name])));
   handle('skins:history', async () => {
