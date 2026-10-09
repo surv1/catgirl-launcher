@@ -6,7 +6,7 @@ const zlib = require('zlib');
 const Module = require('module');
 const origLoad = Module._load;
 Module._load = function (req, ...rest) { return req === 'electron' ? {} : origLoad.call(this, req, ...rest); };
-const { findSkin } = require('../src/main/wardrobe');
+const { findSkin, findSkinLinks } = require('../src/main/wardrobe');
 
 const skin64 = fs.readFileSync(path.join(__dirname, 'fixtures', 'skin-pink.png'));
 const resized = (w, h) => { const b = Buffer.from(skin64); b.writeUInt32BE(w, 16); b.writeUInt32BE(h, 20); return b; };
@@ -32,4 +32,17 @@ assert.strictEqual(findSkin(Buffer.from('<html>login</html>')), null, 'a web pag
 const pack = zip({ 'pack_icon.png': resized(256, 256), 'manifest.json': Buffer.from('{}'), 'skins/my_skin.png': skin64 });
 assert.ok(findSkin(pack)?.buf.equals(skin64), 'skin pack: picks the skin, not the icon');
 assert.strictEqual(findSkin(zip({ 'readme.txt': Buffer.from('hi') })), null, 'zip without a skin');
+// The page scanner, sent to the site exactly the way the app sends it, against a fake page.
+const fakePage = (hrefs, srcs = []) => ({
+  querySelectorAll: (sel) => (sel === 'a[href]' ? hrefs.map((href) => ({ href })) : srcs.map((src) => ({ getAttribute: (k) => (k === 'src' ? src : null) }))),
+});
+const run = (doc, href) => new Function('document', 'location', `return (${findSkinLinks.toString()})(document, location)`)(doc, { href });
+assert.deepStrictEqual(run(fakePage([
+  'https://www.planetminecraft.com/skins/',
+  'https://www.planetminecraft.com/skin/black-6900000/download/remote/123/',
+  'https://www.planetminecraft.com/skin/black-6900000/download/file/19705144/',
+]), 'https://www.planetminecraft.com/skin/black-6900000/'), ['https://www.planetminecraft.com/skin/black-6900000/download/file/19705144/'], 'Planet Minecraft');
+assert.deepStrictEqual(run(fakePage(['https://www.minecraftskins.com/skin/download/22543317'])), ['https://www.minecraftskins.com/skin/download/22543317'], 'The Skindex');
+assert.deepStrictEqual(run(fakePage([], ['/texture/abcdef0123.png']), 'https://namemc.com/skin/abc'), ['https://namemc.com/texture/abcdef0123.png'], 'NameMC');
+assert.deepStrictEqual(run(fakePage(['https://example.com/about'])), [], 'nothing on the page');
 console.log('skin finding tests passed');

@@ -80,22 +80,28 @@ async function fetchBytes(url, wc) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+// Runs inside the skin site's page (sent over as source text, so it must not use anything from
+// this file). Returns the likely skin download links, best first.
+function findSkinLinks(document, location) {
+  const out = [];
+  const add = (h) => { if (h && !out.includes(h)) out.push(h); };
+  const all = Array.from(document.querySelectorAll('a[href]')).map((a) => a.href);
+  all.filter((h) => /planetminecraft\.com\/skin\/.+\/download\/file\//.test(h)).forEach(add);
+  all.filter((h) => /minecraftskins\.com\/skin\/download\//.test(h)).forEach(add);
+  all.filter((h) => /namemc\.com\/texture\/[0-9a-f]+\.png/i.test(h)).forEach(add);
+  Array.from(document.querySelectorAll('[src],[data-src]'))
+    .map((e) => e.getAttribute('data-src') || e.getAttribute('src'))
+    .filter((h) => h && /texture\/[0-9a-f]+\.png|\/skins?\/.*\.png/i.test(h))
+    .forEach((h) => { try { add(new URL(h, location.href).href); } catch (e) { /* bad link */ } });
+  all.filter((h) => /download/i.test(h) && /skin/i.test(h) && !/remote|apply/i.test(h)).forEach(add);
+  return out.slice(0, 8);
+}
+
 // The "Use the skin on this page" button: find the skin's download link on the open page.
 async function grabFromPage() {
   if (!view || view.webContents.isDestroyed()) throw new Error('Open a skin site first.');
   const wc = view.webContents;
-  const links = await wc.executeJavaScript(`(() => {
-    const out = [];
-    const add = (h) => { if (h && !out.includes(h)) out.push(h); };
-    const all = [...document.querySelectorAll('a[href]')].map((a) => a.href);
-    all.filter((h) => /planetminecraft\.com\/skin\/.+\/download\/file\//.test(h)).forEach(add);
-    all.filter((h) => /minecraftskins\.com\/skin\/download\//.test(h)).forEach(add);
-    all.filter((h) => /namemc\.com\/texture\/[0-9a-f]+\.png/i.test(h)).forEach(add);
-    [...document.querySelectorAll('[src],[data-src]')].map((e) => e.getAttribute('data-src') || e.src)
-      .filter((h) => h && /texture\/[0-9a-f]+\.png|\/skins?\/.*\.png/i.test(h)).forEach((h) => add(new URL(h, location.href).href));
-    all.filter((h) => /download/i.test(h) && /skin/i.test(h) && !/remote|apply|bedrock-app/i.test(h)).forEach(add);
-    return out.slice(0, 8);
-  })()`, true);
+  const links = await wc.executeJavaScript(`(${findSkinLinks.toString()})(document, location)`, true);
   if (!links.length) throw new Error("Couldn't find a skin on this page. Open one skin's own page first.");
   let lastErr = null;
   for (const url of links) {
@@ -232,4 +238,4 @@ function windowCmd(cmd) {
   return win.isAlwaysOnTop();
 }
 
-module.exports = { init, open, search, nav, windowCmd, grabFromPage, findSkin, SITES, isPng, nameFrom };
+module.exports = { init, open, search, nav, windowCmd, grabFromPage, findSkin, findSkinLinks, SITES, isPng, nameFrom };
