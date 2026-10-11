@@ -1,0 +1,69 @@
+# Checks the Catgirl Pack that people download (docs/downloads/CatgirlPack.zip) against the real
+# game: every file must replace something that exists, sounds must be valid, and the game must load
+# the pack without a single warning about it.
+name: Texture pack check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "docs/downloads/CatgirlPack.zip"
+      - "texture-pack/**"
+      - ".github/workflows/pack-check.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      MC: "1.21.11"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Get the game files
+        run: |
+          set -e
+          pip install -q pillow portablemc
+          V=$(curl -fsSL https://piston-meta.mojang.com/mc/game/version_manifest_v2.json | jq -r --arg v "$MC" '.versions[] | select(.id==$v) | .url')
+          curl -fsSL "$V" -o v.json
+          curl -fsSL "$(jq -r .downloads.client.url v.json)" -o client.jar
+          mkdir jar && (cd jar && unzip -q ../client.jar 'version.json' 'assets/*')
+          curl -fsSL "$(jq -r .assetIndex.url v.json)" -o idx.json
+          H=$(jq -r '.objects["minecraft/sounds.json"].hash' idx.json)
+          curl -fsSL "https://resources.download.minecraft.net/${H:0:2}/$H" -o vanilla-sounds.json
+          echo "PACKV=$(jq -r '.pack_version.resource_major // .pack_version.resource' jar/version.json)" >> $GITHUB_ENV
+      - name: Check every file
+        run: |
+          python3 texture-pack/tools/validate_pack.py docs/downloads/CatgirlPack.zip jar vanilla-sounds.json "$PACKV" | tee check.txt
+          echo "::notice title=files::$(tail -1 check.txt)"
+          if grep -q PROBLEM check.txt; then echo "::error title=problems::$(grep PROBLEM check.txt | tr '\n' '|' | head -c 3000)"; exit 1; fi
+      - name: Start the game with the pack on
+        run: |
+          set -e
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgl1-mesa-dri mesa-utils > /dev/null
+          G=$PWD/game
+          mkdir -p $G/resourcepacks
+          cp docs/downloads/CatgirlPack.zip $G/resourcepacks/
+          printf 'resourcePacks:["vanilla","file/CatgirlPack.zip"]\nonboardAccessibility:false\nsoundCategory_master:0.0\ntutorialStep:none\n' > $G/options.txt
+          portablemc --main-dir $G --work-dir $G start --dry $MC
+          export LIBGL_ALWAYS_SOFTWARE=1
+          xvfb-run -a -s "-screen 0 1280x720x24" timeout 420 portablemc --main-dir $G --work-dir $G start $MC -u CatTester > game.txt 2>&1 &
+          for i in $(seq 1 400); do
+            sleep 1
+            if grep -q "particles.png-atlas" $G/logs/latest.log 2>/dev/null && [ $i -gt 30 ]; then sleep 20; break; fi
+          done
+          pkill -f net.minecraft.client.main.Main || pkill java || true
+          sleep 3
+          L=$G/logs/latest.log
+          [ -f $L ] || { tail -50 game.txt; echo "::error::the game did not start"; exit 1; }
+          echo "::notice title=reload::$(grep -m3 'Reloading ResourceManager' $L | tr '\n' '|')"
+          echo "::notice title=atlases::$(grep -E 'Created: .*(particles|items|blocks|armor_trims)' $L | sed 's/.*Created: //' | tr '\n' '|')"
+          grep -q 'Reloading ResourceManager: vanilla, file/CatgirlPack.zip' $L || { echo "::error::the game did not turn the pack on"; exit 1; }
+          grep -E '/(WARN|ERROR)\]' $L > warn.txt || true
+          echo "::notice title=all-warnings::$(wc -l < warn.txt) lines: $(cut -c1-220 warn.txt | tr '\n' '|' | head -c 3000)"
+          if grep -iE 'catgirl|totem|sword|_axe|mace|glint|glitter|sweep|critical_hit|enchanted_hit|equipment|sounds\.json|pack\.mcmeta' warn.txt; then
+            echo "::error title=pack-warnings::$(grep -iE 'catgirl|totem|sword|_axe|mace|glint|glitter|sweep|critical_hit|enchanted_hit|equipment|sounds\.json|pack\.mcmeta' warn.txt | tr '\n' '|' | head -c 3000)"
+            exit 1
+          fi
+          echo "::notice title=game::loaded the pack with no warnings about it"
