@@ -15,6 +15,7 @@ permissions:
 jobs:
   shots:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     env:
       MC: "1.21.11"
     steps:

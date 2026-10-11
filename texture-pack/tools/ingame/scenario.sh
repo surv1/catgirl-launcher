@@ -22,11 +22,11 @@ cmd "item replace entity $P hotbar.0 with netherite_sword$G1"
 shot hand-netherite 2
 # effects in front of the camera, one kind at a time, kept coming while the picture is taken
 burst() { for i in $(seq 1 10); do cmd "execute as $P at @s anchored eyes run particle $1"; done; }
-burst "minecraft:sweep_attack ^ ^ ^2.5 0 0 0 0 1 force" & shot sweep 1.2; wait
-burst "minecraft:crit ^ ^ ^3 0.4 0.3 0.4 0 6 force" & shot crit 1.2; wait
-burst "minecraft:enchanted_hit ^ ^ ^3 0.4 0.3 0.4 0 6 force" & shot enchanted-hit 1.2; wait
-burst "minecraft:totem_of_undying ^ ^ ^3 0.6 0.4 0.6 0 12 force" & shot totem-particles 1.2; wait
-burst "minecraft:damage_indicator ^ ^ ^3 0.4 0.3 0.4 0 4 force" & shot damage-hearts 1.2; wait
+burst "minecraft:sweep_attack ^ ^ ^2.5 0 0 0 0 1 force" & B=$!; shot sweep 1.2; wait $B
+burst "minecraft:crit ^ ^ ^3 0.4 0.3 0.4 0 6 force" & B=$!; shot crit 1.2; wait $B
+burst "minecraft:enchanted_hit ^ ^ ^3 0.4 0.3 0.4 0 6 force" & B=$!; shot enchanted-hit 1.2; wait $B
+burst "minecraft:totem_of_undying ^ ^ ^3 0.6 0.4 0.6 0 12 force" & B=$!; shot totem-particles 1.2; wait $B
+burst "minecraft:damage_indicator ^ ^ ^3 0.4 0.3 0.4 0 4 force" & B=$!; shot damage-hearts 1.2; wait $B
 # a real totem pop (survival, then enough damage to die)
 cmd "gamemode survival $P"
 cmd "effect give $P minecraft:instant_health 1 5"
