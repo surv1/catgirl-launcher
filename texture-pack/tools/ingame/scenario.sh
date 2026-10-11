@@ -61,3 +61,5 @@ cmd "item replace entity $P armor.legs with chainmail_leggings"
 cmd "item replace entity $P armor.feet with copper_boots"
 key F5
 shot front-chain-copper 3
+cmd "item replace entity $P weapon.mainhand with totem_of_undying"
+shot front-totem-both-hands 3
