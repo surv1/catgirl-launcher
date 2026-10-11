@@ -50,19 +50,8 @@ cat > config/catgirl-cosmetics.json <<EOF
  "ears":{"on":true,"color":"#5a3a28","inner":"#fff4ea"},
  "tail":{"on":true,"color":"#5a3a28"}}}
 EOF
-# a tiny test pack: copies of the totem with different ways of being held, to compare side by side
-python3 - <<'PY'
-import json, zipfile
-V = {'a': [0, 0, 0], 'b': [0, 0, 90], 'c': [0, 0, -90], 'd': [90, 0, 0], 'e': [-90, 0, 0], 'f': [75, 180, 0]}
-with zipfile.ZipFile('resourcepacks/CatgirlTest.zip', 'w') as z:
-    z.writestr('pack.mcmeta', json.dumps({'pack': {'pack_format': 75, 'min_format': 75, 'max_format': 75, 'description': 'test'}}))
-    for k, r in V.items():
-        t = {'rotation': r, 'translation': [0, 2, 1.5], 'scale': [0.34, 0.34, 0.34]}
-        z.writestr(f'assets/catgirl/models/item/doll_{k}.json', json.dumps({'parent': 'catgirl:item/totem_doll', 'display': {'thirdperson_righthand': t, 'thirdperson_lefthand': t}}))
-        z.writestr(f'assets/catgirl/items/doll_{k}.json', json.dumps({'model': {'type': 'minecraft:model', 'model': f'catgirl:item/doll_{k}'}}))
-PY
 cat > options.txt <<'EOF'
-resourcePacks:["vanilla","fabric","file/CatgirlPack.zip","file/CatgirlTest.zip"]
+resourcePacks:["vanilla","fabric","file/CatgirlPack.zip"]
 onboardAccessibility:false
 skipMultiplayerWarning:true
 joinedFirstServer:true
