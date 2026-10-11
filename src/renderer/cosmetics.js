@@ -158,6 +158,41 @@ function drawEars(ctx, it, view, t) {
       poly(ctx, view, at3(rot2(e.inner, pivot, a), 0), it.inner);
       poly(ctx, view, at3(rot2([[s * 2.2, -8.15], [s * 2.9, -9.7], [s * 3.4, -8.15]], pivot, a), 0), shade(it.inner, 1.35));
     }
+    earFur(ctx, it, view, e, s, pivot, a, t);
+  }
+}
+
+// Fur, matching the mod: thin strands with slightly different shades and lengths.
+const frand = (a, b) => { let h = Math.imul(a, 73856093) ^ Math.imul(b, 19349663); h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995); h ^= h >>> 15; return (h & 0xffff) / 65535; };
+function strokeStrand(ctx, view, color, [bx, by], [dx, dy], len, width) {
+  const [x0, y0] = VIEW[view].at([bx, by, 0]);
+  const [x1, y1] = VIEW[view].at([bx + dx * len, by + dy * len, 0]);
+  const g = ctx.createLinearGradient(x0 * S, y0 * S, x1 * S, y1 * S);
+  g.addColorStop(0, color); g.addColorStop(1, color + '00');
+  ctx.strokeStyle = g; ctx.lineWidth = width * S; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x0 * S, y0 * S); ctx.lineTo(x1 * S, y1 * S); ctx.stroke();
+}
+function earFur(ctx, it, view, e, s, pivot, a, t) {
+  if (view === 'side') return;
+  const outer = rot2([e.base[0], e.tip, e.base[1]], pivot, a);
+  const cx = (outer[0][0] + outer[1][0] + outer[2][0]) / 3, cy = (outer[0][1] + outer[1][1] + outer[2][1]) / 3;
+  for (let ed = 0; ed < 2; ed++) {
+    const [p, q] = [outer[ed], outer[ed + 1]];
+    const ex = q[0] - p[0], ey = q[1] - p[1], el = Math.hypot(ex, ey);
+    let nx = -ey / el, ny = ex / el;
+    if ((p[0] + nx - cx) * nx + (p[1] + ny - cy) * ny < 0) { nx = -nx; ny = -ny; }
+    for (let k = 0; k < 7; k++) {
+      const f = (k + 0.5) / 7, r = frand(ed * 13 + s, k), wave = Math.sin(t * 0.3 + k + ed * 3) * 0.12;
+      const d = [nx + wave, ny - 0.35], dl = Math.hypot(...d);
+      strokeStrand(ctx, view, shade(it.color, 0.85 + r * 0.35), [p[0] + ex * f, p[1] + ey * f], [d[0] / dl, d[1] / dl], 0.35 + r * 0.35, 0.3);
+    }
+  }
+  if (view !== 'front') return;
+  for (let k = 0; k < 9; k++) {
+    const r1 = frand(k, 50 + s), r2 = frand(60 + s, k);
+    const lean = s * (r2 - 0.5) * 0.5 + Math.sin(t * 0.25 + k) * 0.08, dl = Math.hypot(lean, 1);
+    const base = rot2([[s * (2.0 + r1 * 1.7), -8.15]], pivot, a)[0];
+    strokeStrand(ctx, view, shade(it.inner, 1.15 + r2 * 0.35), base, [lean / dl, -1 / dl], 0.9 + r1 * 1.1, 0.28);
   }
 }
 
@@ -179,6 +214,33 @@ function drawTail(ctx, it, view, t) {
     ctx.lineTo(pts[i + 1][0] * S, pts[i + 1][1] * S);
     ctx.stroke();
   }
+  // fur along both sides of the tail, leaning back towards the tip
+  for (let i = 0; i < TAIL.N; i++) {
+    const [p, q] = [pts[i], pts[i + 1]];
+    const dx = q[0] - p[0], dy = q[1] - p[1], dl = Math.hypot(dx, dy) || 1;
+    const ux = dx / dl, uy = dy / dl, half = tailWidth(i) / 2;
+    const base = i >= TAIL.N - 3 ? shade(it.color, 1.25) : it.color;
+    for (let j = 0; j < 8; j++) {
+      const side = j % 2 ? 1 : -1, r1 = frand(i, j), r2 = frand(j, i + 31);
+      const f = (j >> 1) / 4 + r1 * 0.2, wave = Math.sin(t * 0.22 + i * 0.7 + j) * 0.18;
+      const nx = -uy * side, ny = ux * side;
+      const bx = p[0] + dx * f + nx * half * 0.8, by = p[1] + dy * f + ny * half * 0.8;
+      const ddx = nx + ux * (0.85 + r2 * 0.4) + wave, ddy = ny + uy * (0.85 + r2 * 0.4);
+      const ddl = Math.hypot(ddx, ddy);
+      const len = (0.55 + frand(i + 7, j * 3) * 0.55) * (0.7 + half);
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+      strokeStrandScreen(ctx, shade(base, 0.78 + r1 * 0.42), [bx, by], [ddx / ddl, ddy / ddl], len, 0.3);
+      ctx.restore();
+    }
+  }
+}
+// Same as strokeStrand, but for points already in screen space (the tail).
+function strokeStrandScreen(ctx, color, [x0, y0], [dx, dy], len, width) {
+  const x1 = x0 + dx * len, y1 = y0 + dy * len;
+  const g = ctx.createLinearGradient(x0 * S, y0 * S, x1 * S, y1 * S);
+  g.addColorStop(0, color); g.addColorStop(1, color + '00');
+  ctx.strokeStyle = g; ctx.lineWidth = width * S; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x0 * S, y0 * S); ctx.lineTo(x1 * S, y1 * S); ctx.stroke();
 }
 
 /* ---------- 3D shapes (wings, halo, horns, angel buddy) ---------- */

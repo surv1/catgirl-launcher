@@ -175,6 +175,7 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             m.flatTri(inner, in, -1.65F, 1F);
             float[][] tuft = {{s * 2.2F, -8.15F}, {s * 2.9F, -9.7F}, {s * 3.4F, -8.15F}};
             m.flatTri(shade(inner, 1.35F), tuft, -1.7F, 1F);
+            earFur(m, color, inner, outer, s, t);
             m.p = saved;
         }
     }
@@ -209,9 +210,77 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         for (int i = 0; i < TAIL_N; i++) {
             float w = tailWidth(i) / 2F;
             m.box(i >= TAIL_N - 3 ? tip : color, -w, -w, -0.2F, w, w, TAIL_LEN + 0.2F);
+            tailFur(m, i >= TAIL_N - 3 ? tip : color, w, i, t, swing);
             m.p.translate(0F, 0F, TAIL_LEN);
             m.p.rotate(Axis.XP.rotation(TAIL_CURL));
             m.p.rotate(Axis.YP.rotation(sway(t, i, swing)));
+        }
+    }
+
+    // ---- fur: lots of thin tapered strands, each a little different, swaying gently
+    private static float rnd(int a, int b) {
+        int h = a * 73856093 ^ b * 19349663;
+        h ^= h >>> 13; h *= 0x5bd1e995; h ^= h >>> 15;
+        return (h & 0xFFFF) / 65535F;
+    }
+
+    /** One strand: from (bx,by,bz) along direction (dx,dy,dz) for len, wide wd at the root (along sx,sy,sz), pointed at the tip. */
+    private static void strand(Mesh m, int color, float bx, float by, float bz, float dx, float dy, float dz, float len,
+                               float sx, float sy, float sz, float wd) {
+        float dl = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dl < 1e-4F) return;
+        dx /= dl; dy /= dl; dz /= dl;
+        float h = wd / 2F;
+        float[] a = {bx - sx * h, by - sy * h, bz - sz * h}, b = {bx + sx * h, by + sy * h, bz + sz * h};
+        float[] tip = {bx + dx * len, by + dy * len, bz + dz * len};
+        m.quad(color, a, b, tip, tip, bx - dx, by - dy, bz - dz);
+    }
+
+    private static final int TAIL_STRANDS = 14;
+
+    /** Fur all round one tail segment (local z runs along the tail, w is the half-thickness). */
+    private static void tailFur(Mesh m, int color, float w, int seg, float t, float swing) {
+        for (int j = 0; j < TAIL_STRANDS; j++) {
+            float r1 = rnd(seg, j), r2 = rnd(j, seg + 31), r3 = rnd(seg + 7, j * 3);
+            double th = (j + r1 * 0.8) / TAIL_STRANDS * Math.PI * 2;
+            float cx = (float) Math.cos(th), cy = (float) Math.sin(th);
+            float z = r2 * TAIL_LEN;
+            float wave = (float) Math.sin(t * 0.22F + seg * 0.7F + j) * 0.18F * swing;
+            float len = (0.55F + r3 * 0.55F) * (0.7F + w);
+            int c = shade(color, 0.78F + r1 * 0.42F);
+            // out from the surface, leaning back along the tail like real fur
+            strand(m, c, cx * w * 0.92F, cy * w * 0.92F, z, cx + wave, cy - wave * 0.5F, 0.85F + r2 * 0.4F, len, -cy, cx, 0F, 0.32F);
+        }
+        if (seg == TAIL_N - 1) { // a fluffy tuft at the very end
+            for (int j = 0; j < 10; j++) {
+                double th = j / 10.0 * Math.PI * 2;
+                float cx = (float) Math.cos(th), cy = (float) Math.sin(th);
+                strand(m, shade(color, 1.1F + rnd(j, 99) * 0.2F), cx * w * 0.5F, cy * w * 0.5F, TAIL_LEN, cx * 0.5F, cy * 0.5F, 1F,
+                    0.7F + rnd(99, j) * 0.5F, -cy, cx, 0F, 0.35F);
+            }
+        }
+    }
+
+    /** Tufts along the outer edges of an ear, and soft fluff inside it. */
+    private static void earFur(Mesh m, int color, int inner, float[][] outer, int s, float t) {
+        float cx = (outer[0][0] + outer[1][0] + outer[2][0]) / 3F, cy = (outer[0][1] + outer[1][1] + outer[2][1]) / 3F;
+        for (int e = 0; e < 2; e++) { // the two slanted edges: base → tip, tip → base
+            float[] a = outer[e], b = outer[e + 1];
+            float ex = b[0] - a[0], ey = b[1] - a[1], el = (float) Math.sqrt(ex * ex + ey * ey);
+            float nx = -ey / el, ny = ex / el;
+            if ((a[0] + nx - cx) * nx + (a[1] + ny - cy) * ny < 0) { nx = -nx; ny = -ny; } // point away from the middle
+            for (int k = 0; k < 7; k++) {
+                float f = (k + 0.5F) / 7F, r = rnd(e * 13 + s, k);
+                float px = a[0] + ex * f, py = a[1] + ey * f;
+                float wave = (float) Math.sin(t * 0.3F + k + e * 3) * 0.12F;
+                strand(m, shade(color, 0.85F + r * 0.35F), px, py, -0.9F, nx + wave, ny - 0.35F, 0F, 0.35F + r * 0.35F, ex / el, ey / el, 0F, 0.4F);
+            }
+        }
+        for (int k = 0; k < 9; k++) { // fluff rising from the bottom of the inner ear
+            float r1 = rnd(k, 50 + s), r2 = rnd(60 + s, k);
+            float px = s * (2.0F + r1 * 1.7F), py = -8.15F;
+            float lean = s * (r2 - 0.5F) * 0.5F + (float) Math.sin(t * 0.25F + k) * 0.08F;
+            strand(m, shade(inner, 1.15F + r2 * 0.35F), px, py, -1.75F, lean, -1F, 0F, 0.9F + r1 * 1.1F, 1F, 0F, 0F, 0.35F);
         }
     }
 
