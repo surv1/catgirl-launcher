@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PACK_FORMAT = 75  # Minecraft 1.21.11
-VERSION = '1.0.0'
+VERSION = '1.1.0'
 
 
 def run(script, *args):

@@ -84,9 +84,23 @@ def main(zpath, jar, vanilla_sounds_path, pack_version):
             if not os.path.exists(f'{jar}/{n}'):
                 bad(f'{n}: the game has no item called that')
             d = json.loads(z.read(n))
-            m = d.get('model', {})
-            if m.get('type') == 'minecraft:model' and not exists(m['model'], 'models', '.json'):
-                bad(f'{n}: model {m["model"]} does not exist')
+            def walk(node):
+                if isinstance(node, dict):
+                    if node.get('type') == 'minecraft:model' and not exists(node['model'], 'models', '.json'):
+                        bad(f'{n}: model {node["model"]} does not exist')
+                    if node.get('type') == 'minecraft:select' and node.get('property') == 'minecraft:display_context':
+                        ok = {'none', 'thirdperson_lefthand', 'thirdperson_righthand', 'firstperson_lefthand',
+                              'firstperson_righthand', 'head', 'gui', 'ground', 'fixed', 'on_shelf'}
+                        for c in node.get('cases', []):
+                            for w in (c['when'] if isinstance(c['when'], list) else [c['when']]):
+                                if w not in ok:
+                                    bad(f'{n}: unknown display context {w}')
+                    for v in node.values():
+                        walk(v)
+                elif isinstance(node, list):
+                    for v in node:
+                        walk(v)
+            walk(d.get('model'))
             checked += 1
         if '/models/' in n and n.endswith('.json'):
             d = json.loads(z.read(n))
