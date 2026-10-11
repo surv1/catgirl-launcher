@@ -1,0 +1,50 @@
+# Developer tool for the Catgirl texture pack: reads facts from the real game (pack format,
+# texture paths, sound event names) and a player's skin, and prints them as annotations.
+name: Texture pack facts
+
+on:
+  workflow_dispatch:
+    inputs:
+      mc:
+        description: "Minecraft version"
+        default: "1.21.11"
+      player:
+        description: "Player whose skin to fetch"
+        default: "Jerrix3"
+
+jobs:
+  facts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect
+        env:
+          MC: ${{ inputs.mc }}
+          PLAYER: ${{ inputs.player }}
+        run: |
+          set -e
+          V=$(curl -fsSL https://piston-meta.mojang.com/mc/game/version_manifest_v2.json | jq -r --arg v "$MC" '.versions[] | select(.id==$v) | .url')
+          curl -fsSL "$V" -o v.json
+          curl -fsSL "$(jq -r .downloads.client.url v.json)" -o client.jar
+          mkdir jar && cd jar && unzip -q ../client.jar 'version.json' 'assets/minecraft/textures/*' 'assets/minecraft/particles/*' 'assets/minecraft/items/*' 'assets/minecraft/models/item/*' && cd ..
+          echo "::notice title=pack_version::$(jq -c .pack_version jar/version.json)"
+          T=$(cd jar/assets/minecraft/textures && ls item/*sword* item/totem* item/*_axe.png item/mace* item/trident* misc/enchanted_glint* particle/sweep* particle/glitter* particle/critical_hit* particle/enchanted_hit* 2>/dev/null | tr '\n' ' ')
+          echo "::notice title=textures::$T"
+          E=$(cd jar/assets/minecraft/textures/entity/equipment && ls -R | tr '\n' ' ')
+          echo "::notice title=equipment::$E"
+          for f in sword_diamond diamond_sword; do [ -f jar/assets/minecraft/items/$f.json ] && echo "::notice title=items-$f::$(cat jar/assets/minecraft/items/$f.json | tr -d '\n ')"; done
+          echo "::notice title=particles::$(cat jar/assets/minecraft/particles/totem_of_undying.json jar/assets/minecraft/particles/sweep_attack.json jar/assets/minecraft/particles/crit.json | tr -d '\n ')"
+          IDX=$(jq -r .assetIndex.url v.json)
+          curl -fsSL "$IDX" -o idx.json
+          H=$(jq -r '.objects["minecraft/sounds.json"].hash' idx.json)
+          curl -fsSL "https://resources.download.minecraft.net/${H:0:2}/$H" -o sounds.json
+          for ev in item.totem.use entity.player.attack.sweep entity.player.attack.strong entity.player.attack.crit entity.player.attack.knockback entity.player.attack.weak item.armor.equip_generic item.armor.equip_diamond item.armor.equip_netherite item.armor.equip_iron item.armor.equip_gold item.armor.equip_chain item.armor.equip_leather; do
+            echo "$ev: $(jq -c --arg e "$ev" '.[$e] // "MISSING"' sounds.json | head -c 300)"
+          done > ev.txt
+          echo "::notice title=sounds::$(cat ev.txt | tr '\n' '|' | head -c 3500)"
+          UUID=$(curl -fsSL "https://api.mojang.com/users/profiles/minecraft/$PLAYER" | jq -r .id)
+          URL=$(curl -fsSL "https://sessionserver.mojang.com/session/minecraft/profile/$UUID" | jq -r '.properties[0].value' | base64 -d | jq -r .textures.SKIN.url)
+          curl -fsSL "$URL" -o skin.png
+          B=$(base64 -w0 skin.png)
+          echo "::notice title=skin-len::${#B} $URL"
+          for i in 0 1 2 3 4 5; do P=${B:$((i*3500)):3500}; [ -n "$P" ] && echo "::notice title=skin-$i::$P"; done
+          true
