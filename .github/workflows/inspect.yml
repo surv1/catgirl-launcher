@@ -55,7 +55,7 @@ jobs:
             F=/tmp/out/all.txt
             echo "##### $C" >> $F
             case "$C" in
-              *!) javap -p -c -cp "$JARS" "${C%!}" 2>&1 | grep -E 'invoke|getfield|getstatic|class |public|protected|private|ldc|bipush|sipush' >> $F ;;
+              *!) javap -p -c -cp "$JARS" "${C%!}" 2>&1 | grep -E 'invoke|getfield|putfield|getstatic|class |public|protected|private|ldc|bipush|sipush|fconst|fmul|fadd|fsub' >> $F ;;
               *Layer) javap -p -c -cp "$JARS" "$C" 2>&1 | grep -E 'invoke|getfield|getstatic|class |public|protected|private' >> $F ;;
               *) javap -p -cp "$JARS" "$C" 2>&1 | grep -v '^Compiled' >> $F ;;
             esac
