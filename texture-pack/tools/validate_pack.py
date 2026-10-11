@@ -31,6 +31,8 @@ def main(zpath, jar, vanilla_sounds_path, pack_version):
         bad('pack.png is not square')
     # textures: must replace a real game texture, with a matching shape
     for n in sorted(names):
+        if n.startswith('assets/catgirl/textures/') and n.endswith('.png'):
+            continue  # our own textures, used by our models (checked below)
         if not n.startswith('assets/minecraft/textures/'):
             continue
         rel = n[len('assets/minecraft/'):]
@@ -71,6 +73,38 @@ def main(zpath, jar, vanilla_sounds_path, pack_version):
             bad(f'{n}: shape {shape} does not match the game\'s {v.size}')
         if '/entity/equipment/' in n and shape != v.size:
             bad(f'{n}: armour must be exactly {v.size}, is {shape}')
+    # item definitions and models: everything they point at must exist (in the pack or the game)
+    import os
+    def exists(ns_path, kind, ext):
+        ns, path = ns_path.split(':') if ':' in ns_path else ('minecraft', ns_path)
+        rel = f'assets/{ns}/{kind}/{path}{ext}'
+        return rel in names or os.path.exists(f'{jar}/{rel}')
+    for n in sorted(names):
+        if n.startswith('assets/minecraft/items/') and n.endswith('.json'):
+            if not os.path.exists(f'{jar}/{n}'):
+                bad(f'{n}: the game has no item called that')
+            d = json.loads(z.read(n))
+            m = d.get('model', {})
+            if m.get('type') == 'minecraft:model' and not exists(m['model'], 'models', '.json'):
+                bad(f'{n}: model {m["model"]} does not exist')
+            checked += 1
+        if '/models/' in n and n.endswith('.json'):
+            d = json.loads(z.read(n))
+            for k, v in d.get('textures', {}).items():
+                if not v.startswith('#') and not exists(v, 'textures', '.png'):
+                    bad(f'{n}: texture {k}={v} does not exist')
+            for e in d.get('elements', []):
+                if 'rotation' in e and e['rotation']['angle'] not in (-45, -22.5, 0, 22.5, 45):
+                    bad(f'{n}: rotation {e["rotation"]["angle"]} is not allowed')
+                for p in e['from'] + e['to']:
+                    if not -16 <= p <= 32:
+                        bad(f'{n}: element {e.get("name")} goes outside -16..32')
+                for fn, fd in e['faces'].items():
+                    if fn not in ('north', 'south', 'east', 'west', 'up', 'down'):
+                        bad(f'{n}: bad face {fn}')
+                    if fd['texture'].startswith('#') and fd['texture'][1:] not in d.get('textures', {}):
+                        bad(f'{n}: face uses {fd["texture"]} which is not defined')
+            checked += 1
     # sounds
     vs = json.load(open(vanilla_sounds_path))
     ours = json.loads(z.read('assets/minecraft/sounds.json'))

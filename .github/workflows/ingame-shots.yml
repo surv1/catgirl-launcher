@@ -23,8 +23,8 @@ jobs:
         with:
           distribution: temurin
           java-version: |
-            25
             21
+            25
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: current
@@ -36,7 +36,7 @@ jobs:
           FAPI=$(curl -fsSL -A 'catgirl-launcher-ci' "https://api.modrinth.com/v2/project/fabric-api/version?game_versions=%5B%22$MC%22%5D&loaders=%5B%22fabric%22%5D" | jq -r '.[0].version_number')
           LOOM=$(curl -fsSL https://maven.fabricmc.net/fabric-loom/fabric-loom.gradle.plugin/maven-metadata.xml | sed -n 's:.*<release>\(.*\)</release>.*:\1:p')
           sed -i "s/^minecraft_version=.*/minecraft_version=$MC/; s/^loader_version=.*/loader_version=$LOADER/; s/^fabric_version=.*/fabric_version=$FAPI/; s/^loom_version=.*/loom_version=$LOOM/; s/^mod_version=.*/mod_version=0.0.0-test/" gradle.properties
-          gradle build --no-daemon -q 2>&1 | tail -30
+          gradle build --no-daemon --stacktrace > /tmp/build.log 2>&1 || { grep -A3 -E ': error:|FAILURE|What went wrong' /tmp/build.log | head -c 3500 | tr '\n' '|' | sed 's/^/::error title=build::/'; echo; exit 1; }
       - name: Build the pack
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg xvfb xdotool imagemagick libgl1-mesa-dri > /dev/null

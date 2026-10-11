@@ -34,15 +34,20 @@ def sounds_json():
     return j
 
 
-def pack_png(totem_path, out):
-    """128x128 icon: the totem on a soft pink-to-lilac background."""
+def pack_png(catgirl_assets, out):
+    """128x128 icon: the 3D totem on a soft pink-to-lilac background."""
     bg = Image.new('RGBA', (128, 128))
     d = ImageDraw.Draw(bg)
     for y in range(128):
         k = y / 127
         d.line([(0, y), (127, y)], fill=(round(255 - 60 * k), round(170 - 60 * k), round(220 + 20 * k), 255))
-    totem = Image.open(totem_path).convert('RGBA').resize((112, 112), Image.NEAREST)
-    bg.alpha_composite(totem, (8, 10))
+    sys.path.insert(0, HERE)
+    from render_model import render
+    model = json.load(open(os.path.join(catgirl_assets, 'models', 'item', 'totem_doll.json')))
+    model['display']['icon'] = {'rotation': [12, -25, 0], 'scale': [0.95, 0.95, 0.95]}
+    tex = Image.open(os.path.join(catgirl_assets, 'textures', 'item', 'totem_doll.png')).convert('RGBA')
+    doll = render(model, tex, 'icon', px=24, bg=(0, 0, 0, 0)).resize((128, 128), Image.LANCZOS)
+    bg.alpha_composite(doll, (0, 2))
     bg.save(out)
 
 
@@ -53,7 +58,11 @@ def main(skin, out):
     tex = os.path.join(mc, 'textures')
     item = os.path.join(tex, 'item')
     os.makedirs(item, exist_ok=True)
-    run('draw_totem.py', skin, os.path.join(item, 'totem_of_undying.png'))
+    # the totem is a 3D "mini you" figure made from the skin
+    run('draw_totem3d.py', skin, os.path.join(pack, 'assets', 'catgirl'))
+    os.makedirs(os.path.join(mc, 'items'), exist_ok=True)
+    with open(os.path.join(mc, 'items', 'totem_of_undying.json'), 'w') as f:
+        json.dump({'model': {'type': 'minecraft:model', 'model': 'catgirl:item/totem_doll'}}, f, indent=2)
     run('draw_weapons.py', item)
     run('draw_armor.py', os.path.join(tex, 'entity', 'equipment'))
     run('draw_effects.py', tex)
@@ -66,7 +75,7 @@ def main(skin, out):
             'description': [{'text': 'Catgirl Pack ', 'color': '#ff7eb6'}, {'text': f'v{VERSION} ', 'color': 'gray'},
                             {'text': 'nya~ ', 'color': '#c89bff'}, {'text': 'catgirlclient.lol', 'color': 'gray'}],
         }}, f, indent=2)
-    pack_png(os.path.join(item, 'totem_of_undying.png'), os.path.join(pack, 'pack.png'))
+    pack_png(os.path.join(pack, 'assets', 'catgirl'), os.path.join(pack, 'pack.png'))
     shutil.copy(os.path.join(HERE, '..', 'LICENSE.txt'), os.path.join(pack, 'LICENSE.txt'))
     # zip it (files sorted, fixed timestamps, so the same input gives the same zip)
     zpath = os.path.join(out, 'CatgirlPack.zip')
