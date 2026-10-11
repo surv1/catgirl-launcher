@@ -21,7 +21,7 @@ shot hand 3
 cmd "item replace entity $P hotbar.0 with netherite_sword$G1"
 shot hand-netherite 2
 # effects in front of the camera, one kind at a time, kept coming while the picture is taken
-burst() { for i in $(seq 1 10); do cmd "execute as $P at @s anchored eyes run particle $1"; done; }
+burst() { for i in $(seq 1 30); do echo "execute as $P at @s anchored eyes run particle $1" >&3; sleep 0.15; done; }
 burst "minecraft:sweep_attack ^ ^ ^2.5 0 0 0 0 1 force" & B=$!; shot sweep 1.2; wait $B
 burst "minecraft:crit ^ ^ ^3 0.4 0.3 0.4 0 6 force" & B=$!; shot crit 1.2; wait $B
 burst "minecraft:enchanted_hit ^ ^ ^3 0.4 0.3 0.4 0 6 force" & B=$!; shot enchanted-hit 1.2; wait $B
@@ -46,7 +46,7 @@ shot back 3
 key F5
 shot front 3
 # armour (glint on), front then back
-for m in diamond netherite gold iron; do
+for m in diamond netherite golden iron; do
   cmd "item replace entity $P armor.head with ${m}_helmet$G1"
   cmd "item replace entity $P armor.chest with ${m}_chestplate$G1"
   cmd "item replace entity $P armor.legs with ${m}_leggings$G1"

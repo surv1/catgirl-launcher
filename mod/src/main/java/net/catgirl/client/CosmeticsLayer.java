@@ -323,8 +323,9 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             float px = s * (2.85F + (r1 - 0.5F) * 2.0F * half);
             float lean = s * (r1 - 0.5F) * 0.35F + (float) Math.sin(t * 0.22F + k) * 0.04F;
             float len = 0.8F + r2 * 0.9F;
-            lock(m, shade(fluff, 0.92F + r3 * 0.08F), px, py, -1.68F, lean, -1F, -0.55F, len,
-                1F, 0F, 0F, 0.7F + r2 * 0.3F, cx, cy, -0.9F);
+            // grows up and leans very slightly back, so it faces forwards and catches the light
+            lock(m, shade(fluff, 0.92F + r3 * 0.08F), px, py, -1.95F - r2 * 0.15F, lean, -1F, 0.12F, len,
+                1F, 0F, 0F, 0.7F + r2 * 0.3F, px, py, 0F);
         }
         for (int k = 0; k < 5; k++) { // a little fur where the ear meets the head
             float r = rnd(k, 80 + s);

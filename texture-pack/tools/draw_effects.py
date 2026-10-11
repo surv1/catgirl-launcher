@@ -125,8 +125,10 @@ def main(root):
               3: heart_mask(8, 8, 3.8), 2: star_mask(8, 8, 5, 1.6), 1: star_mask(8, 8, 3.5, 1.3), 0: star_mask(8, 8, 2, 1.0)}
     for i, m in shapes.items():
         soft_shape(16, m, W, glow=i not in (6, 4)).save(os.path.join(part, f'glitter_{i}.png'))  # paws: no glow, keeps the toes apart
-    soft_shape(16, star_mask(8, 8, 7, 2.2), (255, 150, 210)).save(os.path.join(part, 'critical_hit.png'))
-    soft_shape(16, star_mask(8, 8, 7, 2.2), (255, 220, 255)).save(os.path.join(part, 'enchanted_hit.png'))
+    # The game colours crits itself (grey that turns orange as they fade, blue for enchanted hits),
+    # so these are white sparkle stars; any colour here would just turn muddy.
+    soft_shape(16, star_mask(8, 8, 7, 2.2), (255, 255, 255)).save(os.path.join(part, 'critical_hit.png'))
+    soft_shape(16, star_mask(8, 8, 7, 2.2), (255, 255, 255)).save(os.path.join(part, 'enchanted_hit.png'))
 
 
 if __name__ == '__main__':
