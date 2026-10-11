@@ -170,7 +170,8 @@ function registerIpc() {
     if (!autoUpdater || !app.isPackaged) throw new Error('Updates work in the installed app, not when running with npm start.');
     await autoUpdater.checkForUpdates();
   });
-  handle('update:install', () => { if (updateState.state === 'ready') autoUpdater.quitAndInstall(); });
+  // Silent (no setup wizard, keeps the same install folder), then start the launcher again.
+  handle('update:install', () => { if (updateState.state === 'ready') autoUpdater.quitAndInstall(true, true); });
 
   handle('auth:list', () => auth.listAccounts());
   handle('auth:start', () => auth.startDeviceLogin());
