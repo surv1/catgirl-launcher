@@ -64,6 +64,7 @@ def main(skin, out):
     with open(os.path.join(mc, 'items', 'totem_of_undying.json'), 'w') as f:
         json.dump({'model': {'type': 'minecraft:model', 'model': 'catgirl:item/totem_doll'}}, f, indent=2)
     run('draw_weapons.py', item)
+    run('draw_auras.py', pack)
     run('draw_armor.py', os.path.join(tex, 'entity', 'equipment'))
     run('draw_effects.py', tex)
     run('make_sounds.py', os.path.join(pack, 'assets', 'catgirl', 'sounds'))

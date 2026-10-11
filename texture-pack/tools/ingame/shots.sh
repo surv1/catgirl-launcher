@@ -60,7 +60,8 @@ pauseOnLostFocus:false
 renderDistance:4
 simulationDistance:5
 guiScale:2
-fov:-0.25
+fov:-1.0
+chatVisibility:2
 soundCategory_master:0.0
 narrator:0
 realmsNotifications:false
@@ -81,6 +82,7 @@ else
   sleep 25
   WID=$(xdotool search --name 'Minecraft|CatGirl|Client' | head -1)
   log "window $WID: $(xdotool getwindowname "$WID")"
+  xdotool windowsize "$WID" 1280 720 2>/dev/null; sleep 2
   xdotool windowfocus --sync "$WID" 2>/dev/null
   key() { xdotool windowfocus "$WID" 2>/dev/null; xdotool key "$1"; sleep 0.6; }
   n=0

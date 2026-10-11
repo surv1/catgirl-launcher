@@ -121,10 +121,10 @@ def main(skin_path, out):
             'ground': {'rotation': [0, 0, 0], 'translation': [0, 2, 0], 'scale': [0.4, 0.4, 0.4]},
             'fixed': {'rotation': [0, 180, 0], 'translation': [0, 0, 0], 'scale': [0.9, 0.9, 0.9]},
             'head': {'rotation': [0, 180, 0], 'translation': [0, 13, 7], 'scale': [1, 1, 1]},
-            'thirdperson_righthand': {'rotation': [0, 180, 0], 'translation': [0, 2.5, 1.5], 'scale': [0.42, 0.42, 0.42]},
-            'thirdperson_lefthand': {'rotation': [0, 180, 0], 'translation': [0, 2.5, 1.5], 'scale': [0.42, 0.42, 0.42]},
-            'firstperson_righthand': {'rotation': [0, 200, 0], 'translation': [1.5, 3.5, -1], 'scale': [0.5, 0.5, 0.5]},
-            'firstperson_lefthand': {'rotation': [0, 160, 0], 'translation': [1.5, 3.5, -1], 'scale': [0.5, 0.5, 0.5]},
+            'thirdperson_righthand': {'rotation': [0, 180, 0], 'translation': [0, 2, 1.5], 'scale': [0.34, 0.34, 0.34]},
+            'thirdperson_lefthand': {'rotation': [0, 180, 0], 'translation': [0, 2, 1.5], 'scale': [0.34, 0.34, 0.34]},
+            'firstperson_righthand': {'rotation': [0, 20, 0], 'translation': [0, 1.5, -2], 'scale': [0.28, 0.28, 0.28]},
+            'firstperson_lefthand': {'rotation': [0, -20, 0], 'translation': [0, 1.5, -2], 'scale': [0.28, 0.28, 0.28]},
         },
     }
     os.makedirs(os.path.join(out, 'models', 'item'), exist_ok=True)

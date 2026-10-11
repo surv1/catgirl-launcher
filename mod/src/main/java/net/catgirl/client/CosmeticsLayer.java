@@ -169,12 +169,13 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         for (int s = -1; s <= 1; s += 2) {
             PoseStack.Pose saved = m.p.copy();
             m.p.rotateAround(Axis.ZP.rotation(s * earFlick(t + (s > 0 ? 0 : 40))), s * 2.75F, -8F, 0F);
-            float[][] outer = {{s * 1.0F, -8F}, {s * 3.7F, -12.6F}, {s * 4.4F, -8F}};
+            float[][] outer = {{s * 0.8F, -8F}, {s * 3.7F, -13.0F}, {s * 4.6F, -8F}};
             m.prism(color, outer, -1.6F, -0.2F);
-            float[][] in = {{s * 1.8F, -8.1F}, {s * 3.45F, -11.3F}, {s * 3.8F, -8.1F}};
-            m.flatTri(inner, in, -1.65F, 1F);
-            float[][] tuft = {{s * 2.2F, -8.15F}, {s * 2.9F, -9.7F}, {s * 3.4F, -8.15F}};
-            m.flatTri(shade(inner, 1.35F), tuft, -1.7F, 1F);
+            // darker tip, like a real cat's ear
+            float[][] tip = {{s * 3.05F, -11.9F}, {s * 3.7F, -13.0F}, {s * 4.15F, -11.9F}};
+            m.prism(shade(color, 0.62F), tip, -1.65F, -0.15F);
+            float[][] in = {{s * 1.7F, -8.1F}, {s * 3.45F, -11.6F}, {s * 3.95F, -8.1F}};
+            m.flatTri(shade(inner, 0.9F), in, -1.65F, 1F);
             earFur(m, color, inner, outer, s, t);
             m.p = saved;
         }
@@ -196,91 +197,137 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
         return i < 0 ? (float) Math.sin(t * 0.08F) * 0.22F * swing : (float) Math.sin(t * 0.08F - (i + 1) * 0.32F) * 0.05F * swing;
     }
 
-    /** Fluffy: a little thicker in the middle, rounding off at the tip. Same formula as the launcher. */
+    /** Bushy: thin at the base, full in the middle, rounding off at the tip. Same formula as the launcher. */
     private static float tailWidth(int i) {
         float f = i / (float) (TAIL_N - 1);
-        return 1.5F + 0.5F * (float) Math.sin(Math.PI * f * 0.8F) - 0.7F * f * f * f;
+        if (f < 0.55F) return 1.4F + 2.4F * (float) Math.sin(Math.PI / 2 * f / 0.55F);
+        float g = (f - 0.55F) / 0.45F;
+        return 3.8F - 1.8F * g * g;
+    }
+
+    private static final int TAIL_TIP = 0xFFFFF4EA; // creamy white tip, like a fox-cat tail
+    /** The tail's colour along its length: your colour, fading into a creamy tip. Same as the launcher. */
+    static int tailColor(int color, int i) {
+        float f = i / (float) (TAIL_N - 1);
+        float k = Math.max(0F, Math.min(1F, (f - 0.66F) / 0.2F));
+        return mix(color, TAIL_TIP, k * 0.9F);
+    }
+
+    static int mix(int a, int b, float k) {
+        int r = Math.round(((a >> 16) & 255) + ((((b >> 16) & 255) - ((a >> 16) & 255)) * k));
+        int g = Math.round(((a >> 8) & 255) + ((((b >> 8) & 255) - ((a >> 8) & 255)) * k));
+        int bl = Math.round((a & 255) + (((b & 255) - (a & 255)) * k));
+        return 0xFF000000 | (r << 16) | (g << 8) | bl;
     }
 
     private static void tail(Mesh m, int color, float t, float swing) {
-        int tip = shade(color, 1.25F);
         m.p.translate(0F, 10.5F, 2F);
         m.p.rotate(Axis.YP.rotation(sway(t, -1, swing)));
         m.p.rotate(Axis.XP.rotation(TAIL_A0));
         for (int i = 0; i < TAIL_N; i++) {
             float w = tailWidth(i) / 2F;
-            m.box(i >= TAIL_N - 3 ? tip : color, -w, -w, -0.2F, w, w, TAIL_LEN + 0.2F);
-            tailFur(m, i >= TAIL_N - 3 ? tip : color, w, i, t, swing);
+            int c = tailColor(color, i);
+            // a rounded core (square + the same square turned 45 degrees), mostly hidden under the fur
+            float k = w * 0.82F;
+            m.box(c, -k, -k, -0.15F, k, k, TAIL_LEN + 0.15F);
+            PoseStack.Pose saved = m.p.copy();
+            m.p.rotate(Axis.ZP.rotation((float) Math.PI / 4F));
+            float k2 = w * 0.7F;
+            m.box(c, -k2, -k2, -0.1F, k2, k2, TAIL_LEN + 0.1F);
+            m.p = saved;
+            tailFur(m, color, w, i, t, swing);
             m.p.translate(0F, 0F, TAIL_LEN);
             m.p.rotate(Axis.XP.rotation(TAIL_CURL));
             m.p.rotate(Axis.YP.rotation(sway(t, i, swing)));
         }
     }
 
-    // ---- fur: lots of thin tapered strands, each a little different, swaying gently
+    // ---- fur: soft locks that lie along the tail and ears, each a little different, swaying gently
     private static float rnd(int a, int b) {
         int h = a * 73856093 ^ b * 19349663;
         h ^= h >>> 13; h *= 0x5bd1e995; h ^= h >>> 15;
         return (h & 0xFFFF) / 65535F;
     }
 
-    /** One strand: from (bx,by,bz) along direction (dx,dy,dz) for len, wide wd at the root (along sx,sy,sz), pointed at the tip. */
-    private static void strand(Mesh m, int color, float bx, float by, float bz, float dx, float dy, float dz, float len,
-                               float sx, float sy, float sz, float wd) {
+    /**
+     * One lock of fur: a leaf shape from (bx,by,bz) along (dx,dy,dz) for len, wd wide (across sx,sy,sz),
+     * widest a little way along, ending in a soft point. (ix,iy,iz) is a point inside the shape it grows from.
+     */
+    private static void lock(Mesh m, int color, float bx, float by, float bz, float dx, float dy, float dz, float len,
+                             float sx, float sy, float sz, float wd, float ix, float iy, float iz) {
         float dl = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (dl < 1e-4F) return;
         dx /= dl; dy /= dl; dz /= dl;
-        float h = wd / 2F;
+        float h = wd / 2F, w2 = wd * 0.55F;
         float[] a = {bx - sx * h, by - sy * h, bz - sz * h}, b = {bx + sx * h, by + sy * h, bz + sz * h};
+        float mx = bx + dx * len * 0.4F, my = by + dy * len * 0.4F, mz = bz + dz * len * 0.4F;
+        float[] m1 = {mx - sx * w2, my - sy * w2, mz - sz * w2}, m2 = {mx + sx * w2, my + sy * w2, mz + sz * w2};
         float[] tip = {bx + dx * len, by + dy * len, bz + dz * len};
-        m.quad(color, a, b, tip, tip, bx - dx, by - dy, bz - dz);
+        m.quad(color, a, b, m2, m1, ix, iy, iz);
+        m.quad(shade(color, 1.06F), m1, m2, tip, tip, ix, iy, iz);
     }
 
-    private static final int TAIL_STRANDS = 14;
+    private static final int TAIL_LOCKS = 16;
 
     /** Fur all round one tail segment (local z runs along the tail, w is the half-thickness). */
     private static void tailFur(Mesh m, int color, float w, int seg, float t, float swing) {
-        for (int j = 0; j < TAIL_STRANDS; j++) {
+        for (int j = 0; j < TAIL_LOCKS; j++) {
             float r1 = rnd(seg, j), r2 = rnd(j, seg + 31), r3 = rnd(seg + 7, j * 3);
-            double th = (j + r1 * 0.8) / TAIL_STRANDS * Math.PI * 2;
+            double th = (j + r1 * 0.7) / TAIL_LOCKS * Math.PI * 2 + seg * 0.37;
             float cx = (float) Math.cos(th), cy = (float) Math.sin(th);
             float z = r2 * TAIL_LEN;
-            float wave = (float) Math.sin(t * 0.22F + seg * 0.7F + j) * 0.18F * swing;
-            float len = (0.55F + r3 * 0.55F) * (0.7F + w);
-            int c = shade(color, 0.78F + r1 * 0.42F);
-            // out from the surface, leaning back along the tail like real fur
-            strand(m, c, cx * w * 0.92F, cy * w * 0.92F, z, cx + wave, cy - wave * 0.5F, 0.85F + r2 * 0.4F, len, -cy, cx, 0F, 0.32F);
+            float wave = (float) Math.sin(t * 0.18F + seg * 0.6F + j) * 0.08F * swing;
+            float lift = 0.2F + r3 * 0.25F;                                  // lies mostly flat, leaning back
+            float len = (1.4F + r3 * 1.0F) * (0.65F + w * 0.35F);
+            int c = shade(tailColor(color, Math.min(TAIL_N - 1, seg + (z > TAIL_LEN / 2 ? 1 : 0))), 0.84F + r1 * 0.26F);
+            lock(m, c, cx * w * 0.8F, cy * w * 0.8F, z, cx * lift - cy * wave, cy * lift + cx * wave, 1F, len,
+                -cy, cx, 0F, 0.75F + r1 * 0.4F, 0F, 0F, z);
         }
-        if (seg == TAIL_N - 1) { // a fluffy tuft at the very end
-            for (int j = 0; j < 10; j++) {
-                double th = j / 10.0 * Math.PI * 2;
+        if (seg >= TAIL_N - 2) { // a soft brush at the very end, gathering to a point
+            int tip = tailColor(color, TAIL_N - 1);
+            for (int j = 0; j < 12; j++) {
+                double th = (j + rnd(j, 5) * 0.5) / 12.0 * Math.PI * 2;
                 float cx = (float) Math.cos(th), cy = (float) Math.sin(th);
-                strand(m, shade(color, 1.1F + rnd(j, 99) * 0.2F), cx * w * 0.5F, cy * w * 0.5F, TAIL_LEN, cx * 0.5F, cy * 0.5F, 1F,
-                    0.7F + rnd(99, j) * 0.5F, -cy, cx, 0F, 0.35F);
+                float r = rnd(j, 99 + seg);
+                lock(m, shade(tip, 0.95F + r * 0.1F), cx * w * 0.75F, cy * w * 0.75F, TAIL_LEN * 0.6F,
+                    -cx * 0.3F, -cy * 0.3F, 1F, 1.6F + r * 0.9F, -cy, cx, 0F, 0.9F, 0F, 0F, TAIL_LEN * 0.6F);
             }
         }
     }
 
-    /** Tufts along the outer edges of an ear, and soft fluff inside it. */
+    /** Soft fringe along the outer edges of an ear, and a big white tuft of fluff spilling out of it. */
     private static void earFur(Mesh m, int color, int inner, float[][] outer, int s, float t) {
         float cx = (outer[0][0] + outer[1][0] + outer[2][0]) / 3F, cy = (outer[0][1] + outer[1][1] + outer[2][1]) / 3F;
-        for (int e = 0; e < 2; e++) { // the two slanted edges: base → tip, tip → base
+        for (int e = 0; e < 2; e++) { // the two slanted edges: fur lies along them, pointing to the tip
             float[] a = outer[e], b = outer[e + 1];
             float ex = b[0] - a[0], ey = b[1] - a[1], el = (float) Math.sqrt(ex * ex + ey * ey);
             float nx = -ey / el, ny = ex / el;
-            if ((a[0] + nx - cx) * nx + (a[1] + ny - cy) * ny < 0) { nx = -nx; ny = -ny; } // point away from the middle
-            for (int k = 0; k < 7; k++) {
-                float f = (k + 0.5F) / 7F, r = rnd(e * 13 + s, k);
+            if ((a[0] + nx - cx) * nx + (a[1] + ny - cy) * ny < 0) { nx = -nx; ny = -ny; }
+            float tx = outer[1][0] - a[0], ty = outer[1][1] - a[1]; // towards the tip
+            float tl = (float) Math.sqrt(tx * tx + ty * ty);
+            for (int k = 0; k < 6; k++) {
+                float f = (k + 0.3F) / 6F, r = rnd(e * 13 + s, k);
                 float px = a[0] + ex * f, py = a[1] + ey * f;
-                float wave = (float) Math.sin(t * 0.3F + k + e * 3) * 0.12F;
-                strand(m, shade(color, 0.85F + r * 0.35F), px, py, -0.9F, nx + wave, ny - 0.35F, 0F, 0.35F + r * 0.35F, ex / el, ey / el, 0F, 0.4F);
+                float wave = (float) Math.sin(t * 0.25F + k + e * 3) * 0.06F;
+                float dx = tx / tl * 0.8F + nx * (0.35F + wave), dy = ty / tl * 0.8F + ny * (0.35F + wave);
+                lock(m, shade(color, 0.9F + r * 0.25F), px - nx * 0.25F, py - ny * 0.25F, -0.9F, dx, dy, 0F,
+                    0.9F + r * 0.5F, 0F, 0F, 1F, 1.3F, cx, cy, -0.9F);
             }
         }
-        for (int k = 0; k < 9; k++) { // fluff rising from the bottom of the inner ear
-            float r1 = rnd(k, 50 + s), r2 = rnd(60 + s, k);
-            float px = s * (2.0F + r1 * 1.7F), py = -8.15F;
-            float lean = s * (r2 - 0.5F) * 0.5F + (float) Math.sin(t * 0.25F + k) * 0.08F;
-            strand(m, shade(inner, 1.15F + r2 * 0.35F), px, py, -1.75F, lean, -1F, 0F, 0.9F + r1 * 1.1F, 1F, 0F, 0F, 0.35F);
+        int fluff = shade(inner, 1.25F);
+        for (int k = 0; k < 14; k++) { // white fluff from the bottom of the ear, up and slightly out of it
+            float r1 = rnd(k, 50 + s), r2 = rnd(60 + s, k), r3 = rnd(k + 9, 70 + s);
+            float px = s * (1.8F + r1 * 2.2F), py = -8.1F - r3 * 0.6F;
+            float lean = s * (r1 - 0.35F) * 0.55F + (float) Math.sin(t * 0.22F + k) * 0.05F;
+            float len = 1.3F + r2 * 1.9F;
+            lock(m, shade(fluff, 0.9F + r3 * 0.18F), px, py, -1.7F - r3 * 0.25F, lean, -1F, -0.28F - r2 * 0.2F, len,
+                1F, 0F, 0F, 0.8F + r2 * 0.35F, cx, cy, -0.9F);
+        }
+        for (int k = 0; k < 5; k++) { // a little fur where the ear meets the head
+            float r = rnd(k, 80 + s);
+            float px = s * (1.0F + k * 0.85F);
+            lock(m, shade(color, 0.85F + r * 0.2F), px, -8.0F, -0.9F + (r - 0.5F) * 0.8F, s * 0.3F, -0.4F, 0F,
+                0.8F + r * 0.4F, 1F, 0F, 0F, 1.0F, cx, -6F, -0.9F);
         }
     }
 

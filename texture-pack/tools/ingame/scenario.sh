@@ -20,15 +20,13 @@ cmd "item replace entity $P weapon.offhand with totem_of_undying"
 shot hand 3
 cmd "item replace entity $P hotbar.0 with netherite_sword$G1"
 shot hand-netherite 2
-# effects in front of the camera
-for i in 1 2 3; do
-  cmd "execute as $P at @s anchored eyes run particle minecraft:sweep_attack ^-0.6 ^ ^2.2 0 0 0 0 1 force"
-  cmd "execute as $P at @s anchored eyes run particle minecraft:crit ^0.6 ^ ^2.5 0.3 0.3 0.3 0.3 25 force"
-  cmd "execute as $P at @s anchored eyes run particle minecraft:enchanted_hit ^0 ^0.5 ^2.5 0.3 0.3 0.3 0.3 25 force"
-done
-shot hit-effects 0.1
-cmd "execute as $P at @s anchored eyes run particle minecraft:totem_of_undying ^ ^ ^2.5 0.6 0.6 0.6 0.4 200 force"
-shot totem-particles 0.3
+# effects in front of the camera, one kind at a time, kept coming while the picture is taken
+burst() { for i in $(seq 1 10); do cmd "execute as $P at @s anchored eyes run particle $1"; done; }
+burst "minecraft:sweep_attack ^ ^ ^2.5 0 0 0 0 1 force" & shot sweep 1.2; wait
+burst "minecraft:crit ^ ^ ^3 0.4 0.3 0.4 0 6 force" & shot crit 1.2; wait
+burst "minecraft:enchanted_hit ^ ^ ^3 0.4 0.3 0.4 0 6 force" & shot enchanted-hit 1.2; wait
+burst "minecraft:totem_of_undying ^ ^ ^3 0.6 0.4 0.6 0 12 force" & shot totem-particles 1.2; wait
+burst "minecraft:damage_indicator ^ ^ ^3 0.4 0.3 0.4 0 4 force" & shot damage-hearts 1.2; wait
 # a real totem pop (survival, then enough damage to die)
 cmd "gamemode survival $P"
 cmd "effect give $P minecraft:instant_health 1 5"

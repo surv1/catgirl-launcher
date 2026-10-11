@@ -42,12 +42,24 @@ const cos = { view2: 'back', items: structuredClone(COS_DEFAULTS), skin: null, v
 
 /* ---------- shared shape maths (model pixels, y points down, -x is the player's right, -z the front) ---------- */
 const TAIL = { N: 14, LEN: 0.9, A0: -0.7, CURL: 0.13, BASE: [0, 10.5, 2] };
-const EAR = (s) => ({ base: [[s * 1.0, -8], [s * 4.4, -8]], tip: [s * 3.7, -12.6], inner: [[s * 1.8, -8.1], [s * 3.8, -8.1], [s * 3.45, -11.3]], z: [-1.6, -0.2] });
+const EAR = (s) => ({ base: [[s * 0.8, -8], [s * 4.6, -8]], tip: [s * 3.7, -13.0], dark: [[s * 3.05, -11.9], [s * 3.7, -13.0], [s * 4.15, -11.9]], inner: [[s * 1.7, -8.1], [s * 3.95, -8.1], [s * 3.45, -11.6]], z: [-1.6, -0.2] });
 const BOW = { c: [3.0, -7.3], tilt: 0.35, wing: (s) => [[3.0 + s * 0.4, -7.3], [3.0 + s * 2.1, -8.5], [3.0 + s * 2.1, -6.1]], knot: [2.45, -7.9, 3.55, -6.7] };
 
 function earFlick(t) { const ph = t % 80; return ph < 6 ? Math.sin((ph / 6) * Math.PI) * 0.25 : 0; }
 function tailSway(t, i) { return i < 0 ? Math.sin(t * 0.08) * 0.22 : Math.sin(t * 0.08 - (i + 1) * 0.32) * 0.05; }
-function tailWidth(i) { const f = i / (TAIL.N - 1); return 1.5 + 0.5 * Math.sin(Math.PI * f * 0.8) - 0.7 * f ** 3; }
+function tailWidth(i) {
+  const f = i / (TAIL.N - 1);
+  if (f < 0.55) return 1.4 + 2.4 * Math.sin((Math.PI / 2) * (f / 0.55));
+  const g = (f - 0.55) / 0.45;
+  return 3.8 - 1.8 * g * g;
+}
+// Same as the mod: your colour fading into a creamy tip.
+function tailColor(hex, i) {
+  const f = i / (TAIL.N - 1), k = Math.max(0, Math.min(1, (f - 0.66) / 0.2)) * 0.9;
+  const a = parseInt(hex.slice(1), 16), b = 0xfff4ea;
+  const c = [16, 8, 0].map((sh) => Math.round(((a >> sh) & 255) + (((b >> sh) & 255) - ((a >> sh) & 255)) * k));
+  return '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('');
+}
 
 const mmul = (a, b) => a.map((r) => [0, 1, 2].map((j) => r[0] * b[0][j] + r[1] * b[1][j] + r[2] * b[2][j]));
 const rx = (a) => [[1, 0, 0], [0, Math.cos(a), -Math.sin(a)], [0, Math.sin(a), Math.cos(a)]];
@@ -154,10 +166,8 @@ function drawEars(ctx, it, view, t) {
     const pivot = [s * 2.75, -8];
     const a = s * earFlick(t + (s > 0 ? 0 : 40));
     poly(ctx, view, at3(rot2([e.base[0], e.tip, e.base[1]], pivot, a), 0), it.color);
-    if (view === 'front') {
-      poly(ctx, view, at3(rot2(e.inner, pivot, a), 0), it.inner);
-      poly(ctx, view, at3(rot2([[s * 2.2, -8.15], [s * 2.9, -9.7], [s * 3.4, -8.15]], pivot, a), 0), shade(it.inner, 1.35));
-    }
+    poly(ctx, view, at3(rot2(e.dark, pivot, a), 0), shade(it.color, 0.62));
+    if (view === 'front') poly(ctx, view, at3(rot2(e.inner, pivot, a), 0), shade(it.inner, 0.9));
     earFur(ctx, it, view, e, s, pivot, a, t);
   }
 }
@@ -181,18 +191,19 @@ function earFur(ctx, it, view, e, s, pivot, a, t) {
     const ex = q[0] - p[0], ey = q[1] - p[1], el = Math.hypot(ex, ey);
     let nx = -ey / el, ny = ex / el;
     if ((p[0] + nx - cx) * nx + (p[1] + ny - cy) * ny < 0) { nx = -nx; ny = -ny; }
-    for (let k = 0; k < 7; k++) {
-      const f = (k + 0.5) / 7, r = frand(ed * 13 + s, k), wave = Math.sin(t * 0.3 + k + ed * 3) * 0.12;
-      const d = [nx + wave, ny - 0.35], dl = Math.hypot(...d);
-      strokeStrand(ctx, view, shade(it.color, 0.85 + r * 0.35), [p[0] + ex * f, p[1] + ey * f], [d[0] / dl, d[1] / dl], 0.35 + r * 0.35, 0.3);
+    const tx = outer[1][0] - p[0], ty = outer[1][1] - p[1], tl = Math.hypot(tx, ty);
+    for (let k = 0; k < 6; k++) {
+      const f = (k + 0.3) / 6, r = frand(ed * 13 + s, k), wave = Math.sin(t * 0.25 + k + ed * 3) * 0.06;
+      const d = [(tx / tl) * 0.8 + nx * (0.35 + wave), (ty / tl) * 0.8 + ny * (0.35 + wave)], dl = Math.hypot(...d);
+      strokeStrand(ctx, view, shade(it.color, 0.9 + r * 0.25), [p[0] + ex * f - nx * 0.25, p[1] + ey * f - ny * 0.25], [d[0] / dl, d[1] / dl], 0.9 + r * 0.5, 0.6);
     }
   }
   if (view !== 'front') return;
-  for (let k = 0; k < 9; k++) {
-    const r1 = frand(k, 50 + s), r2 = frand(60 + s, k);
-    const lean = s * (r2 - 0.5) * 0.5 + Math.sin(t * 0.25 + k) * 0.08, dl = Math.hypot(lean, 1);
-    const base = rot2([[s * (2.0 + r1 * 1.7), -8.15]], pivot, a)[0];
-    strokeStrand(ctx, view, shade(it.inner, 1.15 + r2 * 0.35), base, [lean / dl, -1 / dl], 0.9 + r1 * 1.1, 0.28);
+  for (let k = 0; k < 14; k++) {
+    const r1 = frand(k, 50 + s), r2 = frand(60 + s, k), r3 = frand(k + 9, 70 + s);
+    const lean = s * (r1 - 0.35) * 0.55 + Math.sin(t * 0.22 + k) * 0.05, dl = Math.hypot(lean, 1);
+    const base = rot2([[s * (1.8 + r1 * 2.2), -8.1 - r3 * 0.6]], pivot, a)[0];
+    strokeStrand(ctx, view, shade(shade(it.inner, 1.25), 0.9 + r3 * 0.18), base, [lean / dl, -1 / dl], 1.3 + r2 * 1.9, 0.6);
   }
 }
 
@@ -207,7 +218,7 @@ function drawTail(ctx, it, view, t) {
   const pts = tailJoints(t).map((p) => VIEW[view].at(p));
   ctx.lineCap = 'round';
   for (let i = 0; i < TAIL.N; i++) {
-    ctx.strokeStyle = i >= TAIL.N - 3 ? shade(it.color, 1.25) : it.color;
+    ctx.strokeStyle = tailColor(it.color, i);
     ctx.lineWidth = tailWidth(i) * S;
     ctx.beginPath();
     ctx.moveTo(pts[i][0] * S, pts[i][1] * S);
@@ -219,17 +230,18 @@ function drawTail(ctx, it, view, t) {
     const [p, q] = [pts[i], pts[i + 1]];
     const dx = q[0] - p[0], dy = q[1] - p[1], dl = Math.hypot(dx, dy) || 1;
     const ux = dx / dl, uy = dy / dl, half = tailWidth(i) / 2;
-    const base = i >= TAIL.N - 3 ? shade(it.color, 1.25) : it.color;
-    for (let j = 0; j < 8; j++) {
+    const base = tailColor(it.color, i);
+    for (let j = 0; j < 10; j++) {
       const side = j % 2 ? 1 : -1, r1 = frand(i, j), r2 = frand(j, i + 31);
-      const f = (j >> 1) / 4 + r1 * 0.2, wave = Math.sin(t * 0.22 + i * 0.7 + j) * 0.18;
+      const f = (j >> 1) / 5 + r1 * 0.2, wave = Math.sin(t * 0.18 + i * 0.6 + j) * 0.08;
       const nx = -uy * side, ny = ux * side;
-      const bx = p[0] + dx * f + nx * half * 0.8, by = p[1] + dy * f + ny * half * 0.8;
-      const ddx = nx + ux * (0.85 + r2 * 0.4) + wave, ddy = ny + uy * (0.85 + r2 * 0.4);
+      const bx = p[0] + dx * f + nx * half * 0.75, by = p[1] + dy * f + ny * half * 0.75;
+      const lift = 0.2 + r2 * 0.25;
+      const ddx = nx * lift + ux + wave, ddy = ny * lift + uy;
       const ddl = Math.hypot(ddx, ddy);
-      const len = (0.55 + frand(i + 7, j * 3) * 0.55) * (0.7 + half);
+      const len = (1.4 + frand(i + 7, j * 3) * 1.0) * (0.65 + half * 0.35);
       ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-      strokeStrandScreen(ctx, shade(base, 0.78 + r1 * 0.42), [bx, by], [ddx / ddl, ddy / ddl], len, 0.3);
+      strokeStrandScreen(ctx, shade(base, 0.84 + r1 * 0.26), [bx, by], [ddx / ddl, ddy / ddl], len, 0.75);
       ctx.restore();
     }
   }
