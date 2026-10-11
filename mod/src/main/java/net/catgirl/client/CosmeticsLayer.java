@@ -250,24 +250,25 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
     }
 
     /**
-     * One lock of fur: a leaf shape from (bx,by,bz) along (dx,dy,dz) for len, wd wide (across sx,sy,sz),
-     * widest a little way along, ending in a soft point. (ix,iy,iz) is a point inside the shape it grows from.
+     * One lock of fur: a soft clump from (bx,by,bz) along (dx,dy,dz) for len, wd wide (across sx,sy,sz),
+     * full in the middle and ending narrow but blunt. (ix,iy,iz) is a point inside the shape it grows from.
      */
     private static void lock(Mesh m, int color, float bx, float by, float bz, float dx, float dy, float dz, float len,
                              float sx, float sy, float sz, float wd, float ix, float iy, float iz) {
         float dl = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (dl < 1e-4F) return;
         dx /= dl; dy /= dl; dz /= dl;
-        float h = wd / 2F, w2 = wd * 0.55F;
+        float h = wd / 2F, w2 = wd * 0.55F, w3 = wd * 0.2F;
         float[] a = {bx - sx * h, by - sy * h, bz - sz * h}, b = {bx + sx * h, by + sy * h, bz + sz * h};
-        float mx = bx + dx * len * 0.4F, my = by + dy * len * 0.4F, mz = bz + dz * len * 0.4F;
+        float mx = bx + dx * len * 0.5F, my = by + dy * len * 0.5F, mz = bz + dz * len * 0.5F;
         float[] m1 = {mx - sx * w2, my - sy * w2, mz - sz * w2}, m2 = {mx + sx * w2, my + sy * w2, mz + sz * w2};
-        float[] tip = {bx + dx * len, by + dy * len, bz + dz * len};
+        float ex = bx + dx * len, ey = by + dy * len, ez = bz + dz * len;
+        float[] e1 = {ex - sx * w3, ey - sy * w3, ez - sz * w3}, e2 = {ex + sx * w3, ey + sy * w3, ez + sz * w3};
         m.quad(color, a, b, m2, m1, ix, iy, iz);
-        m.quad(shade(color, 1.06F), m1, m2, tip, tip, ix, iy, iz);
+        m.quad(shade(color, 1.05F), m1, m2, e2, e1, ix, iy, iz);
     }
 
-    private static final int TAIL_LOCKS = 16;
+    private static final int TAIL_LOCKS = 22;
 
     /** Fur all round one tail segment (local z runs along the tail, w is the half-thickness). */
     private static void tailFur(Mesh m, int color, float w, int seg, float t, float swing) {
@@ -277,20 +278,20 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             float cx = (float) Math.cos(th), cy = (float) Math.sin(th);
             float z = r2 * TAIL_LEN;
             float wave = (float) Math.sin(t * 0.18F + seg * 0.6F + j) * 0.08F * swing;
-            float lift = 0.2F + r3 * 0.25F;                                  // lies mostly flat, leaning back
-            float len = (1.4F + r3 * 1.0F) * (0.65F + w * 0.35F);
+            float lift = 0.1F + r3 * 0.15F;                                  // lies flat, leaning back
+            float len = (0.9F + r3 * 0.6F) * (0.8F + w * 0.2F);
             int c = shade(tailColor(color, Math.min(TAIL_N - 1, seg + (z > TAIL_LEN / 2 ? 1 : 0))), 0.84F + r1 * 0.26F);
-            lock(m, c, cx * w * 0.8F, cy * w * 0.8F, z, cx * lift - cy * wave, cy * lift + cx * wave, 1F, len,
-                -cy, cx, 0F, 0.75F + r1 * 0.4F, 0F, 0F, z);
+            lock(m, c, cx * w * 0.85F, cy * w * 0.85F, z, cx * lift - cy * wave, cy * lift + cx * wave, 1F, len,
+                -cy, cx, 0F, 1.0F + r1 * 0.4F, 0F, 0F, z);
         }
         if (seg >= TAIL_N - 2) { // a soft brush at the very end, gathering to a point
             int tip = tailColor(color, TAIL_N - 1);
-            for (int j = 0; j < 12; j++) {
-                double th = (j + rnd(j, 5) * 0.5) / 12.0 * Math.PI * 2;
+            for (int j = 0; j < 10; j++) {
+                double th = (j + rnd(j, 5) * 0.5) / 10.0 * Math.PI * 2;
                 float cx = (float) Math.cos(th), cy = (float) Math.sin(th);
                 float r = rnd(j, 99 + seg);
-                lock(m, shade(tip, 0.95F + r * 0.1F), cx * w * 0.75F, cy * w * 0.75F, TAIL_LEN * 0.6F,
-                    -cx * 0.3F, -cy * 0.3F, 1F, 1.6F + r * 0.9F, -cy, cx, 0F, 0.9F, 0F, 0F, TAIL_LEN * 0.6F);
+                lock(m, shade(tip, 0.95F + r * 0.1F), cx * w * 0.8F, cy * w * 0.8F, TAIL_LEN * 0.6F,
+                    -cx * 0.55F, -cy * 0.55F, 1F, 1.0F + r * 0.5F, -cy, cx, 0F, 1.1F, 0F, 0F, TAIL_LEN * 0.6F);
             }
         }
     }
@@ -314,14 +315,16 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
                     0.9F + r * 0.5F, 0F, 0F, 1F, 1.3F, cx, cy, -0.9F);
             }
         }
-        int fluff = shade(inner, 1.25F);
-        for (int k = 0; k < 14; k++) { // white fluff from the bottom of the ear, up and slightly out of it
+        int fluff = shade(inner, 1.5F);
+        for (int k = 0; k < 18; k++) { // soft fluff filling the inside of the ear and puffing out of it
             float r1 = rnd(k, 50 + s), r2 = rnd(60 + s, k), r3 = rnd(k + 9, 70 + s);
-            float px = s * (1.8F + r1 * 2.2F), py = -8.1F - r3 * 0.6F;
-            float lean = s * (r1 - 0.35F) * 0.55F + (float) Math.sin(t * 0.22F + k) * 0.05F;
-            float len = 1.3F + r2 * 1.9F;
-            lock(m, shade(fluff, 0.9F + r3 * 0.18F), px, py, -1.7F - r3 * 0.25F, lean, -1F, -0.28F - r2 * 0.2F, len,
-                1F, 0F, 0F, 0.8F + r2 * 0.35F, cx, cy, -0.9F);
+            float py = -8.1F - r3 * 1.3F;
+            float half = 1.0F - (-8.1F - py) / 3.5F * 0.75F;           // the ear gets narrower going up
+            float px = s * (2.85F + (r1 - 0.5F) * 2.0F * half);
+            float lean = s * (r1 - 0.5F) * 0.35F + (float) Math.sin(t * 0.22F + k) * 0.04F;
+            float len = 0.8F + r2 * 0.9F;
+            lock(m, shade(fluff, 0.92F + r3 * 0.08F), px, py, -1.68F, lean, -1F, -0.55F, len,
+                1F, 0F, 0F, 0.7F + r2 * 0.3F, cx, cy, -0.9F);
         }
         for (int k = 0; k < 5; k++) { // a little fur where the ear meets the head
             float r = rnd(k, 80 + s);

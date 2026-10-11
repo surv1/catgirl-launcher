@@ -199,11 +199,12 @@ function earFur(ctx, it, view, e, s, pivot, a, t) {
     }
   }
   if (view !== 'front') return;
-  for (let k = 0; k < 14; k++) {
+  for (let k = 0; k < 18; k++) {
     const r1 = frand(k, 50 + s), r2 = frand(60 + s, k), r3 = frand(k + 9, 70 + s);
-    const lean = s * (r1 - 0.35) * 0.55 + Math.sin(t * 0.22 + k) * 0.05, dl = Math.hypot(lean, 1);
-    const base = rot2([[s * (1.8 + r1 * 2.2), -8.1 - r3 * 0.6]], pivot, a)[0];
-    strokeStrand(ctx, view, shade(shade(it.inner, 1.25), 0.9 + r3 * 0.18), base, [lean / dl, -1 / dl], 1.3 + r2 * 1.9, 0.6);
+    const py = -8.1 - r3 * 1.3, half = 1 - ((-8.1 - py) / 3.5) * 0.75;
+    const lean = s * (r1 - 0.5) * 0.35 + Math.sin(t * 0.22 + k) * 0.04, dl = Math.hypot(lean, 1);
+    const base = rot2([[s * (2.85 + (r1 - 0.5) * 2 * half), py]], pivot, a)[0];
+    strokeStrand(ctx, view, shade(shade(it.inner, 1.5), 0.92 + r3 * 0.08), base, [lean / dl, -1 / dl], 0.8 + r2 * 0.9, 0.6);
   }
 }
 
@@ -236,12 +237,12 @@ function drawTail(ctx, it, view, t) {
       const f = (j >> 1) / 5 + r1 * 0.2, wave = Math.sin(t * 0.18 + i * 0.6 + j) * 0.08;
       const nx = -uy * side, ny = ux * side;
       const bx = p[0] + dx * f + nx * half * 0.75, by = p[1] + dy * f + ny * half * 0.75;
-      const lift = 0.2 + r2 * 0.25;
+      const lift = 0.1 + r2 * 0.15;
       const ddx = nx * lift + ux + wave, ddy = ny * lift + uy;
       const ddl = Math.hypot(ddx, ddy);
-      const len = (1.4 + frand(i + 7, j * 3) * 1.0) * (0.65 + half * 0.35);
+      const len = (0.9 + frand(i + 7, j * 3) * 0.6) * (0.8 + half * 0.2);
       ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-      strokeStrandScreen(ctx, shade(base, 0.84 + r1 * 0.26), [bx, by], [ddx / ddl, ddy / ddl], len, 0.75);
+      strokeStrandScreen(ctx, shade(base, 0.84 + r1 * 0.26), [bx, by], [ddx / ddl, ddy / ddl], len, 0.95);
       ctx.restore();
     }
   }
