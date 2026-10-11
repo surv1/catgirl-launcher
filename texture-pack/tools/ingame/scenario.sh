@@ -63,3 +63,13 @@ key F5
 shot front-chain-copper 3
 cmd "item replace entity $P weapon.mainhand with totem_of_undying"
 shot front-totem-both-hands 3
+# held-totem test: armour stands in a row, each holding a differently-turned copy in both hands
+key F5
+cmd "tp $P 0.5 -60 0.5 180 5"
+x=-2.5
+for k in a b c d e f; do
+  T="{id:\"minecraft:totem_of_undying\",count:1,components:{\"minecraft:item_model\":\"catgirl:doll_$k\"}}"
+  cmd "summon armor_stand $x -60 -7.5 {ShowArms:1b,NoBasePlate:1b,Rotation:[0f,0f],CustomName:\"$k\",CustomNameVisible:1b,equipment:{mainhand:$T,offhand:$T}}"
+  x=$(python3 -c "print($x+1.2)")
+done
+shot held-totem-test 4
