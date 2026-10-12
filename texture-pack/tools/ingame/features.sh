@@ -4,7 +4,7 @@ P=CatTester
 click() { xdotool mousemove --window "$WID" $(( $1 * 2 )) $(( $2 * 2 )); sleep 0.3; xdotool click 1; sleep 0.5; }
 rclick() { xdotool mousemove --window "$WID" $(( $1 * 2 )) $(( $2 * 2 )); sleep 0.3; xdotool click 3; sleep 0.5; }
 cmd "gamerule doDaylightCycle false"; cmd "gamerule advance_time false"; cmd "weather rain"
-cmd "tp $P 0.5 -60 0.5 180 10"
+cmd "tp $P 0.5 -60 0.5 180 28"
 cmd "gamemode survival $P"
 cmd "clear $P"
 cmd "item replace entity $P hotbar.0 with diamond_sword"

@@ -289,9 +289,9 @@ final class Hud {
             case "reach" -> new int[] {4, 185};
             case "combo" -> new int[] {4, 202};
             case "effects" -> new int[] {sw - w - 4, 4};
-            case "direction" -> new int[] {sw / 2 - w / 2, 4};
+            case "direction" -> new int[] {sw / 2 - w / 2, 26};
             case "items" -> new int[] {sw - w - 4, sh / 2 + 50};
-            case "packs" -> new int[] {sw - w - 4, sh - h - 70};
+            case "packs" -> new int[] {sw - w - 4, sh - h - 4};
             default -> new int[] {4, 4};
         };
     }

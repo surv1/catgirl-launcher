@@ -1,0 +1,25 @@
+# Fetches the add-on mods' logos from Modrinth into the mod (textures/gui/addons) and commits them.
+name: Add-on icons
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  icons:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch
+        run: |
+          pip install -q pillow
+          python3 mod/tools/fetch_addon_icons.py mod/src/main/resources/assets/catgirl/addons.json mod/src/main/resources/assets/catgirl/textures/gui/addons | tee out.txt
+          echo "::notice title=icons::$(tr '\n' '|' < out.txt)"
+      - name: Commit
+        run: |
+          git add mod/src/main/resources/assets/catgirl/textures/gui/addons
+          git diff --cached --quiet && exit 0
+          git -c user.name=catgirl-ci -c user.email=ci@users.noreply.github.com commit -m "Add-on icons from Modrinth"
+          git push
