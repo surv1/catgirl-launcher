@@ -554,10 +554,12 @@ public final class CatgirlPanel extends Screen {
     @Override
     public boolean keyPressed(KeyEvent e) {
         if (paletteFor != null && e.key() == GLFW.GLFW_KEY_ESCAPE) { paletteFor = null; return true; }
-        if (page == Page.MODS && searchFocused) {
-            if (e.key() == GLFW.GLFW_KEY_BACKSPACE) { if (!search.isEmpty()) search = search.substring(0, search.length() - 1); scroll = 0; return true; }
-            if (e.key() == GLFW.GLFW_KEY_ESCAPE) { searchFocused = false; return true; }
+        if (page == Page.MODS && e.key() == GLFW.GLFW_KEY_BACKSPACE && !search.isEmpty()) {
+            search = search.substring(0, search.length() - 1);
+            scroll = 0;
+            return true;
         }
+        if (page == Page.MODS && searchFocused && e.key() == GLFW.GLFW_KEY_ESCAPE) { searchFocused = false; return true; }
         if (CatgirlClient.isMenuKey(e.key())) { Ui.sound("close"); minecraft.setScreen(null); return true; }
         return super.keyPressed(e);
     }

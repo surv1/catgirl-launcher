@@ -102,8 +102,8 @@ public final class BloomScreen extends Screen {
             int[] c = petalCentre(i, k);
             boolean hot = i == hover;
             float s = (float) (size / 64.0 * Math.min(1.15, k) * (hot ? 1.07 : 1.0));
-            int tint = hot ? accent : Ui.mix(accent, Ui.PLUM, 0.62F);
-            int alpha = (int) (Math.min(1, k) * 235);
+            int tint = hot ? Ui.mix(accent, Ui.MILK, 0.15F) : Ui.mix(accent, Ui.PLUM, 0.38F);
+            int alpha = (int) (Math.min(1, k) * 228);
             g.pose().pushMatrix();
             g.pose().translate(c[0], c[1]);
             g.pose().rotate((float) (angle(i) + Math.PI / 2));
@@ -125,10 +125,10 @@ public final class BloomScreen extends Screen {
             Ui.disc(g, cx, cy, r + 2, Ui.BERRY3);
             Ui.disc(g, cx, cy, r, Ui.PLUM);
             if (k0 > 0.8 && minecraft.player != null) {
-                PlayerFaceRenderer.draw(g, minecraft.player.getSkin(), cx - 10, cy - 14, 20);
+                PlayerFaceRenderer.draw(g, minecraft.player.getSkin(), cx - 8, cy - 13, 16);
                 String name = minecraft.player.getName().getString();
                 if (name.length() > 10) name = name.substring(0, 10);
-                Ui.small(g, name, cx - Ui.smallWidth(name) / 2, cy + 9, Ui.HAZE);
+                Ui.small(g, name, cx - Ui.smallWidth(name) / 2, cy + 6, Ui.HAZE);
             }
         }
         String hint = CatgirlClient.menuKeyName() + " to close";
@@ -143,7 +143,7 @@ public final class BloomScreen extends Screen {
             double speed = 0.018 + (i % 5) * 0.004;
             double y = ((now * speed / 16.0) + seed * 7) % (height + 20) - 10;
             double x = ((seed * 13) % width + Math.sin(now / 900.0 + i) * 18 + y * 0.35) % (width + 10);
-            float s = 0.09F + (i % 3) * 0.025F;
+            float s = 0.13F + (i % 3) * 0.04F;
             g.pose().pushMatrix();
             g.pose().translate((float) x, (float) y);
             g.pose().rotate((float) (now / 1400.0 + i));
