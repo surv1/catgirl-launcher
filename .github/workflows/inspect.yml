@@ -49,7 +49,7 @@ jobs:
           CLASSES: ${{ inputs.classes }}
         run: |
           set +e
-          JARS=$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*loom*' -o -path '*minecraftMaven*' \) 2>/dev/null | grep -Ei 'minecraft-(merged|client|common)|fabric-(rendering|api-base|lifecycle|entity|renderer)' | tr '\n' ':')
+          JARS=$(find ~/.gradle /home/runner/work -name '*.jar' \( -path '*loom*' -o -path '*minecraftMaven*' \) 2>/dev/null | grep -Ei 'minecraft-(merged|client|common)|fabric-(rendering|api-base|lifecycle|entity|renderer|events-interaction|key-binding)' | tr '\n' ':')
           mkdir -p /tmp/out
           for C in $CLASSES; do
             F=/tmp/out/all.txt
