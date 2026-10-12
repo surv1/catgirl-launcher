@@ -45,6 +45,8 @@ log "server up"
 # ---- client
 cd "$G"
 mkdir -p config
+SCENARIO=${SCENARIO:-scenario}
+[ -f "$HERE/$SCENARIO.hud.json" ] && cp "$HERE/$SCENARIO.hud.json" config/catgirl-hud.json
 cat > config/catgirl-cosmetics.json <<EOF
 {"api":"","uuid":"$UUID","items":{
  "ears":{"on":true,"color":"#5a3a28","inner":"#fff4ea"},
@@ -93,7 +95,7 @@ else
     local f; f=$(ls -t "$G"/screenshots/*.png 2>/dev/null | head -1)
     if [ -n "$f" ]; then mv "$f" "$name"; log "$1"; else import -window root "$name"; log "$1 (X capture)"; fi
   }
-  source "$HERE/scenario.sh"
+  source "$HERE/$SCENARIO.sh"
 fi
 kill $CLIENT 2>/dev/null; sleep 2; kill $XVFB 2>/dev/null
 cmd stop; sleep 5; kill $SERVER_PID 2>/dev/null

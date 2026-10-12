@@ -8,6 +8,9 @@ on:
       note:
         description: "What this run is for"
         default: ""
+      scenario:
+        description: "Which test to play (scenario = the full one, features = the mods)"
+        default: "scenario"
 
 permissions:
   contents: write
@@ -58,7 +61,7 @@ jobs:
       - name: Play and take pictures
         run: |
           export JAVA_HOME=$JAVA_HOME_21_X64 PATH=$JAVA_HOME_21_X64/bin:$PATH
-          G=$PWD/game S=$PWD/server OUT=$PWD/shots bash texture-pack/tools/ingame/shots.sh
+          G=$PWD/game S=$PWD/server OUT=$PWD/shots SCENARIO="${{ inputs.scenario }}" bash texture-pack/tools/ingame/shots.sh
           echo "::notice title=shots::$(ls shots | tr '\n' ' ')"
           echo "::notice title=warnings::$(cut -c1-200 shots/warnings.txt | tr '\n' '|' | head -c 3000)"
       - name: Push the pictures

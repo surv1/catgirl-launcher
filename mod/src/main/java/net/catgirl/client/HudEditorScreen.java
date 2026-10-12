@@ -46,7 +46,7 @@ public final class HudEditorScreen extends Screen {
     private Hud.Module at(double mx, double my) {
         Hud.Module hit = null;
         for (Hud.Module m : Hud.MODULES.values()) {
-            if (!m.on) continue;
+            if (!m.on || !m.hud) continue;
             int[] b = Hud.box(m, width, height, true);
             if (Ui.in(mx, my, b[0], b[1], b[2], b[3])) hit = m; // last one drawn is on top
         }
@@ -65,7 +65,7 @@ public final class HudEditorScreen extends Screen {
         boolean any = false;
         Hud.Module hover = dragging != null ? dragging : at(mx, my);
         for (Hud.Module m : Hud.MODULES.values()) {
-            if (!m.on) continue;
+            if (!m.on || !m.hud) continue;
             any = true;
             int[] b = Hud.box(m, width, height, true);
             Hud.draw(g, m, b[0], b[1], accent, true);

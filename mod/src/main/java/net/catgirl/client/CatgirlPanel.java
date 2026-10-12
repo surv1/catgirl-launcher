@@ -26,7 +26,7 @@ import java.util.Locale;
  * away; add-ons download from Modrinth and start next time Minecraft opens.
  */
 public final class CatgirlPanel extends Screen {
-    enum Page { MODS, COSMETICS }
+    enum Page { MODS, COSMETICS, SETTINGS }
 
     private static final String[] CATEGORIES = {"All", "HUD", "PvP", "Visual", "Performance", "Utility"};
     private static int lastCategory = 0;
@@ -41,6 +41,9 @@ public final class CatgirlPanel extends Screen {
     private int px, py, pw, ph, sb;
     // cosmetics colour picker
     private String paletteFor = null;
+    // a mod's settings page
+    private String settingsFor = null;
+    private String draggingSlider = null;
     private int palX, palY;
 
     /** A card on the Mods page: a built-in feature or an add-on. */
@@ -69,9 +72,7 @@ public final class CatgirlPanel extends Screen {
     // ------------------------------------------------------------------ cards
     private List<Card> cards() {
         List<Card> all = new ArrayList<>();
-        for (Hud.Module m : Hud.MODULES.values()) all.add(new Card(m.id, m.name, desc(m.id), cat(m.id), m.icon, null));
-        all.add(new Card("sprint", "Toggle Sprint", "tap once to sprint", "PvP", new ItemStack(Items.SUGAR), null));
-        all.add(new Card("zoom", "Zoom", "hold " + CatgirlClient.zoomKeyName() + " to zoom", "Utility", new ItemStack(Items.SPYGLASS), null));
+        for (Hud.Module m : Hud.MODULES.values()) all.add(new Card(m.id, m.name, desc(m), m.category, m.icon, null));
         for (Addons.Addon a : Addons.LIST) all.add(new Card("addon:" + a.slug(), a.name(), a.desc(), a.category(), a.icon(), a));
         String q = search.trim().toLowerCase(Locale.ROOT);
         List<Card> out = new ArrayList<>();
@@ -83,24 +84,11 @@ public final class CatgirlPanel extends Screen {
         return out;
     }
 
-    private static String desc(String id) {
-        return switch (id) {
-            case "fps" -> "frames per second";
-            case "cps" -> "clicks per second";
-            case "keys" -> "WASD and mouse";
-            case "coords" -> "where you are";
-            case "armour" -> "durability left";
-            case "ping" -> "delay to the server";
-            case "clock" -> "the real time";
-            case "nowplaying" -> "the song you're on";
-            default -> "";
-        };
-    }
-
-    private static String cat(String id) {
-        return switch (id) {
-            case "cps", "keys", "armour", "ping" -> "PvP";
-            default -> "HUD";
+    private static String desc(Hud.Module m) {
+        return switch (m.id) {
+            case "zoom" -> "hold " + CatgirlClient.zoomKeyName() + " to zoom";
+            case "snaplook" -> "hold " + CatgirlClient.snaplookKeyName() + " to look behind";
+            default -> m.desc;
         };
     }
 
@@ -108,7 +96,7 @@ public final class CatgirlPanel extends Screen {
         if (c.addon() != null) return Addons.wantsOn(c.addon());
         return switch (c.key()) {
             case "sprint" -> minecraft.options.toggleSprint().get();
-            case "zoom" -> Hud.zoom;
+            case "sneak" -> minecraft.options.toggleCrouch().get();
             default -> Hud.MODULES.get(c.key()).on;
         };
     }
@@ -117,13 +105,16 @@ public final class CatgirlPanel extends Screen {
         boolean was = isOn(c);
         if (c.addon() != null) {
             Addons.toggle(c.addon());
-        } else switch (c.key()) {
-            case "sprint" -> { minecraft.options.toggleSprint().set(!minecraft.options.toggleSprint().get()); minecraft.options.save(); }
-            case "zoom" -> Hud.zoom = !Hud.zoom;
-            default -> {
-                Hud.Module m = Hud.MODULES.get(c.key());
-                m.on = !m.on;
-                if (m.id.equals("nowplaying") && m.on) NowPlaying.start();
+        } else {
+            Hud.Module m = Hud.MODULES.get(c.key());
+            switch (c.key()) {
+                // these two are the game's own settings, so they also show in Options > Controls
+                case "sprint" -> { minecraft.options.toggleSprint().set(!was); minecraft.options.save(); m.on = !was; }
+                case "sneak" -> { minecraft.options.toggleCrouch().set(!was); minecraft.options.save(); m.on = !was; }
+                default -> {
+                    m.on = !m.on;
+                    if (m.id.equals("nowplaying") && m.on) NowPlaying.start();
+                }
             }
         }
         Hud.save();
@@ -220,12 +211,18 @@ public final class CatgirlPanel extends Screen {
         renderSidebar(g, f, mx, my, now);
 
         // header
-        String title = page == Page.MODS ? "Mods" : "Cosmetics";
-        g.drawString(f, Component.literal(title).withStyle(ChatFormatting.BOLD), mainX() + 12, py + 12, Ui.MILK, false);
+        String title = page == Page.MODS ? "Mods" : page == Page.COSMETICS ? "Cosmetics" : Hud.MODULES.get(settingsFor).name;
+        int tx = mainX() + 12;
+        if (page == Page.SETTINGS) {
+            Ui.glyph(g, Ui.G_BACK, tx, py + 13, Ui.in(mx, my, mainX() + 6, py + 8, 120, 16) ? accent : Ui.HAZE);
+            tx += 12;
+        }
+        g.drawString(f, Component.literal(title).withStyle(ChatFormatting.BOLD), tx, py + 12, Ui.MILK, false);
         int[] c = closeBox();
         Ui.glyph(g, Ui.G_CLOSE, c[0] + 2, c[1] + 2, Ui.in(mx, my, c[0], c[1], c[2], c[3]) ? accent : Ui.HAZE);
 
         if (page == Page.MODS) renderMods(g, f, mx, my, now);
+        else if (page == Page.SETTINGS) renderSettings(g, f, mx, my);
         else renderCosmetics(g, f, mx, my);
         g.pose().popMatrix();
         if (paletteFor != null) renderPalette(g, mx, my);
@@ -241,7 +238,7 @@ public final class CatgirlPanel extends Screen {
             int y = sideY(i);
             if (SIDE[i] == null) { Ui.small(g, SECTIONS[sec++], px + 9, y + 5, Ui.DIM); continue; }
             Side e = SIDE[i];
-            boolean active = (e.action().equals("mods") && page == Page.MODS) || (e.action().equals("cosmetics") && page == Page.COSMETICS);
+            boolean active = (e.action().equals("mods") && page != Page.COSMETICS) || (e.action().equals("cosmetics") && page == Page.COSMETICS);
             boolean hover = Ui.in(mx, my, px + 5, y, sb - 10, 14);
             if (active) {
                 g.fill(px + 5, y, px + sb - 5, y + 14, Ui.mix(accent, Ui.PLUM, 0.72F));
@@ -315,6 +312,8 @@ public final class CatgirlPanel extends Screen {
                 Ui.small(g, "add-on", b[0] + 4, b[1] + 4, Ui.DIM);
             } else {
                 Ui.disc(g, b[0] + b[2] - 7, b[1] + 7, 2, on ? accent : Ui.BERRY3); // little on/off dot
+                if (!Hud.MODULES.get(c.key()).settings.isEmpty())
+                    Ui.glyph(g, Ui.G_GEAR, b[0] + 3, b[1] + 3, Ui.in(mx, my, b[0], b[1], 12, 12) ? accent : Ui.DIM);
             }
             String status = status(c, hover);
             if (!status.isEmpty()) {
@@ -342,6 +341,150 @@ public final class CatgirlPanel extends Screen {
             String msg = "Restart Minecraft to finish " + n + (n == 1 ? " add-on change" : " add-on changes");
             g.drawString(f, msg, bx + (bw - f.width(msg)) / 2, by + 4, Ui.MILK, false);
         }
+    }
+
+    // ------------------------------------------------------------------ a mod's settings
+    private static final String[] SWATCHES = {
+        "#ffffff", "#fff4ea", "#ffd34d", "#ff8a8a", "#e04848", "#ff7eb6",
+        "#c89bff", "#7ec8ff", "#8ce99a", "#3fd17a", "#1a1a1a", "#5a3a28",
+    };
+    private int setX() { return mainX() + 12; }
+    private int setW() { return mainW() - 24; }
+    private int setRowY(int i) { return py + 34 + i * 22; }
+    private static final int SLIDER_W = 110;
+
+    private void openSettings(String id) {
+        settingsFor = id;
+        page = Page.SETTINGS;
+        searchFocused = false;
+        Ui.click();
+    }
+
+    private void renderSettings(GuiGraphics g, Font f, int mx, int my) {
+        Hud.Module m = Hud.MODULES.get(settingsFor);
+        Card card = new Card(m.id, m.name, desc(m), m.category, m.icon, null);
+        int x = setX(), w = setW();
+        // row 0: on/off, with the mod's icon and what it does
+        int y0 = setRowY(0);
+        boolean on = isOn(card);
+        g.fill(x, y0, x + w, y0 + 20, Ui.BERRY);
+        if (on) g.fill(x, y0, x + 2, y0 + 20, accent);
+        g.renderItem(m.icon, x + 5, y0 + 2);
+        g.drawString(f, on ? "On" : "Off", x + 26, y0 + 6, on ? Ui.MILK : Ui.HAZE, false);
+        Ui.small(g, desc(m), x + 26 + f.width("Off") + 8, y0 + 7, Ui.DIM);
+        Ui.toggle(g, x + w - 24, y0 + 5, on, accent, Ui.in(mx, my, x, y0, w, 20));
+        for (int i = 0; i < m.settings.size(); i++) {
+            Hud.Setting st = m.settings.get(i);
+            int y = setRowY(i + 1);
+            boolean hover = Ui.in(mx, my, x, y, w, 20);
+            g.fill(x, y, x + w, y + 20, hover ? Ui.BERRY2 : Ui.BERRY);
+            g.drawString(f, st.label(), x + 8, y + 6, Ui.MILK, false);
+            int right = x + w - 6;
+            switch (st.type()) {
+                case "bool" -> Ui.toggle(g, right - 18, y + 5, Hud.optBool(m.id, st.key()), accent, hover);
+                case "cycle" -> {
+                    String v = "‹ " + Hud.optStr(m.id, st.key()) + " ›";
+                    g.drawString(f, v, right - f.width(v), y + 6, hover ? accent : Ui.HAZE, false);
+                }
+                case "slider" -> {
+                    double v = Hud.optNum(m.id, st.key());
+                    String label = st.max() > 100 ? timeLabel(v) : (st.step() < 1 ? String.format(Locale.ROOT, "%.0f%%", v * 100) : String.valueOf((int) v));
+                    int lw = 40, sx = right - lw - SLIDER_W, sy = y + 9;
+                    g.fill(sx, sy, sx + SLIDER_W, sy + 2, Ui.BERRY3);
+                    int hx = sx + (int) Math.round((v - st.min()) / (st.max() - st.min()) * SLIDER_W);
+                    g.fill(sx, sy, hx, sy + 2, accent);
+                    g.fill(hx - 2, sy - 3, hx + 3, sy + 5, Ui.MILK);
+                    g.drawString(f, label, right - f.width(label), y + 6, Ui.HAZE, false);
+                }
+                case "color" -> {
+                    String cur = Hud.optStr(m.id, st.key());
+                    for (int k = 0; k < SWATCHES.length; k++) {
+                        int cx = right - (SWATCHES.length - k) * 12, cy = y + 5;
+                        boolean sel = SWATCHES[k].equalsIgnoreCase(cur);
+                        g.fill(cx, cy, cx + 10, cy + 10, sel ? Ui.MILK : Ui.INK);
+                        g.fill(cx + 1, cy + 1, cx + 9, cy + 9, 0xFF000000 | Integer.parseInt(SWATCHES[k].substring(1), 16));
+                    }
+                }
+                default -> {}
+            }
+        }
+        // buttons
+        int by = setRowY(m.settings.size() + 1) + 4;
+        if (!m.settings.isEmpty()) Ui.button(g, x, by, 70, 16, "Reset", Ui.in(mx, my, x, by, 70, 16), false, accent);
+        if (m.hud) Ui.button(g, x + (m.settings.isEmpty() ? 0 : 76), by, 92, 16, "Move it on screen", Ui.in(mx, my, x + (m.settings.isEmpty() ? 0 : 76), by, 92, 16), false, accent);
+    }
+
+    /** 0..24000 game ticks as a time of day (0 = 6am). */
+    private static String timeLabel(double ticks) {
+        int t = (int) ((ticks / 1000.0 + 6) % 24 * 60);
+        int h = t / 60, mnt = t % 60;
+        return (h % 12 == 0 ? 12 : h % 12) + ":" + String.format(Locale.ROOT, "%02d", mnt) + (h < 12 ? "am" : "pm");
+    }
+
+    private boolean settingsClick(double mx, double my) {
+        Hud.Module m = Hud.MODULES.get(settingsFor);
+        int x = setX(), w = setW(), right = x + w - 6;
+        if (Ui.in(mx, my, mainX() + 6, py + 8, 120, 16)) { page = Page.MODS; Ui.click(); return true; }
+        if (Ui.in(mx, my, x, setRowY(0), w, 20)) { flip(new Card(m.id, m.name, desc(m), m.category, m.icon, null)); return true; }
+        for (int i = 0; i < m.settings.size(); i++) {
+            Hud.Setting st = m.settings.get(i);
+            int y = setRowY(i + 1);
+            if (!Ui.in(mx, my, x, y, w, 20)) continue;
+            switch (st.type()) {
+                case "bool" -> { boolean v = Hud.optBool(m.id, st.key()); Hud.setOpt(m.id, st.key(), !v); Ui.sound(v ? "off" : "on"); }
+                case "cycle" -> {
+                    String cur = Hud.optStr(m.id, st.key());
+                    int k = 0;
+                    for (int j = 0; j < st.choices().length; j++) if (st.choices()[j].equals(cur)) k = j;
+                    Hud.setOpt(m.id, st.key(), st.choices()[(k + 1) % st.choices().length]);
+                    Ui.click();
+                }
+                case "slider" -> { draggingSlider = st.key(); slide(mx); }
+                case "color" -> {
+                    for (int k = 0; k < SWATCHES.length; k++) {
+                        int cx = right - (SWATCHES.length - k) * 12;
+                        if (Ui.in(mx, my, cx, y + 5, 10, 10)) { Hud.setOpt(m.id, st.key(), SWATCHES[k]); Ui.click(); }
+                    }
+                }
+                default -> {}
+            }
+            return true;
+        }
+        int by = setRowY(m.settings.size() + 1) + 4;
+        if (!m.settings.isEmpty() && Ui.in(mx, my, x, by, 70, 16)) { Hud.resetOpts(m.id); Ui.click(); return true; }
+        int ex = x + (m.settings.isEmpty() ? 0 : 76);
+        if (m.hud && Ui.in(mx, my, ex, by, 92, 16)) {
+            if (!m.on) flip(new Card(m.id, m.name, desc(m), m.category, m.icon, null));
+            Ui.click();
+            minecraft.setScreen(new HudEditorScreen(this, accent));
+            return true;
+        }
+        return false;
+    }
+
+    /** Sets the slider being dragged from the mouse position. */
+    private void slide(double mx) {
+        Hud.Module m = Hud.MODULES.get(settingsFor);
+        for (Hud.Setting st : m.settings) {
+            if (!st.key().equals(draggingSlider)) continue;
+            int right = setX() + setW() - 6, sx = right - 40 - SLIDER_W;
+            double k = Math.max(0, Math.min(1, (mx - sx) / SLIDER_W));
+            double v = st.min() + k * (st.max() - st.min());
+            v = Math.round(v / st.step()) * st.step();
+            Hud.setOpt(m.id, st.key(), Math.max(st.min(), Math.min(st.max(), v)));
+        }
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent e, double dx, double dy) {
+        if (draggingSlider != null && page == Page.SETTINGS) { slide(e.x()); return true; }
+        return super.mouseDragged(e, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent e) {
+        if (draggingSlider != null) { draggingSlider = null; return true; }
+        return super.mouseReleased(e);
     }
 
     // ------------------------------------------------------------------ cosmetics page
@@ -442,6 +585,13 @@ public final class CatgirlPanel extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
         double mx = e.x(), my = e.y();
+        if (e.button() == 1 && page == Page.MODS && my >= gridTop() && my < gridBottom()) {
+            List<Card> list = cards();
+            for (int i = 0; i < list.size(); i++) {
+                int[] b = cardBox(i);
+                if (Ui.in(mx, my, b[0], b[1], b[2], b[3]) && list.get(i).addon() == null) { openSettings(list.get(i).key()); return true; }
+            }
+        }
         if (e.button() != 0) return super.mouseClicked(e, doubleClick);
 
         if (paletteFor != null) {
@@ -484,7 +634,9 @@ public final class CatgirlPanel extends Screen {
             return true;
         }
 
-        if (page == Page.MODS) {
+        if (page == Page.SETTINGS) {
+            if (settingsClick(mx, my)) return true;
+        } else if (page == Page.MODS) {
             int[] s = searchBox();
             searchFocused = Ui.in(mx, my, s[0], s[1], s[2], s[3]);
             if (searchFocused) return true;
@@ -500,7 +652,11 @@ public final class CatgirlPanel extends Screen {
                 List<Card> list = cards();
                 for (int i = 0; i < list.size(); i++) {
                     int[] b = cardBox(i);
-                    if (Ui.in(mx, my, b[0], b[1], b[2], b[3])) { flip(list.get(i)); return true; }
+                    if (!Ui.in(mx, my, b[0], b[1], b[2], b[3])) continue;
+                    Card c = list.get(i);
+                    if (c.addon() == null && Ui.in(mx, my, b[0], b[1], 12, 12) && !Hud.MODULES.get(c.key()).settings.isEmpty()) { openSettings(c.key()); return true; }
+                    flip(c);
+                    return true;
                 }
             }
         } else if (Cosmetics.canEdit()) {
@@ -560,6 +716,7 @@ public final class CatgirlPanel extends Screen {
             return true;
         }
         if (page == Page.MODS && searchFocused && e.key() == GLFW.GLFW_KEY_ESCAPE) { searchFocused = false; return true; }
+        if (page == Page.SETTINGS && e.key() == GLFW.GLFW_KEY_ESCAPE) { page = Page.MODS; return true; }
         if (CatgirlClient.isMenuKey(e.key())) { Ui.sound("close"); minecraft.setScreen(null); return true; }
         return super.keyPressed(e);
     }

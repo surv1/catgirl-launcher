@@ -7,7 +7,6 @@ import net.minecraft.client.Minecraft;
  * slows down so you can aim. Letting go puts both back exactly as they were.
  */
 final class Zoom {
-    private static final int TARGET_FOV = 30;
     private static Integer savedFov = null;
     private static Double savedSensitivity = null;
 
@@ -20,8 +19,10 @@ final class Zoom {
                 savedSensitivity = mc.options.sensitivity().get();
                 mc.options.sensitivity().set(savedSensitivity * 0.45);
             }
+            int target = (int) Hud.optNum("zoom", "fov");
             int fov = mc.options.fov().get();
-            if (fov > TARGET_FOV) mc.options.fov().set(Math.max(TARGET_FOV, fov - Math.max(4, (fov - TARGET_FOV) / 2)));
+            // below 30 is past the FOV slider's range, so it's set directly (and put back on release)
+            if (fov > target) Features.setRaw(mc, mc.options.fov(), Math.max(target, fov - Math.max(3, (fov - target) / 2)));
         } else {
             stop(mc);
         }

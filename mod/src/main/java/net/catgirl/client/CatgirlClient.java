@@ -72,7 +72,7 @@ public class CatgirlClient implements ClientModInitializer {
     private static DiscordRpc discord = null;
     private static long startedMs = System.currentTimeMillis();
     private static String versionLine = "Minecraft";
-    private static KeyMapping menuKey, zoomKey;
+    private static KeyMapping menuKey, zoomKey, snaplookKey;
 
     static boolean isMenuKey(int glfwKey) {
         return menuKey != null && KeyBindingHelper.getBoundKeyOf(menuKey).getValue() == glfwKey;
@@ -80,6 +80,7 @@ public class CatgirlClient implements ClientModInitializer {
 
     static String menuKeyName() { return menuKey == null ? "Right Shift" : menuKey.getTranslatedKeyMessage().getString(); }
     static String zoomKeyName() { return zoomKey == null ? "C" : zoomKey.getTranslatedKeyMessage().getString(); }
+    static String snaplookKeyName() { return snaplookKey == null ? "V" : snaplookKey.getTranslatedKeyMessage().getString(); }
 
     @Override
     public void onInitializeClient() {
@@ -110,7 +111,9 @@ public class CatgirlClient implements ClientModInitializer {
         KeyMapping.Category category = KeyMapping.Category.register(net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", "main"));
         menuKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, category));
         zoomKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.zoom", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, category));
-        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> Zoom.stop(client));
+        snaplookKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.snaplook", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, category));
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> { Zoom.stop(client); Features.restoreAll(client); });
+        Features.register();
         Addons.load();
 
         // Free cosmetics (cat ears, tail, bow) on every player who picked some in Catgirl Launcher.
@@ -125,7 +128,8 @@ public class CatgirlClient implements ClientModInitializer {
             while (menuKey.consumeClick()) {
                 if (client.screen == null && client.player != null) client.setScreen(new BloomScreen(config.accent));
             }
-            Zoom.tick(client, Hud.zoom && client.screen == null && zoomKey.isDown());
+            Zoom.tick(client, Hud.on("zoom") && client.screen == null && zoomKey.isDown());
+            Features.tick(client, snaplookKey.isDown());
             Cosmetics.tick(tick);
             // Minecraft re-sets its own title now and then; put ours back a few times a second.
             if (tick % 5 == 0 && client.getWindow() != null) client.getWindow().setTitle(title);
