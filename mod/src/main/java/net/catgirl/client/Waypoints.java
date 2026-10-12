@@ -113,7 +113,7 @@ final class Waypoints {
         if (!Hud.on("waypoints") || mc.player == null || mc.level == null || mc.options.hideGui) return;
         Camera cam = mc.gameRenderer.getMainCamera();
         Vec3 c = cam.position();
-        double yaw = Math.toRadians(cam.getYRot()), pitch = Math.toRadians(cam.getXRot());
+        double yaw = Math.toRadians(cam.yRot()), pitch = Math.toRadians(cam.xRot());
         double[] fw = {-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)};
         double[] rt = {-Math.cos(yaw), 0, -Math.sin(yaw)};
         double[] up = {rt[1] * fw[2] - rt[2] * fw[1], rt[2] * fw[0] - rt[0] * fw[2], rt[0] * fw[1] - rt[1] * fw[0]};
