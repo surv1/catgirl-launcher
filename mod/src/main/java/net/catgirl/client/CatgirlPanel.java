@@ -304,7 +304,9 @@ public final class CatgirlPanel extends Screen {
             g.drawString(f, name, b[0] + (b[2] - f.width(name)) / 2, b[1] + b[3] - bar + 3, on && !pendingCard ? Ui.INK : Ui.MILK, false);
             // the mod's picture
             int iconY = b[1] + (b[3] - bar) / 2 - 16 - 3;
-            Ui.modIcon(g, Ui.iconPath(c.key()), c.icon(), b[0] + b[2] / 2 - 16, iconY, 32);
+            // add-on logos are full squares, so they're a touch smaller and lower to clear the "add-on" tag
+            int isz = c.addon() != null ? 26 : 32;
+            Ui.modIcon(g, Ui.iconPath(c.key()), c.icon(), b[0] + b[2] / 2 - isz / 2, iconY + (32 - isz) / 2 + (c.addon() != null ? 3 : 0), isz);
             if (c.addon() != null) {
                 Ui.glyph(g, Ui.G_DOWN, b[0] + b[2] - 10, b[1] + 3, Ui.DIM); // downloadable
                 Ui.small(g, "add-on", b[0] + 4, b[1] + 4, Ui.DIM);

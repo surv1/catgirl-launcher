@@ -135,7 +135,7 @@ final class Waypoints {
                 sy = sh - 40;
             }
             sx = Math.max(10, Math.min(sw - 10, sx));
-            sy = Math.max(10, Math.min(sh - 30, sy));
+            sy = Math.max(z > 0.1 ? 20 : 48, Math.min(sh - 30, sy)); // keep labels clear of the boss bar / compass
             // diamond marker
             for (int i = 0; i < 5; i++) g.fill(sx - i, sy - 5 + i, sx + i + 1, sy - 4 + i, p.color());
             for (int i = 0; i < 4; i++) g.fill(sx - 3 + i, sy + i, sx + 4 - i, sy + 1 + i, p.color());

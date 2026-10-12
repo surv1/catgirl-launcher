@@ -297,7 +297,11 @@ final class Hud {
             case "stopwatch" -> new int[] {4, 168};
             case "reach" -> new int[] {4, 185};
             case "combo" -> new int[] {4, 202};
-            case "effects" -> new int[] {sw - w - 4, 4};
+            case "effects" -> { // sit beside the minimap when it's in its usual corner
+                Module mm = MODULES.get("minimap");
+                int shift = mm != null && mm.on && !mm.moved() ? Math.round((Minimap.SIZE + 4) * mm.scale) + 6 : 0;
+                yield new int[] {sw - w - 4 - shift, 4};
+            }
             case "direction" -> new int[] {sw / 2 - w / 2, 26};
             case "items" -> new int[] {sw - w - 4, sh / 2 + 50};
             case "packs" -> new int[] {sw - w - 4, sh - h - 4};
