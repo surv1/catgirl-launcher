@@ -116,7 +116,7 @@ final class Inventories {
             ItemStack want = hovered.getItem();
             if (want.isEmpty() || want.getCount() >= hovered.getMaxStackSize(want)) return true;
             for (Slot s : menu.slots) {
-                if (s == hovered || sameSide(s, hovered) || !s.hasItem() || !ItemStack.isSameItemSameComponents(s.getItem(), want) || !s.mayPickup(mc.player)) continue;
+                if (s == hovered || sameSide(s, hovered) || craftingSlot(s) || !s.hasItem() || !ItemStack.isSameItemSameComponents(s.getItem(), want) || !s.mayPickup(mc.player)) continue;
                 if (whole) moveStack(menu, s, hovered); else moveOne(menu, s, hovered);
                 return true;
             }
@@ -147,11 +147,16 @@ final class Inventories {
         return ha == hb;
     }
 
+    /** Crafting grids and result slots are never where scrolled items should land. */
+    private static boolean craftingSlot(Slot s) {
+        return s.container instanceof net.minecraft.world.inventory.CraftingContainer || s.container instanceof net.minecraft.world.inventory.ResultContainer;
+    }
+
     /** Where one item should go: a matching stack with room first, then an empty slot. */
     private static Slot targetFor(AbstractContainerMenu menu, Slot from, ItemStack item) {
         Slot empty = null;
         for (Slot s : menu.slots) {
-            if (s == from || sameSide(s, from) || !s.isActive() || !s.mayPlace(item)) continue;
+            if (s == from || sameSide(s, from) || !s.isActive() || !s.mayPlace(item) || craftingSlot(s)) continue;
             if (s.container instanceof Inventory inv && s.getContainerSlot() >= 36) continue; // armour / off hand
             if (s.hasItem()) {
                 if (ItemStack.isSameItemSameComponents(s.getItem(), item) && s.getItem().getCount() < s.getMaxStackSize(item)) return s;

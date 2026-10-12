@@ -117,7 +117,7 @@ final class Hud {
         feature("fullbright", "Fullbright", "see in the dark", "Visual", Items.GLOWSTONE).with(Setting.slider("level", "Brightness", 2, 15, 1, 15));
         feature("time", "Time Changer", "your own time of day", "Visual", Items.DAYLIGHT_DETECTOR).with(
             Setting.slider("time", "Time", 0, 24000, 500, 6000), Setting.bool("real", "Follow the real clock", false));
-        feature("weather", "Weather Changer", "your own weather", "Visual", Items.SNOWBALL).with(
+        feature("weather", "Weather", "your own weather", "Visual", Items.SNOWBALL).with(
             Setting.cycle("weather", "Weather", "clear", "rain", "thunder"));
         feature("nohurtcam", "No Hurt Shake", "no camera shake when hit", "Visual", Items.SHIELD).with(
             Setting.slider("amount", "Shake left", 0, 1, 0.1, 0));
@@ -345,23 +345,25 @@ final class Hud {
         return 1 + (optBool("coords", "facing") ? 1 : 0) + (optBool("coords", "other") ? 1 : 0) + (optBool("coords", "biome") ? 1 : 0);
     }
 
+    /** The left-hand column: each piece sits under the ones above it that are on and not moved. */
+    private static final String[] LEFT_STACK = {"fps", "cps", "ping", "clock", "coords", "day", "server", "speed", "memory", "stopwatch", "reach", "combo"};
+
+    private static int stackY(Module target) {
+        int y = 4;
+        for (String id : LEFT_STACK) {
+            if (id.equals(target.id)) return y;
+            Module o = MODULES.get(id);
+            if (o.on && !o.moved()) y += Math.round(size(o, false)[1] * o.scale) + 2;
+        }
+        return y;
+    }
+
     static int[] defaultPos(Module m, int sw, int sh, int w, int h) {
         return switch (m.id) {
-            case "fps" -> new int[] {4, 4};
-            case "cps" -> new int[] {4, 21};
-            case "ping" -> new int[] {4, 38};
-            case "clock" -> new int[] {4, 55};
-            case "coords" -> new int[] {4, 72};
+            case "fps", "cps", "ping", "clock", "coords", "day", "server", "speed", "memory", "stopwatch", "reach", "combo" -> new int[] {4, stackY(m)};
             case "keys" -> new int[] {4, sh - h - 30};
-            case "armour" -> new int[] {sw - w - 4, sh / 2 - h / 2};
+            case "armour" -> optBool("armour", "row") ? new int[] {sw / 2 + 91 + 8, sh - h - 2} : new int[] {sw - w - 4, sh / 2 - h / 2};
             case "nowplaying" -> NowPlaying.defaultPos(sw, sh);
-            case "day" -> new int[] {4, 100};
-            case "server" -> new int[] {4, 117};
-            case "speed" -> new int[] {4, 134};
-            case "memory" -> new int[] {4, 151};
-            case "stopwatch" -> new int[] {4, 168};
-            case "reach" -> new int[] {4, 185};
-            case "combo" -> new int[] {4, 202};
             case "effects" -> { // sit beside the minimap when it's in its usual corner
                 Module mm = MODULES.get("minimap");
                 int shift = mm != null && mm.on && !mm.moved() ? Math.round((Minimap.SIZE + 4) * mm.scale) + 6 : 0;

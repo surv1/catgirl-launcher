@@ -130,9 +130,9 @@ final class Waypoints {
             if (z > 0.1) {
                 sx = (int) Math.round(sw / 2.0 + x / z * focal);
                 sy = (int) Math.round(sh / 2.0 - y / z * focal);
-            } else { // behind you: stick to the bottom edge on the side it's on
-                sx = x >= 0 ? sw - 12 : 12;
-                sy = sh - 40;
+            } else { // behind you: pinned to the left or right edge, halfway up, on the side it's on
+                sx = x >= 0 ? sw - 40 : 40;
+                sy = sh / 2;
             }
             sx = Math.max(10, Math.min(sw - 10, sx));
             sy = Math.max(z > 0.1 ? 20 : 48, Math.min(sh - 30, sy)); // keep labels clear of the boss bar / compass

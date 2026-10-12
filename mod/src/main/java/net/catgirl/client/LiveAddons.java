@@ -82,7 +82,9 @@ final class LiveAddons {
     private static boolean irisOn() {
         try {
             Object c = irisApiConfig();
-            return (boolean) Class.forName("net.irisshaders.iris.api.v0.IrisApiConfig").getMethod("areShadersEnabled").invoke(c);
+            // "on" means shaders are switched on AND a shader pack is chosen (Iris starts with them
+            // "enabled" but no pack, which looks exactly like off)
+            return (boolean) Class.forName("net.irisshaders.iris.api.v0.IrisApiConfig").getMethod("areShadersEnabled").invoke(c) && chosenPack().isPresent();
         } catch (Throwable t) {
             return false;
         }

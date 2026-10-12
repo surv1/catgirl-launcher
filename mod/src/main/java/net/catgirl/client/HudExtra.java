@@ -59,7 +59,8 @@ final class HudExtra {
         List<String> out = new ArrayList<>();
         for (Pack p : mc.getResourcePackRepository().getSelectedPacks()) {
             String id = p.getId();
-            if (id.equals("vanilla") || id.startsWith("fabric") || id.equals("catgirl") || id.equals("minecraft")) continue;
+            // only packs you added (built-in ones from the game and mods aren't interesting here)
+            if (!id.startsWith("file/") && !id.equals("programmer_art") && !id.equals("high_contrast")) continue;
             out.add(p.getTitle().getString());
         }
         return out;
@@ -73,7 +74,7 @@ final class HudExtra {
                 int n = mc.player == null ? 0 : mc.player.getActiveEffects().size();
                 boolean compact = Hud.optBool("effects", "compact");
                 int rowH = compact ? 14 : 22;
-                yield new int[] {compact ? 130 : 118, Math.max(1, n == 0 && preview ? 3 : n) * rowH - 2};
+                yield new int[] {compact ? 146 : 118, Math.max(1, n == 0 && preview ? 3 : n) * rowH - 2};
             }
             case "direction" -> new int[] {121, Hud.optBool("direction", "degrees") ? 26 : 16};
             case "day" -> new int[] {f.width(Hud.optBool("day", "time") ? "Day 00000 · 00:00pm" : "Day 00000") + PAD * 2, 15};

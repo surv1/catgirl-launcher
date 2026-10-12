@@ -62,17 +62,19 @@ shot crosshair-settings-changed 1
 key Escape; key Escape
 shot crosshair-pink 1.5
 # ---- built-in add-ons
-# Food Info: get hungry, then hold the golden apples (hotbar slot 4)
-cmd "effect give $P hunger 6 120"; sleep 7
-key 4; sleep 0.5
+# Food Info: get hungry (needs a difficulty above peaceful), then hold the golden apples
+# hotbar: 0 sword, 1-3 totems (they don't stack), 4 pearls, 5 gapples, 6 arrows, 7 shulker box
+cmd "difficulty easy"; cmd "effect give $P hunger 8 150"; sleep 9
+cmd "effect clear $P hunger"
+key 6; sleep 0.5
 shot food-preview 0.3
 key 1
-# Shulker Peek: open the inventory and hover the shulker box (hotbar slot 6)
+# Shulker Peek: open the inventory and hover the shulker box
 key e; sleep 1
-xdotool mousemove --window "$WID" $(( (248 + 5 * 18) * 2 )) $(( 247 * 2 )); sleep 0.6
+xdotool mousemove --window "$WID" $(( (248 + 7 * 18) * 2 )) $(( 247 * 2 )); sleep 0.6
 shot shulker-peek 0.3
-# Mouse Tweaks: scroll down over the pearls (slot 3) twice: two pearls move up into the inventory
-xdotool mousemove --window "$WID" $(( (248 + 2 * 18) * 2 )) $(( 247 * 2 )); sleep 0.4
+# Mouse Tweaks: scroll down over the pearls twice: two pearls move up into the inventory
+xdotool mousemove --window "$WID" $(( (248 + 4 * 18) * 2 )) $(( 247 * 2 )); sleep 0.4
 xdotool click 5; sleep 0.4; xdotool click 5; sleep 0.6
 xdotool mousemove --window "$WID" 40 40; sleep 0.4
 shot mousetweaks-scroll 0.3
@@ -85,23 +87,25 @@ rclick 230 110         # first card, FPS -> its settings
 shot fps-settings 1
 xdotool mousemove --window "$WID" 640 400; for i in 1 2 3 4 5 6; do xdotool click 5; sleep 0.15; done
 shot fps-settings-look 0.8
-key Escape; sleep 0.5
+key Escape; key Escape; sleep 0.5   # settings -> mods -> game
 # ---- add-ons that switch live (only when the test installed them)
 if ls "$G/mods" | grep -qi continuity; then
   key Shift_R; sleep 1
   click 320 118; click 301 67   # Mods, Visual
   shot addons-ready 1
-  click 520 242                 # Continuity on
-  sleep 6; key Escape; key Escape
+  click 520 242                 # Continuity on (a quick resource reload)
+  sleep 8
+  shot continuity-on 0.2
+  key Escape
   cmd "setblock 2 -59 -3 glass"; cmd "setblock 3 -59 -3 glass"; cmd "setblock 2 -58 -3 glass"; cmd "setblock 3 -58 -3 glass"
   cmd "tp $P 2.5 -60 0.5 180 0"; sleep 3
   shot continuity-glass 0.5
   key Shift_R; sleep 1
   click 320 118; click 301 67
   click 425 242                 # Iris on (downloads a shader pack the first time)
-  sleep 4
+  sleep 3
   shot iris-downloading 0.2
-  key Escape; key Escape
+  key Escape
   sleep 60
   shot iris-shaders 2
 fi
