@@ -32,6 +32,27 @@ final class Ui {
         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(ev, 1.0F));
     }
 
+    private static final java.util.Map<net.minecraft.resources.Identifier, Boolean> HAS = new java.util.HashMap<>();
+
+    /** A mod's picture (textures/gui/mods/<id>.png, or an add-on's logo), or its item if there's no picture. */
+    static void modIcon(GuiGraphics g, String path, net.minecraft.world.item.ItemStack fallback, int x, int y, int size) {
+        net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", path);
+        boolean has = HAS.computeIfAbsent(id, k -> Minecraft.getInstance().getResourceManager().getResource(k).isPresent());
+        if (has) {
+            g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, id, x, y, 0F, 0F, size, size, size, size);
+        } else {
+            g.pose().pushMatrix();
+            g.pose().translate(x, y);
+            g.pose().scale(size / 16F, size / 16F);
+            g.renderItem(fallback, 0, 0);
+            g.pose().popMatrix();
+        }
+    }
+
+    static String iconPath(String key) {
+        return key.startsWith("addon:") ? "textures/gui/addons/" + key.substring(6) + ".png" : "textures/gui/mods/" + key + ".png";
+    }
+
     /** A 7x7 pixel icon from rows of '#' and '.'. */
     static void glyph(GuiGraphics g, String[] rows, int x, int y, int color) {
         for (int r = 0; r < rows.length; r++)

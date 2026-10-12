@@ -72,7 +72,7 @@ public class CatgirlClient implements ClientModInitializer {
     private static DiscordRpc discord = null;
     private static long startedMs = System.currentTimeMillis();
     private static String versionLine = "Minecraft";
-    private static KeyMapping menuKey, zoomKey, snaplookKey;
+    private static KeyMapping menuKey, zoomKey, snaplookKey, freelookKey, waypointKey;
 
     static boolean isMenuKey(int glfwKey) {
         return menuKey != null && KeyBindingHelper.getBoundKeyOf(menuKey).getValue() == glfwKey;
@@ -80,6 +80,8 @@ public class CatgirlClient implements ClientModInitializer {
 
     static String menuKeyName() { return menuKey == null ? "Right Shift" : menuKey.getTranslatedKeyMessage().getString(); }
     static String zoomKeyName() { return zoomKey == null ? "C" : zoomKey.getTranslatedKeyMessage().getString(); }
+    static String freelookKeyName() { return freelookKey == null ? "Left Alt" : freelookKey.getTranslatedKeyMessage().getString(); }
+    static String waypointKeyName() { return waypointKey == null ? "B" : waypointKey.getTranslatedKeyMessage().getString(); }
     static String snaplookKeyName() { return snaplookKey == null ? "V" : snaplookKey.getTranslatedKeyMessage().getString(); }
 
     @Override
@@ -112,6 +114,9 @@ public class CatgirlClient implements ClientModInitializer {
         menuKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, category));
         zoomKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.zoom", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, category));
         snaplookKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.snaplook", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, category));
+        freelookKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.freelook", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_LEFT_ALT, category));
+        waypointKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.waypoint", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, category));
+        Waypoints.load(FabricLoader.getInstance().getConfigDir().resolve("catgirl-waypoints.json").toFile());
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> { Zoom.stop(client); Features.restoreAll(client); });
         Features.register();
         Addons.load();
@@ -130,6 +135,11 @@ public class CatgirlClient implements ClientModInitializer {
             }
             Zoom.tick(client, Hud.on("zoom") && client.screen == null && zoomKey.isDown());
             Features.tick(client, snaplookKey.isDown());
+            Freelook.tick(client, freelookKey.isDown());
+            boolean addWaypoint = false;
+            while (waypointKey.consumeClick()) addWaypoint = true;
+            Waypoints.tick(client, addWaypoint && client.screen == null);
+            HitColor.tick(client);
             Cosmetics.tick(tick);
             // Minecraft re-sets its own title now and then; put ours back a few times a second.
             if (tick % 5 == 0 && client.getWindow() != null) client.getWindow().setTitle(title);

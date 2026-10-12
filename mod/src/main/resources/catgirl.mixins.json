@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.catgirl.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "CameraMixin",
+    "EntityTurnMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

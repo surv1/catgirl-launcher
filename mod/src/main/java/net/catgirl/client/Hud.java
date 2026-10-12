@@ -101,6 +101,14 @@ final class Hud {
         feature("sneak", "Toggle Sneak", "tap once to sneak", "Utility", Items.LEATHER_BOOTS);
         feature("sprint", "Toggle Sprint", "tap once to sprint", "PvP", Items.SUGAR);
         feature("zoom", "Zoom", "hold a key to zoom", "Utility", Items.SPYGLASS).with(Setting.slider("fov", "Zoom amount", 10, 50, 5, 30));
+        feature("freelook", "Freelook", "look around without turning", "Utility", Items.ENDER_EYE);
+        hud("minimap", "Minimap", "a map of what's around you", "Utility", Items.FILLED_MAP).with(
+            Setting.slider("zoom", "Blocks per pixel", 1, 4, 1, 1), Setting.bool("rotate", "Rotate with you", false), Setting.bool("coords", "Show coordinates", true));
+        feature("waypoints", "Waypoints", "mark places to find again", "Utility", Items.RED_BANNER).with(Setting.bool("death", "Mark where you die", true));
+        feature("hitcolor", "Hit Colour", "the flash when things get hit", "Visual", Items.RED_DYE).with(
+            Setting.color("color", "Colour", "#ff7eb6"), Setting.slider("strength", "Strength", 0.2, 0.9, 0.05, 0.7));
+        feature("outline", "Block Outline", "your own block outline colour", "Visual", Items.GLASS).with(
+            Setting.color("color", "Colour", "#ff7eb6"), Setting.slider("width", "Thickness", 1, 6, 1, 2));
         MODULES.get("zoom").on = true;
     }
     private static Module hud(String id, String name, String desc, String cat, net.minecraft.world.item.Item icon) {
@@ -266,6 +274,7 @@ final class Hud {
             case "keys" -> new int[] {KEY * 3 + GAP * 2, KEY * 2 + GAP + (optBool("keys", "mouse") ? KEY + GAP : 0) + (optBool("keys", "space") ? 8 + GAP : 0)};
             case "armour" -> new int[] {16 + 4 + f.width("0000") + PAD, (optBool("armour", "held") ? 5 : 4) * 17 + 1};
             case "nowplaying" -> new int[] {NowPlaying.W, NowPlaying.H};
+            case "minimap" -> new int[] {Minimap.SIZE, Minimap.SIZE};
             default -> HudExtra.size(m, preview);
         };
     }
@@ -292,6 +301,7 @@ final class Hud {
             case "direction" -> new int[] {sw / 2 - w / 2, 26};
             case "items" -> new int[] {sw - w - 4, sh / 2 + 50};
             case "packs" -> new int[] {sw - w - 4, sh - h - 4};
+            case "minimap" -> new int[] {sw - w - 6, 6};
             default -> new int[] {4, 4};
         };
     }
@@ -326,6 +336,7 @@ final class Hud {
         if (mc.options.hideGui || mc.player == null) return;
         if (mc.screen instanceof HudEditorScreen) return; // the editor draws them itself
         int sw = g.guiWidth(), sh = g.guiHeight();
+        Waypoints.render(g, accent);
         for (Module m : MODULES.values()) {
             if (!m.on || !m.hud) continue;
             int[] b = box(m, sw, sh, false);
@@ -365,6 +376,7 @@ final class Hud {
             case "coords" -> coords(g, f, s, mc, accent, preview);
             case "keys" -> keys(g, f, mc, accent);
             case "armour" -> armour(g, f, mc, preview);
+            case "minimap" -> Minimap.draw(g, f, accent, preview);
             default -> HudExtra.draw(g, f, s, m, mc, accent, preview);
         }
         g.pose().popMatrix();

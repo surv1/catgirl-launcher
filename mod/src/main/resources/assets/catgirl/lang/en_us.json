@@ -2,5 +2,7 @@
   "key.catgirl.menu": "Open Catgirl menu",
   "key.catgirl.zoom": "Zoom",
   "key.category.catgirl.main": "Catgirl Client",
-  "key.catgirl.snaplook": "Snaplook (look behind you)"
+  "key.catgirl.snaplook": "Snaplook (look behind you)",
+  "key.catgirl.freelook": "Freelook (hold)",
+  "key.catgirl.waypoint": "Add a waypoint here"
 }

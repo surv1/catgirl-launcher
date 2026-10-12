@@ -3,6 +3,11 @@ package net.catgirl.client;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.ShapeRenderer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
@@ -32,6 +37,16 @@ final class Features {
         AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
             if (level.isClientSide() && player == Minecraft.getInstance().player) onAttack(player, entity);
             return InteractionResult.PASS;
+        });
+        WorldRenderEvents.BEFORE_BLOCK_OUTLINE.register((ctx, st) -> {
+            if (!Hud.on("outline")) return true;
+            Minecraft mc = Minecraft.getInstance();
+            Vec3 cam = mc.gameRenderer.getMainCamera().position();
+            VertexConsumer vc = ctx.consumers().getBuffer(RenderTypes.lines());
+            BlockPos p = st.pos();
+            ShapeRenderer.renderShape(ctx.matrices(), vc, st.shape(), p.getX() - cam.x, p.getY() - cam.y, p.getZ() - cam.z,
+                Hud.optColor("outline", "color") | 0xFF000000, (float) Hud.optNum("outline", "width"));
+            return false;
         });
         HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, orig -> (g, d) -> {
             if (Hud.on("crosshair")) crosshair(g); else orig.render(g, d);

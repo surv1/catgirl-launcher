@@ -22,6 +22,24 @@ shot hud-all 2
 xdotool mousemove --window "$WID" 640 360
 for i in 1 2 3 4; do xdotool click 1; sleep 0.65; done
 shot hits 0.1
+xdotool click 1; sleep 0.05
+shot hitcolor 0
+sleep 0.8
+# waypoint here, then walk away (tp) and look back at it
+key b; sleep 0.5
+cmd "tp $P 0.5 -60 14.5 180 10"; sleep 2
+shot waypoint 0.5
+# block outline: look down at the floor
+cmd "tp $P 0.5 -60 14.5 180 65"; sleep 1.5
+shot outline 0.3
+# freelook: hold Left Alt and move the mouse; the camera turns, the player doesn't
+cmd "tp $P 0.5 -60 3.5 180 15"; sleep 1.5
+xdotool keydown Alt_L; sleep 0.4
+for i in 1 2 3 4 5 6; do xdotool mousemove_relative -- 60 0; sleep 0.1; done
+shot freelook 0.3
+xdotool keyup Alt_L; sleep 0.8
+shot freelook-after 0.3
+cmd "tp $P 0.5 -60 0.5 180 28"; sleep 1
 xdotool keydown v; sleep 0.8
 shot snaplook 0.2
 xdotool keyup v; sleep 0.5
@@ -31,6 +49,7 @@ xdotool keyup c; sleep 0.8
 # a mod's settings page: Visual category, right-click Crosshair
 key Shift_R; sleep 1
 click 320 118          # Mods petal
+shot mods-icons 1
 click 301 67           # Visual
 shot visual-category 1
 rclick 230 110         # Crosshair -> settings

@@ -23,5 +23,8 @@
     "fabric-lifecycle-events-v1": "*",
     "fabric-rendering-v1": "*",
     "fabric-key-binding-api-v1": "*"
-  }
+  },
+  "mixins": [
+    "catgirl.mixins.json"
+  ]
 }

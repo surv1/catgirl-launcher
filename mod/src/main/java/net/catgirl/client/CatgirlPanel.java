@@ -88,6 +88,8 @@ public final class CatgirlPanel extends Screen {
         return switch (m.id) {
             case "zoom" -> "hold " + CatgirlClient.zoomKeyName() + " to zoom";
             case "snaplook" -> "hold " + CatgirlClient.snaplookKeyName() + " to look behind";
+            case "freelook" -> "hold " + CatgirlClient.freelookKeyName() + " to look around";
+            case "waypoints" -> "press " + CatgirlClient.waypointKeyName() + " to mark a spot";
             default -> m.desc;
         };
     }
@@ -300,13 +302,9 @@ public final class CatgirlPanel extends Screen {
             String name = c.name();
             while (f.width(name) > b[2] - 6 && name.length() > 3) name = name.substring(0, name.length() - 1);
             g.drawString(f, name, b[0] + (b[2] - f.width(name)) / 2, b[1] + b[3] - bar + 3, on && !pendingCard ? Ui.INK : Ui.MILK, false);
-            // icon, twice the size
+            // the mod's picture
             int iconY = b[1] + (b[3] - bar) / 2 - 16 - 3;
-            g.pose().pushMatrix();
-            g.pose().translate(b[0] + b[2] / 2F - 16, iconY);
-            g.pose().scale(2F, 2F);
-            g.renderItem(c.icon(), 0, 0);
-            g.pose().popMatrix();
+            Ui.modIcon(g, Ui.iconPath(c.key()), c.icon(), b[0] + b[2] / 2 - 16, iconY, 32);
             if (c.addon() != null) {
                 Ui.glyph(g, Ui.G_DOWN, b[0] + b[2] - 10, b[1] + 3, Ui.DIM); // downloadable
                 Ui.small(g, "add-on", b[0] + 4, b[1] + 4, Ui.DIM);
@@ -369,7 +367,7 @@ public final class CatgirlPanel extends Screen {
         boolean on = isOn(card);
         g.fill(x, y0, x + w, y0 + 20, Ui.BERRY);
         if (on) g.fill(x, y0, x + 2, y0 + 20, accent);
-        g.renderItem(m.icon, x + 5, y0 + 2);
+        Ui.modIcon(g, Ui.iconPath(m.id), m.icon, x + 5, y0 + 2, 16);
         g.drawString(f, on ? "On" : "Off", x + 26, y0 + 6, on ? Ui.MILK : Ui.HAZE, false);
         Ui.small(g, desc(m), x + 26 + f.width("Off") + 8, y0 + 7, Ui.DIM);
         Ui.toggle(g, x + w - 24, y0 + 5, on, accent, Ui.in(mx, my, x, y0, w, 20));
@@ -412,6 +410,19 @@ public final class CatgirlPanel extends Screen {
         int by = setRowY(m.settings.size() + 1) + 4;
         if (!m.settings.isEmpty()) Ui.button(g, x, by, 70, 16, "Reset", Ui.in(mx, my, x, by, 70, 16), false, accent);
         if (m.hud) Ui.button(g, x + (m.settings.isEmpty() ? 0 : 76), by, 92, 16, "Move it on screen", Ui.in(mx, my, x + (m.settings.isEmpty() ? 0 : 76), by, 92, 16), false, accent);
+        if (m.id.equals("waypoints")) {
+            var list = Waypoints.here(minecraft);
+            int ly = by + 24;
+            Ui.small(g, list.isEmpty() ? "No waypoints here yet. Press " + CatgirlClient.waypointKeyName() + " in game to add one." : "Waypoints in this world", x, ly, Ui.DIM);
+            for (int i = 0; i < list.size() && ly + 12 + (i + 1) * 14 < py + ph - 6; i++) {
+                var p = list.get(i);
+                int ry = ly + 10 + i * 14;
+                g.fill(x, ry, x + w, ry + 12, Ui.BERRY);
+                g.fill(x + 3, ry + 3, x + 9, ry + 9, p.color());
+                g.drawString(f, p.name() + "  " + (int) p.x() + ", " + (int) p.y() + ", " + (int) p.z(), x + 13, ry + 2, Ui.MILK, false);
+                Ui.glyph(g, Ui.G_CLOSE, x + w - 11, ry + 3, Ui.in(mx, my, x + w - 14, ry, 14, 12) ? accent : Ui.DIM);
+            }
+        }
     }
 
     /** 0..24000 game ticks as a time of day (0 = 6am). */
@@ -451,6 +462,13 @@ public final class CatgirlPanel extends Screen {
             return true;
         }
         int by = setRowY(m.settings.size() + 1) + 4;
+        if (m.id.equals("waypoints")) {
+            var list = Waypoints.here(minecraft);
+            for (int i = 0; i < list.size(); i++) {
+                int ry = by + 24 + 10 + i * 14;
+                if (Ui.in(mx, my, x + w - 14, ry, 14, 12)) { Waypoints.remove(minecraft, i); Ui.sound("off"); return true; }
+            }
+        }
         if (!m.settings.isEmpty() && Ui.in(mx, my, x, by, 70, 16)) { Hud.resetOpts(m.id); Ui.click(); return true; }
         int ex = x + (m.settings.isEmpty() ? 0 : 76);
         if (m.hud && Ui.in(mx, my, ex, by, 92, 16)) {

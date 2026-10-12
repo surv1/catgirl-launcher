@@ -2,13 +2,130 @@
   "seenNowPlaying": "true",
   "seenNpPosition": "bottom-right",
   "modules": {
-    "fps": {"on": true}, "cps": {"on": true}, "ping": {"on": true}, "coords": {"on": true}, "clock": {"on": true},
-    "effects": {"on": true}, "direction": {"on": true}, "day": {"on": true}, "server": {"on": true}, "speed": {"on": true},
-    "items": {"on": true}, "reach": {"on": true}, "combo": {"on": true}, "memory": {"on": true}, "stopwatch": {"on": true},
-    "packs": {"on": true}, "saturation": {"on": true, "opts": {"number": true}},
-    "crosshair": {"on": true}, "scoreboard": {"on": true, "opts": {"size": 0.7}}, "bossbar": {"on": true, "opts": {"size": 0.7}},
-    "fullbright": {"on": true}, "time": {"on": true, "opts": {"time": 18000}}, "weather": {"on": true},
-    "nohurtcam": {"on": true}, "particles": {"on": true, "opts": {"amount": 4}}, "snaplook": {"on": true},
-    "zoom": {"on": true, "opts": {"fov": 10}}, "nowplaying": {"on": false}
+    "fps": {
+      "on": true
+    },
+    "cps": {
+      "on": true
+    },
+    "ping": {
+      "on": true
+    },
+    "coords": {
+      "on": true
+    },
+    "clock": {
+      "on": true
+    },
+    "effects": {
+      "on": true
+    },
+    "direction": {
+      "on": true
+    },
+    "day": {
+      "on": true
+    },
+    "server": {
+      "on": true
+    },
+    "speed": {
+      "on": true
+    },
+    "items": {
+      "on": true
+    },
+    "reach": {
+      "on": true
+    },
+    "combo": {
+      "on": true
+    },
+    "memory": {
+      "on": true
+    },
+    "stopwatch": {
+      "on": true
+    },
+    "packs": {
+      "on": true
+    },
+    "saturation": {
+      "on": true,
+      "opts": {
+        "number": true
+      }
+    },
+    "crosshair": {
+      "on": true
+    },
+    "scoreboard": {
+      "on": true,
+      "opts": {
+        "size": 0.7
+      }
+    },
+    "bossbar": {
+      "on": true,
+      "opts": {
+        "size": 0.7
+      }
+    },
+    "fullbright": {
+      "on": true
+    },
+    "time": {
+      "on": true,
+      "opts": {
+        "time": 18000
+      }
+    },
+    "weather": {
+      "on": true
+    },
+    "nohurtcam": {
+      "on": true
+    },
+    "particles": {
+      "on": true,
+      "opts": {
+        "amount": 4
+      }
+    },
+    "snaplook": {
+      "on": true
+    },
+    "zoom": {
+      "on": true,
+      "opts": {
+        "fov": 10
+      }
+    },
+    "nowplaying": {
+      "on": false
+    },
+    "minimap": {
+      "on": true
+    },
+    "waypoints": {
+      "on": true
+    },
+    "freelook": {
+      "on": true
+    },
+    "hitcolor": {
+      "on": true,
+      "opts": {
+        "color": "#40c8ff",
+        "strength": 0.8
+      }
+    },
+    "outline": {
+      "on": true,
+      "opts": {
+        "color": "#ff7eb6",
+        "width": 4
+      }
+    }
   }
 }
