@@ -104,6 +104,7 @@ public class CatgirlClient implements ClientModInitializer {
         // HUD extras (FPS, CPS, keystrokes, ... and the "Now playing" card), switched on in the Catgirl menu.
         NowPlaying.setCorner(config.nowPlayingPosition);
         Hud.load(FabricLoader.getInstance().getConfigDir().resolve("catgirl-hud.json").toFile(), config.nowPlaying, config.nowPlayingPosition);
+        Compat.stepAside(); // mods you already have for the same job win
         if (Hud.MODULES.get("nowplaying").on) NowPlaying.start();
         net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
             net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", "hud"),
@@ -121,6 +122,8 @@ public class CatgirlClient implements ClientModInitializer {
         Features.register();
         Food.register();
         Addons.load();
+        // once every mod has added its keys: don't take a key another mod uses
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> Compat.freeKeys(client, zoomKey, snaplookKey, freelookKey, waypointKey));
 
         // Free cosmetics (cat ears, tail, bow) on every player who picked some in Catgirl Launcher.
         Cosmetics.init(FabricLoader.getInstance().getConfigDir().resolve("catgirl-cosmetics.json").toFile());

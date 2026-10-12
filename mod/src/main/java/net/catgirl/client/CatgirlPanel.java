@@ -116,6 +116,7 @@ public final class CatgirlPanel extends Screen {
                 case "sneak" -> { minecraft.options.toggleCrouch().set(!was); minecraft.options.save(); m.on = !was; }
                 default -> {
                     m.on = !m.on;
+                    Compat.chosen(m, m.on);
                     if (m.id.equals("nowplaying") && m.on) NowPlaying.start();
                 }
             }
@@ -138,7 +139,11 @@ public final class CatgirlPanel extends Screen {
 
     /** What a card says under its icon (state for add-ons, the description otherwise). */
     private String status(Card c, boolean hover) {
-        if (c.addon() == null) return hover ? c.desc() : "";
+        if (c.addon() == null) {
+            String other = Compat.takenBy(c.key());
+            if (other != null && !isOn(c)) return "using your " + other;
+            return hover ? c.desc() : "";
+        }
         return switch (Addons.state(c.addon())) {
             case STARTS_NEXT_TIME -> "restart to use";
             case STOPS_NEXT_TIME -> "off after restart";

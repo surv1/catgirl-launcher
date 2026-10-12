@@ -49,7 +49,7 @@ final class Zoom {
     /** Puts the field of view, mouse speed and camera back (also called when the game closes). */
     static void stop(Minecraft mc) {
         if (savedFov == null) return;
-        mc.options.fov().set(savedFov);
+        Features.setRaw(mc, mc.options.fov(), savedFov); // exactly as it was, even if another mod set it outside the slider
         if (savedSensitivity != null) mc.options.sensitivity().set(savedSensitivity);
         if (savedSmooth != null) mc.options.smoothCamera = savedSmooth;
         savedFov = null;

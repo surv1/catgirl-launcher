@@ -14,6 +14,9 @@ const EXCLUDE = new Set([
   'version',                    // data version of that Minecraft release
   'resourcePacks', 'incompatibleResourcePacks', // packs differ per instance
   'lastServer', 'tutorialStep', 'joinedFirstServer', 'skipMultiplayerWarning',
+  // Brightness stays with each instance: fullbright mods set it far above 100%, and an
+  // instance without one would otherwise hand back a normal value (or the reverse).
+  'gamma',
 ]);
 
 function dir() {

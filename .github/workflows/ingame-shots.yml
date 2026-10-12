@@ -58,9 +58,15 @@ jobs:
           cp "$(ls mod/build/libs/*.jar | grep -v -- '-sources' | head -1)" $G/mods/catgirl.jar
           FURL=$(curl -fsSL -A 'catgirl-launcher-ci' "https://api.modrinth.com/v2/project/fabric-api/version?game_versions=%5B%22$MC%22%5D&loaders=%5B%22fabric%22%5D" | jq -r '.[0].files[0].url')
           curl -fsSL "$FURL" -o $G/mods/fabric-api.jar
-          for A in ${{ inputs.addons }}; do
-            AURL=$(curl -fsSL -A 'catgirl-launcher-ci' "https://api.modrinth.com/v2/project/$A/version?game_versions=%5B%22$MC%22%5D&loaders=%5B%22fabric%22%5D" | jq -r '.[0].files[0].url')
-            curl -fsSL "$AURL" -o "$G/mods/$A.jar" && echo "::notice title=addon::$A $AURL"
+          # add-ons and whatever they need (Fabric API is already there)
+          QUEUE="${{ inputs.addons }}"; DONE=" P7dR8mSH fabric-api "
+          while [ -n "$(echo $QUEUE)" ]; do
+            A=$(echo $QUEUE | cut -d' ' -f1); QUEUE=$(echo $QUEUE | cut -s -d' ' -f2-)
+            case "$DONE" in *" $A "*) continue;; esac; DONE="$DONE$A "
+            V=$(curl -fsSL -A 'catgirl-launcher-ci' "https://api.modrinth.com/v2/project/$A/version?game_versions=%5B%22$MC%22%5D&loaders=%5B%22fabric%22%5D" | jq '.[0]')
+            [ "$V" = null ] && { echo "::warning title=addon::$A has no $MC build"; continue; }
+            curl -fsSL "$(echo "$V" | jq -r '.files[0].url')" -o "$G/mods/$A.jar" && echo "::notice title=addon::$A $(echo "$V" | jq -r .version_number)"
+            QUEUE="$QUEUE $(echo "$V" | jq -r '[.dependencies[] | select(.dependency_type=="required") | .project_id] | join(" ")')"
           done
           V=$(curl -fsSL https://piston-meta.mojang.com/mc/game/version_manifest_v2.json | jq -r --arg v "$MC" '.versions[] | select(.id==$v) | .url')
           curl -fsSL "$(curl -fsSL "$V" | jq -r .downloads.server.url)" -o $S/server.jar

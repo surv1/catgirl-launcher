@@ -377,13 +377,20 @@ function modIdsInFolder(instId) {
   return ids;
 }
 
+// Mods that replace Minecraft's renderer in their own way and can't run next to Sodium / Iris /
+// ImmediatelyFast. If you have one of these, we leave the renderer add-ons out.
+const RENDERER_CONFLICTS = ['vulkanmod', 'optifabric', 'embeddium', 'rubidium', 'canvas', 'blaze4d'];
+const RENDERER_ADDONS = new Set(['sodium', 'iris', 'immediatelyfast', 'continuity']);
+
 async function ensureReadyAddons(instId, log = () => {}, progress = () => {}) {
   const inst = instances.get(instId);
   if (!inst || inst.loader !== 'fabric') return [];
   const done = { ...(inst.readyAddons || {}) };
   const have = modIdsInFolder(instId);
+  const clash = RENDERER_CONFLICTS.find((id) => have.has(id));
   const added = [];
   for (const a of READY_ADDONS) {
+    if (clash && RENDERER_ADDONS.has(a.slug) && !have.has(a.id)) { log(`[Catgirl] Not adding ${a.slug}: it can't run next to your ${clash}`); continue; }
     const mark = done[a.slug];
     if (mark === true || mark === `none:${inst.mcVersion}`) continue;
     if (have.has(a.id)) { done[a.slug] = true; continue; } // you already have it (on or off)
