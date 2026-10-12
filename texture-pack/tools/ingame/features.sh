@@ -64,8 +64,8 @@ shot crosshair-pink 1.5
 # ---- built-in add-ons
 # Food Info: get hungry (needs a difficulty above peaceful), then hold the golden apples
 # hotbar: 0 sword, 1-3 totems (they don't stack), 4 pearls, 5 gapples, 6 arrows, 7 shulker box
-cmd "difficulty easy"; cmd "effect give $P hunger 8 150"; sleep 9
-cmd "effect clear $P hunger"
+cmd "kill @e[type=!player,type=!pig]"; cmd "difficulty easy"; cmd "effect give $P hunger 8 150"; sleep 9
+cmd "effect clear $P hunger"; cmd "difficulty peaceful"; cmd "kill @e[type=!player,type=!pig]"
 key 6; sleep 0.5
 shot food-preview 0.3
 key 1

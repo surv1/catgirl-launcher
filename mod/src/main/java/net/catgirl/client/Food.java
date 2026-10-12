@@ -55,7 +55,7 @@ final class Food {
         float sat = p.getFoodData().getSaturationLevel();
         FoodProperties food = Hud.optBool("saturation", "preview") ? heldFood(p) : null;
         // gentle flashing, like AppleSkin
-        float pulse = (float) (0.35 + 0.35 * Math.sin(System.currentTimeMillis() / 160.0));
+        float pulse = (float) (0.7 + 0.25 * Math.sin(System.currentTimeMillis() / 160.0));
         int a = Math.round(pulse * 255) << 24;
 
         if (food != null) {
