@@ -162,7 +162,7 @@ final class Features {
     /**
      * Sets a game option past the range its slider allows (brightness above 100% for fullbright,
      * field of view below 30 for zoom). The field holding the value is found without changing
-     * anything: it's the non-final field that holds the very object get() returns. (An older
+     * anything: it's the one changeable field of the option's own value type. (An older
      * version found it by setting a test value, which reset brightness set by other fullbright
      * mods, because Minecraft won't put back a value outside the slider's range.)
      */
@@ -170,12 +170,12 @@ final class Features {
         try {
             if (!optionSearched) {
                 optionSearched = true;
-                OptionInstance<Double> probe = mc.options.gamma();
-                Object current = probe.get();
+                // the only changeable field of the generic type T (erased to Object): "value"
                 for (Field f : OptionInstance.class.getDeclaredFields()) {
-                    if (Modifier.isStatic(f.getModifiers()) || Modifier.isFinal(f.getModifiers())) continue;
+                    if (Modifier.isStatic(f.getModifiers()) || Modifier.isFinal(f.getModifiers()) || f.getType() != Object.class) continue;
                     f.setAccessible(true);
-                    if (f.get(probe) == current) { optionValue = f; break; }
+                    optionValue = f;
+                    break;
                 }
                 if (optionValue == null) CatgirlClient.LOG.warn("[Catgirl] Couldn't find where options keep their value");
             }
