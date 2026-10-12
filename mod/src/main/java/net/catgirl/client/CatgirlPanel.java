@@ -653,9 +653,9 @@ public final class CatgirlPanel extends Screen {
                 for (int i = 0; i < list.size(); i++) {
                     int[] b = cardBox(i);
                     if (!Ui.in(mx, my, b[0], b[1], b[2], b[3])) continue;
-                    Card c = list.get(i);
-                    if (c.addon() == null && Ui.in(mx, my, b[0], b[1], 12, 12) && !Hud.MODULES.get(c.key()).settings.isEmpty()) { openSettings(c.key()); return true; }
-                    flip(c);
+                    Card card = list.get(i);
+                    if (card.addon() == null && Ui.in(mx, my, b[0], b[1], 12, 12) && !Hud.MODULES.get(card.key()).settings.isEmpty()) { openSettings(card.key()); return true; }
+                    flip(card);
                     return true;
                 }
             }
