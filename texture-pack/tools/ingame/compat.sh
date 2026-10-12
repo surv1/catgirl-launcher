@@ -6,6 +6,7 @@ cmd "time set 18000"; cmd "gamerule doDaylightCycle false"; cmd "gamerule advanc
 cmd "tp $P 0.5 -60 0.5 180 10"
 cmd "summon pig 0.5 -60 -4"
 sleep 3
+xdotool mousemove --window "$WID" 640 360; sleep 0.3; xdotool click 3; sleep 0.5   # (like the other tests: a first click into the window)
 shot 1-night-normal 1
 key g; sleep 2            # their fullbright on
 shot 2-their-fullbright 1
