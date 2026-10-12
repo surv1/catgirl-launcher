@@ -23,8 +23,38 @@ final class Ui {
         return mx >= x && mx < x + w && my >= y && my < y + h;
     }
 
-    static void click() {
-        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+    static void click() { sound("pop"); }
+
+    /** One of the Catgirl menu sounds: bloom, pop, on, off, close (assets/catgirl/sounds.json). */
+    static void sound(String name) {
+        net.minecraft.sounds.SoundEvent ev = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(
+            net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", "ui." + name));
+        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(ev, 1.0F));
+    }
+
+    /** A 7x7 pixel icon from rows of '#' and '.'. */
+    static void glyph(GuiGraphics g, String[] rows, int x, int y, int color) {
+        for (int r = 0; r < rows.length; r++)
+            for (int c = 0; c < rows[r].length(); c++)
+                if (rows[r].charAt(c) == '#') g.fill(x + c, y + r, x + c + 1, y + r + 1, color);
+    }
+
+    static final String[] G_HUD = {"#######", "#..#..#", "#..#..#", "####..#", "#.....#", "#.....#", "#######"};
+    static final String[] G_MODS = {".#.....", "#######", ".#.....", ".......", ".....#.", "#######", ".....#."};
+    static final String[] G_HEART = {".##.##.", "#######", "#######", ".#####.", "..###..", "...#...", "......."};
+    static final String[] G_KEYS = {"#######", "#.#.#.#", "#######", "#.#.#.#", "#######", "##...##", "#######"};
+    static final String[] G_SHIRT = {"##...##", "###.###", "#######", ".#####.", ".#####.", ".#####.", ".#####."};
+    static final String[] G_PICTURE = {"#######", "#.....#", "#...#.#", "#..###.", "#.#####", "#######", "......."};
+    static final String[] G_SEARCH = {".###...", "#...#..", "#...#..", "#...#..", ".###...", "....##.", ".....##"};
+    static final String[] G_CLOSE = {"#.....#", ".#...#.", "..#.#..", "...#...", "..#.#..", ".#...#.", "#.....#"};
+    static final String[] G_DOWN = {"...#...", "...#...", "...#...", "#######", ".#####.", "..###..", "...#..."};
+
+    /** Pixel circle (filled). */
+    static void disc(GuiGraphics g, int cx, int cy, int r, int color) {
+        for (int dy = -r; dy < r; dy++) {
+            int half = (int) Math.round(Math.sqrt(r * r - (dy + 0.5) * (dy + 0.5)));
+            g.fill(cx - half, cy + dy, cx + half, cy + dy + 1, color);
+        }
     }
 
     static int alpha(int argb, int a) { return (a << 24) | (argb & 0xFFFFFF); }

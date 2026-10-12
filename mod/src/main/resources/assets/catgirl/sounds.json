@@ -1,0 +1,7 @@
+{
+  "ui.bloom": { "sounds": [{ "name": "catgirl:ui/bloom", "volume": 0.8 }] },
+  "ui.pop": { "sounds": [{ "name": "catgirl:ui/pop", "volume": 0.6 }] },
+  "ui.on": { "sounds": [{ "name": "catgirl:ui/on", "volume": 0.6 }] },
+  "ui.off": { "sounds": [{ "name": "catgirl:ui/off", "volume": 0.6 }] },
+  "ui.close": { "sounds": [{ "name": "catgirl:ui/close", "volume": 0.6 }] }
+}

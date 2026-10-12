@@ -87,6 +87,7 @@ public class CatgirlClient implements ClientModInitializer {
             .map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("");
         config = Config.load(FabricLoader.getInstance().getConfigDir().resolve("catgirl-client.json").toFile());
         title = (config.windowTitle + " " + mcVersion).trim();
+        mcVersionName = mcVersion;
         String loader = FabricLoader.getInstance().getModContainer("fabricloader")
             .map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("");
         versionLine = ("Minecraft " + mcVersion + (loader.isEmpty() ? "" : " / Fabric " + loader)).trim();
@@ -110,6 +111,7 @@ public class CatgirlClient implements ClientModInitializer {
         menuKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, category));
         zoomKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.zoom", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, category));
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> Zoom.stop(client));
+        Addons.load();
 
         // Free cosmetics (cat ears, tail, bow) on every player who picked some in Catgirl Launcher.
         Cosmetics.init(FabricLoader.getInstance().getConfigDir().resolve("catgirl-cosmetics.json").toFile());
@@ -121,7 +123,7 @@ public class CatgirlClient implements ClientModInitializer {
             tick++;
             Hud.installClickCounter(client);
             while (menuKey.consumeClick()) {
-                if (client.screen == null && client.player != null) client.setScreen(new CatgirlMenuScreen(config.accent));
+                if (client.screen == null && client.player != null) client.setScreen(new BloomScreen(config.accent));
             }
             Zoom.tick(client, Hud.zoom && client.screen == null && zoomKey.isDown());
             Cosmetics.tick(tick);
@@ -351,7 +353,17 @@ public class CatgirlClient implements ClientModInitializer {
      * launcher to show the Wardrobe (or starts it if it was closed). Without the launcher,
      * falls back to Minecraft's own skin page in the browser.
      */
-    private static void openWardrobe() {
+    static String versionShort() { return "Fabric " + mcVersionName; }
+    private static String mcVersionName = "";
+
+    /** Opens a folder in the game directory (e.g. screenshots). */
+    static void openFolder(String name) {
+        File dir = new File(Minecraft.getInstance().gameDirectory, name);
+        dir.mkdirs();
+        open(dir.getAbsolutePath());
+    }
+
+    static void openWardrobe() {
         if (!config.launcherCommand.isEmpty()) {
             try {
                 List<String> cmd = new ArrayList<>(config.launcherCommand);

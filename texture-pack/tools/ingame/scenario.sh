@@ -75,17 +75,24 @@ cmd "item replace entity $P armor.head with diamond_helmet"
 cmd "item replace entity $P armor.chest with diamond_chestplate"
 cmd "item replace entity $P weapon.mainhand with diamond_sword"
 key Shift_R
-shot menu-mods 1.5
-# panel: px=150 py=80 (340x218), tiles 160x28 in 2 columns from (158, 104), 32 apart
-for i in 0 1 2 3 4 5 6; do click $(( 158 + (i % 2) * 164 + 80 )) $(( 104 + (i / 2) * 32 + 14 )); done
-shot menu-mods-on 1
-click 267 73    # Cosmetics tab
-shot menu-cosmetics 1.5
-click 452 112   # cat ears colour
-shot menu-palette 1
-click 459 143   # mint
-shot menu-ears-mint 1.5
-click 204 285   # Edit HUD layout
+shot bloom 1.2
+click 320 118   # the Mods petal
+shot panel-mods 1
+# panel: px=60 py=30 (520x300), sidebar 112; cards 91x60 in 4 columns from (185, 80), 97/66 apart
+for i in 0 1 2 3 4 5 6; do click $(( 185 + (i % 4) * 97 + 45 )) $(( 80 + (i / 4) * 66 + 30 )); done
+shot panel-mods-on 1
+xdotool type --delay 80 apple
+shot panel-search 1
+click 230 110   # AppleSkin, the only card left
+sleep 8
+shot panel-addon 1
+ls -la "$G/mods" > "$OUT/mods-after.txt"
+for k in 1 2 3 4 5; do xdotool key BackSpace; sleep 0.1; done
+click 228 67    # HUD category
+shot panel-hud-category 1
+click 110 123   # Cosmetics in the sidebar
+shot panel-cosmetics 1.5
+click 110 71    # Edit HUD in the sidebar
 shot hud-editor 1.5
 xdotool mousemove --window "$WID" 20 20; sleep 0.3; xdotool mousedown 1; sleep 0.2
 for s in 1 2 3 4 5 6 7 8 9 10; do xdotool mousemove --window "$WID" $(( 20 + s * 30 )) $(( 20 + s * 20 )); sleep 0.05; done
@@ -93,7 +100,7 @@ xdotool mouseup 1; sleep 0.5
 shot hud-editor-dragged 1
 xdotool mousemove --window "$WID" 330 220; sleep 0.2; xdotool click 4; sleep 0.2; xdotool click 4; sleep 0.2; xdotool click 4
 shot hud-editor-bigger 1
-key Escape      # back to the menu
+key Escape      # back to the panel
 key Shift_R     # and close it
 xdotool keydown w; xdotool click --repeat 8 --delay 70 1; xdotool click --repeat 3 --delay 70 3
 shot hud-in-game 0.1
