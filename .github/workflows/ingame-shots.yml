@@ -11,6 +11,9 @@ on:
       scenario:
         description: "Which test to play (scenario = the full one, features = the mods)"
         default: "scenario"
+      addons:
+        description: "Modrinth add-ons to install too (space-separated slugs)"
+        default: ""
 
 permissions:
   contents: write
@@ -55,6 +58,10 @@ jobs:
           cp "$(ls mod/build/libs/*.jar | grep -v -- '-sources' | head -1)" $G/mods/catgirl.jar
           FURL=$(curl -fsSL -A 'catgirl-launcher-ci' "https://api.modrinth.com/v2/project/fabric-api/version?game_versions=%5B%22$MC%22%5D&loaders=%5B%22fabric%22%5D" | jq -r '.[0].files[0].url')
           curl -fsSL "$FURL" -o $G/mods/fabric-api.jar
+          for A in ${{ inputs.addons }}; do
+            AURL=$(curl -fsSL -A 'catgirl-launcher-ci' "https://api.modrinth.com/v2/project/$A/version?game_versions=%5B%22$MC%22%5D&loaders=%5B%22fabric%22%5D" | jq -r '.[0].files[0].url')
+            curl -fsSL "$AURL" -o "$G/mods/$A.jar" && echo "::notice title=addon::$A $AURL"
+          done
           V=$(curl -fsSL https://piston-meta.mojang.com/mc/game/version_manifest_v2.json | jq -r --arg v "$MC" '.versions[] | select(.id==$v) | .url')
           curl -fsSL "$(curl -fsSL "$V" | jq -r .downloads.server.url)" -o $S/server.jar
           portablemc --main-dir $G --work-dir $G start --dry "fabric:$MC" > /dev/null

@@ -90,6 +90,19 @@ final class Minimap {
             g.pose().popMatrix();
             g.disableScissor();
         }
+        // other players and your waypoints, as dots (clipped to the map)
+        if (texture != null) {
+            int zoom = (int) Hud.optNum("minimap", "zoom");
+            double perBlock = (double) s / RES * 1.4 / zoom;
+            double rot = rotate ? Math.toRadians(180 - yaw) : 0;
+            if (Hud.optBool("minimap", "waypoints") && Hud.on("waypoints"))
+                for (Waypoints.Point wp : Waypoints.here(mc)) dot(g, s, wp.x() - mc.player.getX(), wp.z() - mc.player.getZ(), perBlock, rot, wp.color(), 2, true);
+            if (Hud.optBool("minimap", "players") && mc.level != null)
+                for (var other : mc.level.players()) {
+                    if (other == mc.player) continue;
+                    dot(g, s, other.getX() - mc.player.getX(), other.getZ() - mc.player.getZ(), perBlock, rot, 0xFFFFFFFF, 1, false);
+                }
+        }
         // you: a little arrow pointing where you face
         g.pose().pushMatrix();
         g.pose().translate(s / 2F, s / 2F);
@@ -104,6 +117,21 @@ final class Minimap {
             String c = mc.player.getBlockX() + ", " + mc.player.getBlockZ();
             Ui.small(g, c, s / 2 - Ui.smallWidth(c) / 2, s - 8, Ui.MILK);
         }
+    }
+
+    /** A marker dx / dz blocks from you; waypoints off the edge stay pinned to the edge. */
+    private static void dot(GuiGraphics g, int s, double dx, double dz, double perBlock, double rot, int color, int r, boolean pinToEdge) {
+        double x = dx * perBlock, y = dz * perBlock;
+        if (rot != 0) { double c = Math.cos(rot), sn = Math.sin(rot); double nx = x * c - y * sn, ny = x * sn + y * c; x = nx; y = ny; }
+        double half = s / 2.0 - r - 1;
+        if (Math.abs(x) > half || Math.abs(y) > half) {
+            if (!pinToEdge) return;
+            double k = half / Math.max(Math.abs(x), Math.abs(y));
+            x *= k; y *= k;
+        }
+        int px = (int) Math.round(s / 2.0 + x), py = (int) Math.round(s / 2.0 + y);
+        g.fill(px - r - 1, py - r - 1, px + r + 2, py + r + 2, 0xFF140A18);
+        g.fill(px - r, py - r, px + r + 1, py + r + 1, color);
     }
 
     static void forget() {

@@ -9,6 +9,8 @@ cmd "gamemode survival $P"
 cmd "clear $P"
 cmd "item replace entity $P hotbar.0 with diamond_sword"
 cmd "give $P totem_of_undying 3"; cmd "give $P ender_pearl 16"; cmd "give $P golden_apple 5"; cmd "give $P arrow 64"
+cmd "give $P pink_shulker_box[container=[{slot:0,item:{id:diamond,count:64}},{slot:1,item:{id:golden_apple,count:12}},{slot:4,item:{id:totem_of_undying,count:1}},{slot:13,item:{id:ender_pearl,count:16}},{slot:26,item:{id:netherite_sword,count:1}}]]"
+cmd "item replace entity $P weapon.offhand with shield"
 cmd "item replace entity $P armor.head with iron_helmet"; cmd "item replace entity $P armor.chest with iron_chestplate"
 cmd "effect give $P speed 600 1"; cmd "effect give $P strength 300 0"; cmd "effect give $P fire_resistance 900 0"
 cmd "scoreboard objectives add cgtest dummy \"Catgirl Test\""; cmd "scoreboard objectives setdisplay sidebar cgtest"
@@ -59,5 +61,49 @@ click 483 157          # pink
 shot crosshair-settings-changed 1
 key Escape; key Escape
 shot crosshair-pink 1.5
+# ---- built-in add-ons
+# Food Info: get hungry, then hold the golden apples (hotbar slot 4)
+cmd "effect give $P hunger 6 120"; sleep 7
+key 4; sleep 0.5
+shot food-preview 0.3
+key 1
+# Shulker Peek: open the inventory and hover the shulker box (hotbar slot 6)
+key e; sleep 1
+xdotool mousemove --window "$WID" $(( (248 + 5 * 18) * 2 )) $(( 247 * 2 )); sleep 0.6
+shot shulker-peek 0.3
+# Mouse Tweaks: scroll down over the pearls (slot 3) twice: two pearls move up into the inventory
+xdotool mousemove --window "$WID" $(( (248 + 2 * 18) * 2 )) $(( 247 * 2 )); sleep 0.4
+xdotool click 5; sleep 0.4; xdotool click 5; sleep 0.6
+xdotool mousemove --window "$WID" 40 40; sleep 0.4
+shot mousetweaks-scroll 0.3
+key Escape
+# ---- a mod's settings, with the Look section (scrolls)
+key Shift_R; sleep 1
+click 320 118          # Mods petal
+click 196 67           # "All" (the menu remembers Visual from before)
+rclick 230 110         # first card, FPS -> its settings
+shot fps-settings 1
+xdotool mousemove --window "$WID" 640 400; for i in 1 2 3 4 5 6; do xdotool click 5; sleep 0.15; done
+shot fps-settings-look 0.8
+key Escape; sleep 0.5
+# ---- add-ons that switch live (only when the test installed them)
+if ls "$G/mods" | grep -qi continuity; then
+  key Shift_R; sleep 1
+  click 320 118; click 301 67   # Mods, Visual
+  shot addons-ready 1
+  click 520 242                 # Continuity on
+  sleep 6; key Escape; key Escape
+  cmd "setblock 2 -59 -3 glass"; cmd "setblock 3 -59 -3 glass"; cmd "setblock 2 -58 -3 glass"; cmd "setblock 3 -58 -3 glass"
+  cmd "tp $P 2.5 -60 0.5 180 0"; sleep 3
+  shot continuity-glass 0.5
+  key Shift_R; sleep 1
+  click 320 118; click 301 67
+  click 425 242                 # Iris on (downloads a shader pack the first time)
+  sleep 4
+  shot iris-downloading 0.2
+  key Escape; key Escape
+  sleep 60
+  shot iris-shaders 2
+fi
 cp "$G/config/catgirl-hud.json" "$OUT/catgirl-hud.json" 2>/dev/null
 cp "$G/options.txt" "$OUT/options-after.txt" 2>/dev/null

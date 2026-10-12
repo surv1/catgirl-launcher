@@ -3,34 +3,64 @@
   "seenNpPosition": "bottom-right",
   "modules": {
     "fps": {
-      "on": true
+      "on": true,
+      "opts": {
+        "st_brackets": true,
+        "st_text": "#ffd34d",
+        "colour": true
+      }
     },
     "cps": {
       "on": true
     },
     "ping": {
-      "on": true
+      "on": true,
+      "opts": {
+        "st_bgcolor": "#7ec8ff",
+        "st_bgalpha": 0.4
+      }
     },
     "coords": {
-      "on": true
+      "on": true,
+      "opts": {
+        "other": true,
+        "biome": true,
+        "decimals": true
+      }
     },
     "clock": {
-      "on": true
+      "on": true,
+      "opts": {
+        "seconds": true,
+        "date": true
+      }
     },
     "effects": {
-      "on": true
+      "on": true,
+      "opts": {
+        "compact": true
+      }
     },
     "direction": {
-      "on": true
+      "on": true,
+      "opts": {
+        "degrees": true
+      }
     },
     "day": {
-      "on": true
+      "on": true,
+      "opts": {
+        "time": true
+      }
     },
     "server": {
       "on": true
     },
     "speed": {
-      "on": true
+      "on": true,
+      "opts": {
+        "unit": "km/h"
+      }
     },
     "items": {
       "on": true
@@ -42,7 +72,11 @@
       "on": true
     },
     "memory": {
-      "on": true
+      "on": true,
+      "opts": {
+        "st_bg": false,
+        "st_shadow": true
+      }
     },
     "stopwatch": {
       "on": true
@@ -57,7 +91,13 @@
       }
     },
     "crosshair": {
-      "on": true
+      "on": true,
+      "opts": {
+        "style": "x",
+        "thickness": 2,
+        "targetOn": true,
+        "target": "#ff8a8a"
+      }
     },
     "scoreboard": {
       "on": true,
@@ -105,7 +145,11 @@
       "on": false
     },
     "minimap": {
-      "on": true
+      "on": true,
+      "opts": {
+        "players": true,
+        "waypoints": true
+      }
     },
     "waypoints": {
       "on": true
@@ -123,9 +167,33 @@
     "outline": {
       "on": true,
       "opts": {
-        "color": "#ff7eb6",
+        "rainbow": true,
         "width": 4
       }
+    },
+    "keys": {
+      "on": true,
+      "opts": {
+        "arrows": true,
+        "pressed": "#8ce99a"
+      }
+    },
+    "armour": {
+      "on": true,
+      "opts": {
+        "row": true,
+        "dura": "bar",
+        "offhand": true
+      }
+    },
+    "shulker": {
+      "on": true
+    },
+    "mousetweaks": {
+      "on": true
+    },
+    "dynamicfps": {
+      "on": true
     }
   }
 }

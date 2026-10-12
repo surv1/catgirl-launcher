@@ -6,7 +6,8 @@
   "client": [
     "CameraMixin",
     "ContainerScreenMixin",
-    "EntityTurnMixin"
+    "EntityTurnMixin",
+    "MouseScrollMixin"
   ],
   "injectors": {
     "defaultRequire": 1

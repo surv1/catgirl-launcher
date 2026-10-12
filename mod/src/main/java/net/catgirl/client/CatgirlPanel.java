@@ -43,6 +43,7 @@ public final class CatgirlPanel extends Screen {
     private String paletteFor = null;
     // a mod's settings page
     private String settingsFor = null;
+    private double setScroll = 0; // settings page scroll
     private String draggingSlider = null;
     private int palX, palY;
 
@@ -369,11 +370,22 @@ public final class CatgirlPanel extends Screen {
     };
     private int setX() { return mainX() + 12; }
     private int setW() { return mainW() - 24; }
-    private int setRowY(int i) { return py + 34 + i * 22; }
+    private int setRowY(int i) { return i == 0 ? py + 34 : py + 34 + i * 22 - (int) setScroll; }
+    private int setTop() { return py + 56; }
+    private int setBottom() { return py + ph - 6; }
+    private boolean setVisible(double my) { return my >= setTop() && my < setBottom(); }
+
+    /** How far the settings page can scroll. */
+    private double maxSetScroll(Hud.Module m) {
+        int bottom = setRowY(m.settings.size() + 1) + 4 + 16 + (int) setScroll;
+        if (m.id.equals("waypoints")) bottom += 24 + 10 + Waypoints.here(minecraft).size() * 14;
+        return Math.max(0, bottom + 4 - setBottom());
+    }
     private static final int SLIDER_W = 110;
 
     private void openSettings(String id) {
         settingsFor = id;
+        setScroll = 0;
         page = Page.SETTINGS;
         searchFocused = false;
         Ui.click();
@@ -392,10 +404,18 @@ public final class CatgirlPanel extends Screen {
         g.drawString(f, on ? "On" : "Off", x + 26, y0 + 6, on ? Ui.MILK : Ui.HAZE, false);
         Ui.small(g, desc(m), x + 26 + f.width("Off") + 8, y0 + 7, Ui.DIM);
         Ui.toggle(g, x + w - 24, y0 + 5, on, accent, Ui.in(mx, my, x, y0, w, 20));
+        setScroll = Math.max(0, Math.min(maxSetScroll(m), setScroll));
+        g.enableScissor(mainX(), setTop(), mainX() + mainW(), setBottom());
         for (int i = 0; i < m.settings.size(); i++) {
             Hud.Setting st = m.settings.get(i);
             int y = setRowY(i + 1);
-            boolean hover = Ui.in(mx, my, x, y, w, 20);
+            if (y + 20 < setTop() || y > setBottom()) continue;
+            if (st.type().equals("header")) {
+                g.fill(x, y + 15, x + w, y + 16, Ui.BERRY3);
+                Ui.small(g, st.label().toUpperCase(Locale.ROOT), x + 2, y + 8, Ui.DIM);
+                continue;
+            }
+            boolean hover = setVisible(my) && Ui.in(mx, my, x, y, w, 20);
             g.fill(x, y, x + w, y + 20, hover ? Ui.BERRY2 : Ui.BERRY);
             g.drawString(f, st.label(), x + 8, y + 6, Ui.MILK, false);
             int right = x + w - 6;
@@ -435,7 +455,7 @@ public final class CatgirlPanel extends Screen {
             var list = Waypoints.here(minecraft);
             int ly = by + 24;
             Ui.small(g, list.isEmpty() ? "No waypoints here yet. Press " + CatgirlClient.waypointKeyName() + " in game to add one." : "Waypoints in this world", x, ly, Ui.DIM);
-            for (int i = 0; i < list.size() && ly + 12 + (i + 1) * 14 < py + ph - 6; i++) {
+            for (int i = 0; i < list.size(); i++) {
                 var p = list.get(i);
                 int ry = ly + 10 + i * 14;
                 g.fill(x, ry, x + w, ry + 12, Ui.BERRY);
@@ -443,6 +463,13 @@ public final class CatgirlPanel extends Screen {
                 g.drawString(f, p.name() + "  " + (int) p.x() + ", " + (int) p.y() + ", " + (int) p.z(), x + 13, ry + 2, Ui.MILK, false);
                 Ui.glyph(g, Ui.G_CLOSE, x + w - 11, ry + 3, Ui.in(mx, my, x + w - 14, ry, 14, 12) ? accent : Ui.DIM);
             }
+        }
+        g.disableScissor();
+        double max = maxSetScroll(m);
+        if (max > 0) {
+            int trackH = setBottom() - setTop(), barH = Math.max(16, (int) (trackH * trackH / (trackH + max)));
+            int sy = setTop() + (int) ((trackH - barH) * (setScroll / max));
+            g.fill(px + pw - 6, sy, px + pw - 4, sy + barH, Ui.BERRY3);
         }
     }
 
@@ -458,6 +485,7 @@ public final class CatgirlPanel extends Screen {
         int x = setX(), w = setW(), right = x + w - 6;
         if (Ui.in(mx, my, mainX() + 6, py + 8, 120, 16)) { page = Page.MODS; Ui.click(); return true; }
         if (Ui.in(mx, my, x, setRowY(0), w, 20)) { flip(new Card(m.id, m.name, desc(m), m.category, m.icon, null)); return true; }
+        if (!setVisible(my)) return false;
         for (int i = 0; i < m.settings.size(); i++) {
             Hud.Setting st = m.settings.get(i);
             int y = setRowY(i + 1);
@@ -738,6 +766,7 @@ public final class CatgirlPanel extends Screen {
     @Override
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
         if (page == Page.MODS && sy != 0) { scroll = Math.max(0, Math.min(maxScroll(), scroll - sy * 24)); return true; }
+        if (page == Page.SETTINGS && sy != 0) { setScroll = Math.max(0, Math.min(maxSetScroll(Hud.MODULES.get(settingsFor)), setScroll - sy * 22)); return true; }
         return super.mouseScrolled(mx, my, sx, sy);
     }
 

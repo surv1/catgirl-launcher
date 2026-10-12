@@ -139,10 +139,15 @@ final class Waypoints {
             // diamond marker
             for (int i = 0; i < 5; i++) g.fill(sx - i, sy - 5 + i, sx + i + 1, sy - 4 + i, p.color());
             for (int i = 0; i < 4; i++) g.fill(sx - 3 + i, sy + i, sx + 4 - i, sy + 1 + i, p.color());
-            String label = p.name() + "  " + (dist < 1000 ? Math.round(dist) + "m" : String.format(Locale.ROOT, "%.1fkm", dist / 1000));
+            String label = p.name() + (Hud.optBool("waypoints", "distance") ? "  " + (dist < 1000 ? Math.round(dist) + "m" : String.format(Locale.ROOT, "%.1fkm", dist / 1000)) : "");
+            float k = (float) Hud.optNum("waypoints", "size");
             int lw = f.width(label);
-            g.fill(sx - lw / 2 - 3, sy - 18, sx + lw / 2 + 3, sy - 7, 0x9A140A18);
-            g.drawString(f, label, sx - lw / 2, sy - 16, Ui.MILK, false);
+            g.pose().pushMatrix();
+            g.pose().translate(sx, sy - 7);
+            g.pose().scale(k, k);
+            g.fill(-lw / 2 - 3, -11, lw / 2 + 3, 0, 0x9A140A18);
+            g.drawString(f, label, -lw / 2, -9, Ui.MILK, false);
+            g.pose().popMatrix();
         }
     }
 }
