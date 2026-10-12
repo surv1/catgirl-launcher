@@ -1,0 +1,15 @@
+[
+  { "slug": "sodium", "id": "sodium", "name": "Sodium", "category": "Performance", "icon": "minecraft:redstone", "desc": "much higher FPS" },
+  { "slug": "lithium", "id": "lithium", "name": "Lithium", "category": "Performance", "icon": "minecraft:feather", "desc": "faster game logic" },
+  { "slug": "ferrite-core", "id": "ferritecore", "name": "FerriteCore", "category": "Performance", "icon": "minecraft:iron_ingot", "desc": "uses less memory" },
+  { "slug": "immediatelyfast", "id": "immediatelyfast", "name": "ImmediatelyFast", "category": "Performance", "icon": "minecraft:golden_carrot", "desc": "faster HUD and text" },
+  { "slug": "entityculling", "id": "entityculling", "name": "Entity Culling", "category": "Performance", "icon": "minecraft:ender_eye", "desc": "skips what you can't see" },
+  { "slug": "dynamic-fps", "id": "dynamic_fps", "name": "Dynamic FPS", "category": "Performance", "icon": "minecraft:slime_ball", "desc": "rests when tabbed out" },
+  { "slug": "iris", "id": "iris", "name": "Iris Shaders", "category": "Visual", "icon": "minecraft:amethyst_shard", "desc": "shader packs" },
+  { "slug": "continuity", "id": "continuity", "name": "Continuity", "category": "Visual", "icon": "minecraft:glass", "desc": "connected glass" },
+  { "slug": "appleskin", "id": "appleskin", "name": "AppleSkin", "category": "HUD", "icon": "minecraft:apple", "desc": "food and saturation" },
+  { "slug": "xaeros-minimap", "id": "xaerominimap", "name": "Xaero's Minimap", "category": "Utility", "icon": "minecraft:filled_map", "desc": "a minimap" },
+  { "slug": "mouse-tweaks", "id": "mousetweaks", "name": "Mouse Tweaks", "category": "Utility", "icon": "minecraft:hopper", "desc": "easier inventories" },
+  { "slug": "shulkerboxtooltip", "id": "shulkerboxtooltip", "name": "Shulker Peek", "category": "Utility", "icon": "minecraft:shulker_box", "desc": "see inside shulkers" },
+  { "slug": "modmenu", "id": "modmenu", "name": "Mod Menu", "category": "Utility", "icon": "minecraft:bookshelf", "desc": "list of your mods" }
+]

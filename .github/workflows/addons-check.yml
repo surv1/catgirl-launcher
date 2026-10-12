@@ -1,0 +1,21 @@
+# Checks the add-on mods listed in the Catgirl menu against Modrinth (they must exist for this
+# Minecraft version, and their mod ids must match).
+name: Add-ons check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "mod/src/main/resources/assets/catgirl/addons.json"
+      - "mod/tools/check_addons.py"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check
+        run: |
+          python3 mod/tools/check_addons.py mod/src/main/resources/assets/catgirl/addons.json 1.21.11 | tee out.txt
+          echo "::notice title=addons::$(tr '\n' '|' < out.txt | head -c 3800)"
+          ! grep -q PROBLEM out.txt
