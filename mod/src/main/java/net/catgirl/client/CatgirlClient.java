@@ -117,8 +117,9 @@ public class CatgirlClient implements ClientModInitializer {
         freelookKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.freelook", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_LEFT_ALT, category));
         waypointKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.waypoint", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, category));
         Waypoints.load(FabricLoader.getInstance().getConfigDir().resolve("catgirl-waypoints.json").toFile());
-        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> { Zoom.stop(client); Features.restoreAll(client); });
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> { Zoom.stop(client); Features.restoreAll(client); DynamicFps.restore(client); });
         Features.register();
+        Food.register();
         Addons.load();
 
         // Free cosmetics (cat ears, tail, bow) on every player who picked some in Catgirl Launcher.
@@ -135,6 +136,7 @@ public class CatgirlClient implements ClientModInitializer {
             }
             Zoom.tick(client, Hud.on("zoom") && client.screen == null && zoomKey.isDown());
             Features.tick(client, snaplookKey.isDown());
+            DynamicFps.tick(client);
             Freelook.tick(client, freelookKey.isDown());
             boolean addWaypoint = false;
             while (waypointKey.consumeClick()) addWaypoint = true;
@@ -389,6 +391,22 @@ public class CatgirlClient implements ClientModInitializer {
             }
         }
         open("https://www.minecraft.net/msaprofile/mygames/editskin");
+    }
+
+    /** True when the launcher started this game, so it can open it again after a restart. */
+    static boolean canRestart() { return !config.launcherCommand.isEmpty(); }
+
+    /** Closes the game and asks the launcher to open this same instance again once it's gone. */
+    static void restartGame() {
+        try {
+            List<String> cmd = new ArrayList<>(config.launcherCommand);
+            cmd.add("--relaunch=" + Minecraft.getInstance().gameDirectory.getAbsoluteFile().toPath().normalize());
+            new ProcessBuilder(cmd).start();
+        } catch (IOException e) {
+            LOG.warn("[Catgirl] Couldn't ask the launcher to restart the game: {}", e.toString());
+            return;
+        }
+        Minecraft.getInstance().stop();
     }
 
     /** Opens a folder or https link with the operating system. */

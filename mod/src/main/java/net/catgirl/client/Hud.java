@@ -82,7 +82,9 @@ final class Hud {
         hud("memory", "Memory", "how much RAM is used", "HUD", Items.CHEST);
         hud("stopwatch", "Play Time", "time since you joined", "HUD", Items.HONEYCOMB);
         hud("packs", "Pack Display", "your resource packs", "HUD", Items.PINK_DYE);
-        feature("saturation", "Saturation", "food saturation on the bar", "HUD", Items.GOLDEN_CARROT).with(Setting.bool("number", "Show the number too", false));
+        feature("saturation", "Food Info", "hunger and saturation, like AppleSkin", "HUD", Items.GOLDEN_CARROT).with(
+            Setting.bool("outline", "Saturation on the food bar", true), Setting.bool("preview", "Preview what held food fills", true),
+            Setting.bool("tooltip", "Food values on tooltips", true), Setting.bool("number", "Show the saturation number", false));
         feature("crosshair", "Crosshair", "your own crosshair", "Visual", Items.TARGET).with(
             Setting.cycle("style", "Style", "cross", "dot", "circle", "cross + dot"), Setting.slider("size", "Size", 2, 10, 1, 5),
             Setting.slider("gap", "Gap", 0, 5, 1, 2), Setting.color("color", "Colour", "#ffffff"), Setting.bool("outline", "Dark outline", true));
@@ -107,6 +109,14 @@ final class Hud {
         feature("waypoints", "Waypoints", "mark places to find again", "Utility", Items.RED_BANNER).with(Setting.bool("death", "Mark where you die", true));
         feature("hitcolor", "Hit Colour", "the flash when things get hit", "Visual", Items.RED_DYE).with(
             Setting.color("color", "Colour", "#ff7eb6"), Setting.slider("strength", "Strength", 0.2, 0.9, 0.05, 0.7));
+        feature("shulker", "Shulker Peek", "see inside shulker boxes", "Utility", Items.SHULKER_BOX).with(
+            Setting.bool("shift", "Only while holding Shift", false), Setting.bool("compact", "Add up the same items", false),
+            Setting.bool("color", "Box colour frame", true));
+        feature("mousetweaks", "Mouse Tweaks", "scroll and drag to move items", "Utility", Items.HOPPER).with(
+            Setting.bool("wheel", "Scroll to move items", true), Setting.bool("stack", "Scroll moves the whole stack", false),
+            Setting.bool("invert", "Flip scroll direction", false), Setting.bool("shiftdrag", "Shift + drag moves stacks", true));
+        feature("dynamicfps", "Dynamic FPS", "rests the game when you tab out", "Performance", Items.SLIME_BALL).with(
+            Setting.slider("fps", "FPS when tabbed out", 10, 60, 5, 15), Setting.slider("volume", "Volume when tabbed out", 0, 1, 0.1, 0.3));
         feature("outline", "Block Outline", "your own block outline colour", "Visual", Items.GLASS).with(
             Setting.color("color", "Colour", "#ff7eb6"), Setting.slider("width", "Thickness", 1, 6, 1, 2));
         MODULES.get("zoom").on = true;

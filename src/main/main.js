@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS = {
   font: 'default', fontName: '',
   background: 'none', bgDim: 55, bgBlur: 0, navPosition: 'left', navIcons: false,
   menuPosition: 'right', menuIconsOnly: false, splashes: true, accentHex: '#ff7eb6',
-  discordPresence: true, discordShowServer: true, shareOptions: true, shareServers: true, showCapePictures: true, autoFixMods: true, nowPlaying: true, nowPlayingPos: 'bottom-right',
+  discordPresence: true, discordShowServer: true, shareOptions: true, shareServers: true, showCapePictures: true, autoFixMods: true, readyAddons: true, nowPlaying: true, nowPlayingPos: 'bottom-right',
 };
 
 let win = null;
@@ -149,6 +149,65 @@ function handle(channel, fn) {
   });
 }
 
+// Starts an instance: syncs mods / settings / cosmetics, then launches Minecraft.
+async function startGame(id) {
+  const account = await auth.getLaunchAccount();
+  const inst = instances.get(id);
+  const s = settings();
+  await installStarterMods(inst);
+  if (s.autoFixMods && inst.loader === 'fabric') {
+    send('launch:progress', { instId: id, stage: 'Checking your mods', done: 0, total: 0 });
+    try {
+      const r = await mods.syncToVersion(id, (line) => send('launch:log', { instId: id, line }));
+      if (r.updated.length || r.disabled.length) send('mods:fixed', { instId: id, ...r });
+    } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't check mods: ${e.message}` }); }
+  }
+  if (inst.loader === 'fabric' && s.catgirlMenu && s.readyAddons !== false) {
+  try {
+    const added = await mods.ensureReadyAddons(id, (line) => send('launch:log', { instId: id, line }),
+      (stage) => send('launch:progress', { instId: id, stage, done: 0, total: 0 }));
+    if (added.length) send('launch:log', { instId: id, line: `[Catgirl] Ready in the Catgirl menu: ${added.join(', ')}` });
+  } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't get add-ons ready: ${e.message}` }); }
+}
+send('launch:progress', { instId: id, stage: 'Checking Catgirl menu', done: 0, total: 0 });
+  if (s.shareOptions) {
+    try {
+      sharedOptions.collect();
+      if (sharedOptions.apply(inst, { servers: s.shareServers })) send('launch:log', { instId: id, line: '[Catgirl] Applied your shared Minecraft settings' });
+    } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't share settings: ${e.message}` }); }
+  }
+  const modActive = await catmod.sync(inst, {
+    enabled: s.catgirlMenu, github: config.github, settings: s,
+    discord: { enabled: s.discordPresence && presence.configured, clientId: config.discordClientId, showServer: s.discordShowServer, downloadUrl: downloadUrl() },
+    launcherCommand: launcherCommand(),
+  }, (line) => send('launch:log', { instId: id, line }));
+  if (inst.loader === 'fabric' && s.catgirlMenu) {
+    // Anything you changed in the game's Catgirl menu last time (if the launcher was closed then).
+    try { const edited = cosmetics.applyGameEdits(instances.gameDir(id), account); if (edited) cosmetics.save(account.uuid, edited, false); } catch {}
+    try { cosmetics.writeForGame(instances.gameDir(id), config.cosmeticsApi, account, { showCapePictures: s.showCapePictures }); } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't write cosmetics: ${e.message}` }); }
+    cosmetics.retryIfNeeded(config.cosmeticsApi, account);
+  }
+  await launcher.launch(id, account, s, {
+    progress: (p) => send('launch:progress', p),
+    log: (l) => send('launch:log', l),
+    server: (x) => { send('launch:server', x); playing.server = x.server; updatePresence(); },
+    started: (x) => {
+      send('launch:started', x);
+      Object.assign(playing, { inst: instances.get(id), server: inst.joinServer || null, startedAt: Date.now(), gameHandlesDiscord: modActive });
+      updatePresence();
+      if (s.afterLaunch === 'minimize') win?.minimize();
+      // Minecraft runs on its own, so the launcher can close without stopping the game.
+      if (s.afterLaunch === 'close') setTimeout(() => app.quit(), 1500);
+    },
+    exit: (x) => {
+      send('launch:exit', x);
+      if (settings().shareOptions) { try { sharedOptions.collect(); } catch {} }
+      if (playing.inst?.id === id) { Object.assign(playing, { inst: null, server: null, startedAt: 0, gameHandlesDiscord: false }); updatePresence(); }
+      if (s.afterLaunch === 'minimize' && win?.isMinimized()) win.restore();
+    },
+  });
+}
+
 function registerIpc() {
   ipcMain.on('win:minimize', () => win?.minimize());
   ipcMain.on('win:maximize', () => (win?.isMaximized() ? win.unmaximize() : win?.maximize()));
@@ -225,57 +284,9 @@ function registerIpc() {
   handle('packs:search', (q, offset) => mods.searchPacks(q, offset));
   handle('packs:install', (projectId) => mods.installPack(projectId, (stage, done, total) => send('pack:progress', { projectId, stage, done, total })));
 
-  handle('launch:start', async (id) => {
-    const account = await auth.getLaunchAccount();
-    const inst = instances.get(id);
-    const s = settings();
-    await installStarterMods(inst);
-    if (s.autoFixMods && inst.loader === 'fabric') {
-      send('launch:progress', { instId: id, stage: 'Checking your mods', done: 0, total: 0 });
-      try {
-        const r = await mods.syncToVersion(id, (line) => send('launch:log', { instId: id, line }));
-        if (r.updated.length || r.disabled.length) send('mods:fixed', { instId: id, ...r });
-      } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't check mods: ${e.message}` }); }
-    }
-    send('launch:progress', { instId: id, stage: 'Checking Catgirl menu', done: 0, total: 0 });
-    if (s.shareOptions) {
-      try {
-        sharedOptions.collect();
-        if (sharedOptions.apply(inst, { servers: s.shareServers })) send('launch:log', { instId: id, line: '[Catgirl] Applied your shared Minecraft settings' });
-      } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't share settings: ${e.message}` }); }
-    }
-    const modActive = await catmod.sync(inst, {
-      enabled: s.catgirlMenu, github: config.github, settings: s,
-      discord: { enabled: s.discordPresence && presence.configured, clientId: config.discordClientId, showServer: s.discordShowServer, downloadUrl: downloadUrl() },
-      launcherCommand: launcherCommand(),
-    }, (line) => send('launch:log', { instId: id, line }));
-    if (inst.loader === 'fabric' && s.catgirlMenu) {
-      // Anything you changed in the game's Catgirl menu last time (if the launcher was closed then).
-      try { const edited = cosmetics.applyGameEdits(instances.gameDir(id), account); if (edited) cosmetics.save(account.uuid, edited, false); } catch {}
-      try { cosmetics.writeForGame(instances.gameDir(id), config.cosmeticsApi, account, { showCapePictures: s.showCapePictures }); } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't write cosmetics: ${e.message}` }); }
-      cosmetics.retryIfNeeded(config.cosmeticsApi, account);
-    }
-    await launcher.launch(id, account, s, {
-      progress: (p) => send('launch:progress', p),
-      log: (l) => send('launch:log', l),
-      server: (x) => { send('launch:server', x); playing.server = x.server; updatePresence(); },
-      started: (x) => {
-        send('launch:started', x);
-        Object.assign(playing, { inst: instances.get(id), server: inst.joinServer || null, startedAt: Date.now(), gameHandlesDiscord: modActive });
-        updatePresence();
-        if (s.afterLaunch === 'minimize') win?.minimize();
-        // Minecraft runs on its own, so the launcher can close without stopping the game.
-        if (s.afterLaunch === 'close') setTimeout(() => app.quit(), 1500);
-      },
-      exit: (x) => {
-        send('launch:exit', x);
-        if (settings().shareOptions) { try { sharedOptions.collect(); } catch {} }
-        if (playing.inst?.id === id) { Object.assign(playing, { inst: null, server: null, startedAt: 0, gameHandlesDiscord: false }); updatePresence(); }
-        if (s.afterLaunch === 'minimize' && win?.isMinimized()) win.restore();
-      },
-    });
-  });
+  handle('launch:start', startGame);
   handle('launch:kill', (id) => launcher.kill(id));
+
 
   // ---------- wardrobe ----------
   handle('wardrobe:open', () => openWardrobe({ fromGame: false }));
@@ -341,8 +352,26 @@ function openWardrobe({ fromGame }) {
 // just pokes the running one.
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
+// "Restart now" in the game's Catgirl menu: the game closes itself and asks us (started fresh or
+// already running) to open the same instance again once it's gone.
+async function relaunchFromGame(argv) {
+  const arg = argv.find((a) => a.startsWith('--relaunch='));
+  if (!arg) return false;
+  const dir = path.resolve(arg.slice('--relaunch='.length));
+  const inst = instances.list().find((i) => path.resolve(instances.gameDir(i.id)) === dir);
+  if (!inst) return true;
+  await new Promise((r) => setTimeout(r, 2500));
+  for (let i = 0; i < 120 && launcher.runningIds().includes(inst.id); i++) await new Promise((r) => setTimeout(r, 500));
+  try { await startGame(inst.id); } catch (e) {
+    send('launch:log', { instId: inst.id, line: `[Catgirl] Couldn't restart Minecraft: ${e.message}` });
+    send('launch:exit', { instId: inst.id, code: -1, error: e.message });
+  }
+  return true;
+}
+
 app.on('second-instance', (_e, argv) => {
   if (argv.includes('--wardrobe')) { openWardrobe({ fromGame: true }); return; }
+  if (argv.some((a) => a.startsWith('--relaunch='))) { relaunchFromGame(argv); return; }
   if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); }
 });
 
@@ -356,6 +385,7 @@ app.whenReady().then(() => {
   registerIpc();
   createWindow();
   if (process.argv.includes('--wardrobe')) { win.minimize(); openWardrobe({ fromGame: true }); }
+  if (process.argv.some((a) => a.startsWith('--relaunch='))) win.webContents.once('did-finish-load', () => relaunchFromGame(process.argv));
   setupUpdates();
   watchGameCosmeticEdits();
   updatePresence();

@@ -393,6 +393,37 @@ def _(d):
     line(d, [(36, 220), (220, 36)], CREAM, 12)
 
 
+# ---- built-in add-ons
+@icon('shulker')
+def _(d):
+    rect(d, (36, 104, 220, 222), LILAC, r=14)
+    poly(d, [(30, 70), (226, 52), (232, 104), (36, 116)], (170, 120, 230, 255))
+    rect(d, (106, 140, 150, 176), CREAM, r=8, w=8)
+    for x, y, c in ((70, 26, PINK), (128, 14, BUTTER), (184, 22, MINT)):
+        rect(d, (x - 16, y, x + 16, y + 32), c, r=6, w=8)
+
+
+@icon('mousetweaks')
+def _(d):
+    rect(d, (78, 50, 178, 222), CREAM, r=50)
+    line(d, [(128, 56), (128, 110)])
+    line(d, [(82, 110), (174, 110)])
+    rect(d, (116, 70, 140, 102), PINK, r=10, w=8)
+    poly(d, [(36, 70), (60, 40), (60, 100)], SKY, w=8)
+    poly(d, [(220, 70), (196, 40), (196, 100)], SKY, w=8)
+
+
+@icon('dynamicfps')
+def _(d):
+    rect(d, (28, 64, 228, 196), DARK, r=14)
+    d.rectangle((96, 196, 160, 220), fill=INK)
+    rect(d, (70, 214, 186, 232), GREY, r=6, w=8)
+    ell(d, (88, 92, 156, 160), BUTTER, w=8)
+    ell(d, (110, 84, 170, 144), DARK, outline=None, w=0)
+    text(d, (190, 46), 'z', 52, LILAC)
+    text(d, (218, 18), 'z', 36, LILAC)
+
+
 def main(out, preview=None):
     os.makedirs(out, exist_ok=True)
     tiles = []

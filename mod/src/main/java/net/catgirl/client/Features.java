@@ -78,7 +78,7 @@ final class Features {
             orig.render(g, d);
         });
         HudElementRegistry.attachElementAfter(VanillaHudElements.FOOD_BAR, Identifier.fromNamespaceAndPath("catgirl", "saturation"),
-            (g, d) -> saturation(g));
+            (g, d) -> Food.render(g));
     }
 
     // ------------------------------------------------------------------ every tick
@@ -223,33 +223,6 @@ final class Features {
                     g.fill(x - o, y - o, x + 1 + o, y + 1 + o, c);
                 }
             }
-        }
-    }
-
-    /** Food saturation as gold outlines over the hunger shanks (like AppleSkin). */
-    private static void saturation(GuiGraphics g) {
-        Minecraft mc = Minecraft.getInstance();
-        Player p = mc.player;
-        if (!Hud.on("saturation") || p == null || mc.options.hideGui || mc.gameMode == null || !mc.gameMode.canHurtPlayer()) return;
-        if (p.getVehicle() instanceof net.minecraft.world.entity.LivingEntity) return; // the mount's hearts are there instead
-        float sat = p.getFoodData().getSaturationLevel();
-        int right = g.guiWidth() / 2 + 91, y = g.guiHeight() - 39;
-        for (int i = 0; i < 10; i++) {
-            float amount = Math.max(0, Math.min(2, sat - i * 2));
-            if (amount <= 0) break;
-            int x = right - i * 8 - 9;
-            int c = 0xE6FFD34D;
-            if (amount >= 2) {
-                Ui.frame(g, x, y, 9, 9, c);
-            } else {
-                g.fill(x + 4, y, x + 9, y + 1, c);
-                g.fill(x + 4, y + 8, x + 9, y + 9, c);
-                g.fill(x + 8, y + 1, x + 9, y + 8, c);
-            }
-        }
-        if (Hud.optBool("saturation", "number")) {
-            String t = String.format(java.util.Locale.ROOT, "%.1f", sat);
-            Ui.small(g, t, right + 3, y + 2, 0xFFFFD34D);
         }
     }
 }

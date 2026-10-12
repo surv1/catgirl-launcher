@@ -31,17 +31,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipFile;
 
 /**
- * Add-ons: popular mods listed in the Catgirl menu that you don't have yet. Switching one on downloads
- * it from Modrinth (with anything it needs) into your mods folder; Minecraft loads it next time it
- * starts. Switching one off turns its file into .disabled (or removes a download that never ran).
+ * Add-ons: popular mods listed in the Catgirl menu. The launcher installs them ahead of time, so
+ * they're loaded when the game starts and Iris / Continuity switch on and off live (LiveAddons);
+ * performance mods just stay on. If one is missing (e.g. a game started without the launcher),
+ * switching it on downloads it from Modrinth and it works after a restart; switching a loaded one
+ * off without a live switch turns its file into .disabled.
  */
 final class Addons {
-    record Addon(String slug, String id, String name, String category, ItemStack icon, String desc) {}
+    record Addon(String slug, String id, String name, String category, ItemStack icon, String desc, String live) {}
 
     enum State { OFF, ON, STARTS_NEXT_TIME, STOPS_NEXT_TIME, DOWNLOADING, NOT_AVAILABLE, FAILED }
 
     static final List<Addon> LIST = new ArrayList<>();
-    private static final Map<String, State> BUSY = new ConcurrentHashMap<>(); // downloading / failed / not available
+    static final Map<String, State> BUSY = new ConcurrentHashMap<>(); // downloading / failed / not available
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10))
         .followRedirects(HttpClient.Redirect.NORMAL).build();
     private static final String UA = "CatgirlClient (+https://catgirlclient.lol)";
@@ -60,7 +62,7 @@ final class Addons {
                 ItemStack icon = BuiltInRegistries.ITEM.getOptional(Identifier.parse(o.get("icon").getAsString()))
                     .map(ItemStack::new).orElse(new ItemStack(net.minecraft.world.item.Items.BOOK));
                 LIST.add(new Addon(o.get("slug").getAsString(), o.get("id").getAsString(), o.get("name").getAsString(),
-                    o.get("category").getAsString(), icon, o.get("desc").getAsString()));
+                    o.get("category").getAsString(), icon, o.get("desc").getAsString(), o.has("live") ? o.get("live").getAsString() : ""));
             }
         } catch (Exception e) {
             CatgirlClient.LOG.warn("[Catgirl] Couldn't read the add-on list: {}", e.toString());
@@ -111,6 +113,7 @@ final class Addons {
         if (scannedAt == 0) rescan(true); // the menu rescans when it opens and after every change
         boolean loaded = FabricLoader.getInstance().isModLoaded(a.id());
         boolean file = enabled.containsKey(a.id());
+        if (loaded && file && LiveAddons.live(a)) return LiveAddons.isOn(a) ? State.ON : State.OFF; // switches while you play
         if (loaded) return file ? State.ON : State.STOPS_NEXT_TIME;
         return file ? State.STARTS_NEXT_TIME : State.OFF;
     }
@@ -130,6 +133,10 @@ final class Addons {
     /** Flip an add-on on or off. */
     static void toggle(Addon a) {
         State s = state(a);
+        if (s != State.DOWNLOADING && FabricLoader.getInstance().isModLoaded(a.id()) && enabled.containsKey(a.id()) && LiveAddons.live(a)) {
+            LiveAddons.toggle(a);
+            return;
+        }
         try {
             switch (s) {
                 case ON -> { for (Path p : enabled.getOrDefault(a.id(), List.of())) Files.move(p, p.resolveSibling(p.getFileName() + ".disabled"), StandardCopyOption.REPLACE_EXISTING); }
@@ -208,13 +215,22 @@ final class Addons {
         return true;
     }
 
-    private static String getText(String url) throws Exception {
+    /** Downloads a file (to name.part first, so a broken download never looks finished). */
+    static void downloadTo(String url, Path dest) throws Exception {
+        Path part = dest.resolveSibling(dest.getFileName() + ".part");
+        HttpResponse<Path> res = HTTP.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMinutes(5))
+            .header("User-Agent", UA).GET().build(), HttpResponse.BodyHandlers.ofFile(part));
+        if (res.statusCode() != 200) { Files.deleteIfExists(part); throw new IllegalStateException("download said " + res.statusCode()); }
+        Files.move(part, dest, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    static String getText(String url) throws Exception {
         HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(20))
             .header("User-Agent", UA).GET().build(), HttpResponse.BodyHandlers.ofString());
         if (r.statusCode() != 200) throw new IllegalStateException("Modrinth said " + r.statusCode());
         return r.body();
     }
 
-    private static String enc(String s) { return URLEncoder.encode(s, StandardCharsets.UTF_8); }
+    static String enc(String s) { return URLEncoder.encode(s, StandardCharsets.UTF_8); }
     private static String str(JsonObject o, String k) { return o.has(k) && !o.get(k).isJsonNull() ? o.get(k).getAsString() : ""; }
 }

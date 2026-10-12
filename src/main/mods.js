@@ -269,7 +269,7 @@ function jarInfo(file) {
     const fmj = readFile(file, 'fabric.mod.json');
     if (fmj) {
       const j = JSON.parse(fmj.toString('utf8').replace(/^﻿/, '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ' '));
-      return { fabric: true, minecraft: j.depends?.minecraft, name: j.name || j.id };
+      return { fabric: true, id: j.id, minecraft: j.depends?.minecraft, name: j.name || j.id };
     }
     if (readFile(file, 'quilt.mod.json')) return { fabric: true };
     if (readFile(file, 'META-INF/mods.toml') || readFile(file, 'META-INF/neoforge.mods.toml') || readFile(file, 'mcmod.info')) return { forge: true };
@@ -351,3 +351,55 @@ async function syncToVersion(instId, log = () => {}) {
 
 module.exports.syncToVersion = syncToVersion;
 module.exports.matchesMc = matchesMc;
+
+// ---------- ready-to-go add-ons ----------
+// The add-ons in the game's Catgirl menu (Right Shift) are installed ahead of time, so switching
+// one on in the game works straight away: Fabric can only load mods when Minecraft starts.
+// Each one is added once; if you remove it or switch it off yourself, it stays that way.
+const READY_ADDONS = [
+  { slug: 'sodium', id: 'sodium' },
+  { slug: 'lithium', id: 'lithium' },
+  { slug: 'ferrite-core', id: 'ferritecore' },
+  { slug: 'immediatelyfast', id: 'immediatelyfast' },
+  { slug: 'entityculling', id: 'entityculling' },
+  { slug: 'iris', id: 'iris' },
+  { slug: 'continuity', id: 'continuity' },
+];
+
+function modIdsInFolder(instId) {
+  const dir = modsDir(instId);
+  const ids = new Set();
+  for (const f of fs.readdirSync(dir)) {
+    if (!f.endsWith('.jar') && !f.endsWith('.jar.disabled')) continue;
+    const info = jarInfo(path.join(dir, f));
+    if (info?.id) ids.add(info.id);
+  }
+  return ids;
+}
+
+async function ensureReadyAddons(instId, log = () => {}, progress = () => {}) {
+  const inst = instances.get(instId);
+  if (!inst || inst.loader !== 'fabric') return [];
+  const done = { ...(inst.readyAddons || {}) };
+  const have = modIdsInFolder(instId);
+  const added = [];
+  for (const a of READY_ADDONS) {
+    const mark = done[a.slug];
+    if (mark === true || mark === `none:${inst.mcVersion}`) continue;
+    if (have.has(a.id)) { done[a.slug] = true; continue; } // you already have it (on or off)
+    progress(`Getting ${a.slug} ready`);
+    try {
+      if (!(await bestVersion(a.slug, inst))) { done[a.slug] = `none:${inst.mcVersion}`; continue; }
+      added.push(...(await install(instId, a.slug)));
+      done[a.slug] = true;
+      have.add(a.id);
+    } catch (e) {
+      log(`[Catgirl] Couldn't get ${a.slug} ready (will try next time): ${e.message}`);
+    }
+  }
+  instances.save({ ...instances.get(instId), readyAddons: done });
+  return added;
+}
+
+module.exports.READY_ADDONS = READY_ADDONS;
+module.exports.ensureReadyAddons = ensureReadyAddons;

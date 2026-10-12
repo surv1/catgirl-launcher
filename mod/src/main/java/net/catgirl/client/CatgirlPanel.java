@@ -123,6 +123,18 @@ public final class CatgirlPanel extends Screen {
         Ui.sound(was ? "off" : "on");
     }
 
+    /** The "Restart now" button inside the restart banner. */
+    private int[] restartBox() {
+        int bx = mainX() + 12, by = py + ph - 24, bw = mainW() - 24;
+        int w = minecraft.font.width("Restart now") + 12;
+        return new int[] {bx + bw - w - 2, by + 2, w, 12};
+    }
+
+    /** Iris, when it's loaded, gets a gear that opens its own shader pack screen. */
+    private static boolean irisGear(Card c) {
+        return c.addon() != null && "iris".equals(c.addon().live()) && LiveAddons.live(c.addon());
+    }
+
     /** What a card says under its icon (state for add-ons, the description otherwise). */
     private String status(Card c, boolean hover) {
         if (c.addon() == null) return hover ? c.desc() : "";
@@ -308,8 +320,11 @@ public final class CatgirlPanel extends Screen {
             int isz = c.addon() != null ? 26 : 32;
             Ui.modIcon(g, Ui.iconPath(c.key()), c.icon(), b[0] + b[2] / 2 - isz / 2, iconY + (32 - isz) / 2 + (c.addon() != null ? 3 : 0), isz);
             if (c.addon() != null) {
-                Ui.glyph(g, Ui.G_DOWN, b[0] + b[2] - 10, b[1] + 3, Ui.DIM); // downloadable
-                Ui.small(g, "add-on", b[0] + 4, b[1] + 4, Ui.DIM);
+                boolean loaded = net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded(c.addon().id());
+                if (loaded) Ui.disc(g, b[0] + b[2] - 7, b[1] + 7, 2, on ? accent : Ui.BERRY3);   // ready: switches like the rest
+                else Ui.glyph(g, Ui.G_DOWN, b[0] + b[2] - 10, b[1] + 3, Ui.DIM);           // needs downloading
+                if (irisGear(c)) Ui.glyph(g, Ui.G_GEAR, b[0] + 3, b[1] + 3, Ui.DIM);         // Iris: pick a shader pack
+                else Ui.small(g, "add-on", b[0] + 4, b[1] + 4, Ui.DIM);
             } else {
                 Ui.disc(g, b[0] + b[2] - 7, b[1] + 7, 2, on ? accent : Ui.BERRY3); // little on/off dot
                 if (!Hud.MODULES.get(c.key()).settings.isEmpty())
@@ -339,7 +354,11 @@ public final class CatgirlPanel extends Screen {
             Ui.frame(g, bx, by, bw, 16, accent);
             int n = Addons.pendingCount();
             String msg = "Restart Minecraft to finish " + n + (n == 1 ? " add-on change" : " add-on changes");
-            g.drawString(f, msg, bx + (bw - f.width(msg)) / 2, by + 4, Ui.MILK, false);
+            if (CatgirlClient.canRestart()) {
+                int[] r = restartBox();
+                Ui.button(g, r[0], r[1], r[2], r[3], "Restart now", Ui.in(mx, my, r[0], r[1], r[2], r[3]), true, accent);
+                g.drawString(f, msg, bx + 6, by + 4, Ui.MILK, false);
+            } else g.drawString(f, msg, bx + (bw - f.width(msg)) / 2, by + 4, Ui.MILK, false);
         }
     }
 
@@ -610,6 +629,7 @@ public final class CatgirlPanel extends Screen {
             for (int i = 0; i < list.size(); i++) {
                 int[] b = cardBox(i);
                 if (Ui.in(mx, my, b[0], b[1], b[2], b[3]) && list.get(i).addon() == null) { openSettings(list.get(i).key()); return true; }
+                if (Ui.in(mx, my, b[0], b[1], b[2], b[3]) && irisGear(list.get(i))) { Ui.click(); LiveAddons.openIrisScreen(this); return true; }
             }
         }
         if (e.button() != 0) return super.mouseClicked(e, doubleClick);
@@ -657,6 +677,10 @@ public final class CatgirlPanel extends Screen {
         if (page == Page.SETTINGS) {
             if (settingsClick(mx, my)) return true;
         } else if (page == Page.MODS) {
+            if (pending() && CatgirlClient.canRestart()) {
+                int[] r = restartBox();
+                if (Ui.in(mx, my, r[0], r[1], r[2], r[3])) { Ui.click(); CatgirlClient.restartGame(); return true; }
+            }
             int[] s = searchBox();
             searchFocused = Ui.in(mx, my, s[0], s[1], s[2], s[3]);
             if (searchFocused) return true;
@@ -675,6 +699,7 @@ public final class CatgirlPanel extends Screen {
                     if (!Ui.in(mx, my, b[0], b[1], b[2], b[3])) continue;
                     Card card = list.get(i);
                     if (card.addon() == null && Ui.in(mx, my, b[0], b[1], 12, 12) && !Hud.MODULES.get(card.key()).settings.isEmpty()) { openSettings(card.key()); return true; }
+                    if (irisGear(card) && Ui.in(mx, my, b[0], b[1], 12, 12)) { Ui.click(); LiveAddons.openIrisScreen(this); return true; }
                     flip(card);
                     return true;
                 }
