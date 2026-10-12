@@ -123,24 +123,38 @@ final class Hud {
     static float clampScale(float v) { return Float.isNaN(v) ? 1F : Math.max(0.5F, Math.min(2F, Math.round(v * 20F) / 20F)); }
 
     // ------------------------------------------------------------------ clicks per second
+    // Counted straight from the mouse (every press, however quick), by sitting in front of
+    // Minecraft's own mouse-button handler and passing everything on to it unchanged.
     private static final ArrayDeque<Long> LEFT = new ArrayDeque<>(), RIGHT = new ArrayDeque<>();
-    private static boolean wasLeft, wasRight;
+    private static org.lwjgl.glfw.GLFWMouseButtonCallback previous = null;
+    private static org.lwjgl.glfw.GLFWMouseButtonCallback counter = null;
 
-    /** Called every frame: counts new presses of attack / use (only while playing, not in menus). */
-    static void sampleClicks() {
-        Minecraft mc = Minecraft.getInstance();
-        long now = System.currentTimeMillis();
-        boolean l = mc.screen == null && mc.options.keyAttack.isDown();
-        boolean r = mc.screen == null && mc.options.keyUse.isDown();
-        if (l && !wasLeft) LEFT.addLast(now);
-        if (r && !wasRight) RIGHT.addLast(now);
-        wasLeft = l; wasRight = r;
-        while (!LEFT.isEmpty() && now - LEFT.peekFirst() > 1000) LEFT.pollFirst();
-        while (!RIGHT.isEmpty() && now - RIGHT.peekFirst() > 1000) RIGHT.pollFirst();
+    static void installClickCounter(Minecraft mc) {
+        if (counter != null || mc.getWindow() == null) return;
+        counter = org.lwjgl.glfw.GLFWMouseButtonCallback.create((window, button, action, mods) -> {
+            if (action == org.lwjgl.glfw.GLFW.GLFW_PRESS && Minecraft.getInstance().screen == null) {
+                long now = System.currentTimeMillis();
+                synchronized (LEFT) {
+                    if (button == org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) LEFT.addLast(now);
+                    if (button == org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT) RIGHT.addLast(now);
+                }
+            }
+            if (previous != null) previous.invoke(window, button, action, mods);
+        });
+        previous = org.lwjgl.glfw.GLFW.glfwSetMouseButtonCallback(mc.getWindow().handle(), counter);
     }
 
-    static int leftCps() { return LEFT.size(); }
-    static int rightCps() { return RIGHT.size(); }
+    /** Called every frame: forgets clicks older than a second. */
+    static void sampleClicks() {
+        long now = System.currentTimeMillis();
+        synchronized (LEFT) {
+            while (!LEFT.isEmpty() && now - LEFT.peekFirst() > 1000) LEFT.pollFirst();
+            while (!RIGHT.isEmpty() && now - RIGHT.peekFirst() > 1000) RIGHT.pollFirst();
+        }
+    }
+
+    static int leftCps() { synchronized (LEFT) { return LEFT.size(); } }
+    static int rightCps() { synchronized (LEFT) { return RIGHT.size(); } }
 
     // ------------------------------------------------------------------ layout
     private static final int PAD = 4;

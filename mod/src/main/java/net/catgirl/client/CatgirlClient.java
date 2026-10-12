@@ -119,6 +119,7 @@ public class CatgirlClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             tick++;
+            Hud.installClickCounter(client);
             while (menuKey.consumeClick()) {
                 if (client.screen == null && client.player != null) client.setScreen(new CatgirlMenuScreen(config.accent));
             }

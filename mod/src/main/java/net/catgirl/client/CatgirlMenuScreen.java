@@ -50,9 +50,9 @@ public final class CatgirlMenuScreen extends Screen {
     @Override
     protected void init() {
         pw = Math.min(340, width - 20);
-        ph = Math.min(226, height - 30);
+        ph = Math.min(218, height - 34);
         px = (width - pw) / 2;
-        py = (height - ph) / 2 + 7;
+        py = (height - ph) / 2 + 9;
     }
 
     @Override
@@ -148,7 +148,7 @@ public final class CatgirlMenuScreen extends Screen {
                 g.fill(tx + 1, ty, tx + tw - 1, ty + 1, Ui.BERRY3);
                 g.fill(tx, ty + 1, tx + 1, py, Ui.BERRY3);
                 g.fill(tx + tw - 1, ty + 1, tx + tw, py, Ui.BERRY3);
-                g.fill(tx + 3, ty + 3, tx + 7, ty + 4, accent);
+                g.fill(tx + 2, ty + 1, tx + tw - 2, ty + 2, accent);
             }
             g.drawString(f, names[i], tx + (tw - f.width(names[i])) / 2, ty + 4, active ? Ui.MILK : Ui.DIM, false);
         }
@@ -156,7 +156,11 @@ public final class CatgirlMenuScreen extends Screen {
         // repaint the active tab's join so it flows into the panel
         int at = tabX(tab);
         g.fill(at + 1, py, at + 69, py + 1, 0xF51D1026);
-        Ui.cat(g, px + pw - 30, py - 13, accent, now);
+        g.pose().pushMatrix();
+        g.pose().translate(px + pw - 44, py - 26);
+        g.pose().scale(2F, 2F);
+        Ui.cat(g, 0, 0, accent, now);
+        g.pose().popMatrix();
 
         // header
         g.drawString(f, "Catgirl Client", px + 10, py + 9, accent, false);
@@ -207,7 +211,7 @@ public final class CatgirlMenuScreen extends Screen {
         Ui.frame(g, vx, top, vw, bottom - top, Ui.BERRY2);
         if (mc.player != null) {
             InventoryScreen.renderEntityInInventoryFollowsMouse(g, vx + 2, top + 2, vx + vw - 2, bottom - 2,
-                Math.max(20, Math.min(40, (bottom - top) / 4)), 0.0625F, mx, my, mc.player);
+                Math.max(24, Math.min(62, Math.min((bottom - top) * 10 / 32, vw * 10 / 13))), 0.0625F, mx, my, mc.player);
         }
         if (!Cosmetics.canEdit()) {
             String[] lines = {"Start Minecraft from", "Catgirl Launcher to change", "your cosmetics here."};

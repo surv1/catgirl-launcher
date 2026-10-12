@@ -41,6 +41,7 @@ cmd "item replace entity $P hotbar.0 with diamond_sword$G1"
 # third person: cosmetics with no armour
 key F1
 key F5
+xdotool keydown c   # hold zoom for the close-ups (tests the zoom too)
 cmd "tp $P 0.5 -60 0.5 180 0"
 shot back 3
 key F5
@@ -63,6 +64,7 @@ key F5
 shot front-chain-copper 3
 cmd "item replace entity $P weapon.mainhand with totem_of_undying"
 shot front-totem-both-hands 3
+xdotool keyup c
 
 # ---------------------------------------------------------------- Catgirl menu (Right Shift)
 # GUI scale 2 on a 1280x720 window = 640x360 GUI pixels; click() takes GUI pixels.
@@ -74,16 +76,16 @@ cmd "item replace entity $P armor.chest with diamond_chestplate"
 cmd "item replace entity $P weapon.mainhand with diamond_sword"
 key Shift_R
 shot menu-mods 1.5
-# panel: px=150 py=74, tiles 160x28 in 2 columns from (158, 98), 32 apart
-for i in 0 1 2 3 4 5 6 7; do click $(( 158 + (i % 2) * 164 + 80 )) $(( 98 + (i / 2) * 32 + 14 )); done
+# panel: px=150 py=80 (340x218), tiles 160x28 in 2 columns from (158, 104), 32 apart
+for i in 0 1 2 3 4 5 6; do click $(( 158 + (i % 2) * 164 + 80 )) $(( 104 + (i / 2) * 32 + 14 )); done
 shot menu-mods-on 1
-click 267 67    # Cosmetics tab
+click 267 73    # Cosmetics tab
 shot menu-cosmetics 1.5
-click 452 106   # cat ears colour
+click 452 112   # cat ears colour
 shot menu-palette 1
-click 459 137   # mint
+click 459 143   # mint
 shot menu-ears-mint 1.5
-click 204 287   # Edit HUD layout
+click 204 285   # Edit HUD layout
 shot hud-editor 1.5
 xdotool mousemove --window "$WID" 20 20; sleep 0.3; xdotool mousedown 1; sleep 0.2
 for s in 1 2 3 4 5 6 7 8 9 10; do xdotool mousemove --window "$WID" $(( 20 + s * 30 )) $(( 20 + s * 20 )); sleep 0.05; done
@@ -93,8 +95,8 @@ xdotool mousemove --window "$WID" 330 220; sleep 0.2; xdotool click 4; sleep 0.2
 shot hud-editor-bigger 1
 key Escape      # back to the menu
 key Shift_R     # and close it
-xdotool keydown w; xdotool click --repeat 6 --delay 90 1
-shot hud-in-game 0.2
+xdotool keydown w; xdotool click --repeat 8 --delay 70 1; xdotool click --repeat 3 --delay 70 3
+shot hud-in-game 0.1
 xdotool keyup w
 xdotool keydown c; sleep 1.2
 shot zoom 0.3
