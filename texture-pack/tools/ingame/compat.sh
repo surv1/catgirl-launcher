@@ -2,6 +2,7 @@
 # (our Food Info steps aside) and Zoomify (our zoom steps aside and our C key is freed).
 # Switching the Catgirl Fullbright on and off on top must leave their brightness exactly as it was.
 P=CatTester
+click() { xdotool mousemove --window "$WID" $(( $1 * 2 )) $(( $2 * 2 )); sleep 0.3; xdotool click 1; sleep 0.5; }
 cmd "time set 18000"; cmd "gamerule doDaylightCycle false"; cmd "gamerule advance_time false"
 cmd "tp $P 0.5 -60 0.5 180 10"
 cmd "summon pig 0.5 -60 -4"
