@@ -10,7 +10,8 @@ shot 1-night-normal 1
 key g; sleep 2            # their fullbright on
 shot 2-their-fullbright 1
 key Shift_R; sleep 2.5
-click 320 118; sleep 1     # Mods
+xdotool getmouselocation >> "$OUT/mouse.txt"; click 320 118; sleep 1     # Mods
+xdotool getmouselocation >> "$OUT/mouse.txt"
 click 301 67; sleep 0.5    # Visual
 shot 3-visual-page 1
 click 520 110; sleep 1.5   # our Fullbright on (you can still choose ours)...

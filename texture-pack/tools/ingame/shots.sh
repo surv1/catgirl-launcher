@@ -74,7 +74,7 @@ Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 &
 XVFB=$!
 export DISPLAY=:99
 sleep 2
-portablemc --main-dir "$G" --work-dir "$G" start "fabric:$MC" -u "$NAME" -i "$UUID" -s localhost > "$G/client.txt" 2>&1 &
+portablemc --main-dir "$G" --work-dir "$G" start --jvm-args="-Xmx2G -Dcatgirl.debugClicks=true" "fabric:$MC" -u "$NAME" -i "$UUID" -s localhost > "$G/client.txt" 2>&1 &
 CLIENT=$!
 RC=0
 for i in $(seq 1 480); do grep -q "$NAME joined the game" "$S/server.log" && break; kill -0 $CLIENT 2>/dev/null || break; sleep 1; done

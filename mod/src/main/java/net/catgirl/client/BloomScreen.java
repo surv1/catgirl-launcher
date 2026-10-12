@@ -158,6 +158,7 @@ public final class BloomScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
         if (closingAt >= 0) return true;
         int i = petalAt(e.x(), e.y());
+        if (Boolean.getBoolean("catgirl.debugClicks")) CatgirlClient.LOG.info("[Catgirl] bloom click {} {} button {} petal {}", e.x(), e.y(), e.button(), i);
         if (e.button() != 0 || i < 0) return super.mouseClicked(e, doubleClick);
         Ui.click();
         Minecraft mc = minecraft;
