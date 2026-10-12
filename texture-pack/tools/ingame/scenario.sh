@@ -63,3 +63,43 @@ key F5
 shot front-chain-copper 3
 cmd "item replace entity $P weapon.mainhand with totem_of_undying"
 shot front-totem-both-hands 3
+
+# ---------------------------------------------------------------- Catgirl menu (Right Shift)
+# GUI scale 2 on a 1280x720 window = 640x360 GUI pixels; click() takes GUI pixels.
+click() { xdotool mousemove --window "$WID" $(( $1 * 2 )) $(( $2 * 2 )); sleep 0.3; xdotool click 1; sleep 0.5; }
+key F5          # back to first person
+key F1          # show the HUD again
+cmd "item replace entity $P armor.head with diamond_helmet"
+cmd "item replace entity $P armor.chest with diamond_chestplate"
+cmd "item replace entity $P weapon.mainhand with diamond_sword"
+key Shift_R
+shot menu-mods 1.5
+# panel: px=150 py=74, tiles 160x28 in 2 columns from (158, 98), 32 apart
+for i in 0 1 2 3 4 5 6 7; do click $(( 158 + (i % 2) * 164 + 80 )) $(( 98 + (i / 2) * 32 + 14 )); done
+shot menu-mods-on 1
+click 267 67    # Cosmetics tab
+shot menu-cosmetics 1.5
+click 452 106   # cat ears colour
+shot menu-palette 1
+click 459 137   # mint
+shot menu-ears-mint 1.5
+click 204 287   # Edit HUD layout
+shot hud-editor 1.5
+xdotool mousemove --window "$WID" 20 20; sleep 0.3; xdotool mousedown 1; sleep 0.2
+for s in 1 2 3 4 5 6 7 8 9 10; do xdotool mousemove --window "$WID" $(( 20 + s * 30 )) $(( 20 + s * 20 )); sleep 0.05; done
+xdotool mouseup 1; sleep 0.5
+shot hud-editor-dragged 1
+xdotool mousemove --window "$WID" 330 220; sleep 0.2; xdotool click 4; sleep 0.2; xdotool click 4; sleep 0.2; xdotool click 4
+shot hud-editor-bigger 1
+key Escape      # back to the menu
+key Shift_R     # and close it
+xdotool keydown w; xdotool click --repeat 6 --delay 90 1
+shot hud-in-game 0.2
+xdotool keyup w
+xdotool keydown c; sleep 1.2
+shot zoom 0.3
+xdotool keyup c; sleep 1
+shot after-zoom 1
+cp "$G/config/catgirl-hud.json" "$OUT/catgirl-hud.json" 2>/dev/null
+cp "$G/config/catgirl-cosmetics-edit.json" "$OUT/catgirl-cosmetics-edit.json" 2>/dev/null
+cp "$G/options.txt" "$OUT/options-after.txt" 2>/dev/null

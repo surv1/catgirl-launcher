@@ -767,6 +767,11 @@ async function renderCosmetics() {
   $('#cosStatus').textContent = data.synced ? 'Saved ✓' : COS_ITEMS.some((d) => data.items[d.id]?.on) ? "Saved on this PC (not shared online yet)" : '';
 }
 
+// Changed in the game's Catgirl menu: show it here too (unless you're in the middle of editing).
+window.cat?.cosmetics?.onChanged?.(() => {
+  if ($('#page-cosmetics').classList.contains('active') && !cos.dirty) renderCosmetics();
+});
+
 $$('#cosView2 button').forEach((b) => b.addEventListener('click', () => {
   cos.view2 = b.dataset.v;
   $$('#cosView2 button').forEach((x) => x.classList.toggle('on', x === b));

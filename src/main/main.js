@@ -98,6 +98,29 @@ function setupUpdates() {
   setInterval(check, 4 * 60 * 60 * 1000);
 }
 
+// While a game is running, pick up cosmetics changed in its Catgirl menu (Right Shift), save them,
+// share them online, and send the saved version back to every running game.
+let applyingEdits = false;
+function watchGameCosmeticEdits() {
+  setInterval(async () => {
+    if (applyingEdits) return;
+    const ids = launcher.runningIds().filter((id) => cosmetics.hasGameEdits(instances.gameDir(id)));
+    if (!ids.length) return;
+    applyingEdits = true;
+    try {
+      const acc = await auth.getLaunchAccount();
+      for (const id of ids) {
+        const edited = cosmetics.applyGameEdits(instances.gameDir(id), acc);
+        if (edited) await cosmetics.saveAndSync(config.cosmeticsApi, acc, edited);
+      }
+      for (const id of launcher.runningIds()) {
+        try { cosmetics.writeForGame(instances.gameDir(id), config.cosmeticsApi, acc, { showCapePictures: settings().showCapePictures }); } catch {}
+      }
+      send('cosmetics:changed', {});
+    } catch { /* try again next time */ } finally { applyingEdits = false; }
+  }, 3000);
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1180,
@@ -227,6 +250,8 @@ function registerIpc() {
       launcherCommand: launcherCommand(),
     }, (line) => send('launch:log', { instId: id, line }));
     if (inst.loader === 'fabric' && s.catgirlMenu) {
+      // Anything you changed in the game's Catgirl menu last time (if the launcher was closed then).
+      try { const edited = cosmetics.applyGameEdits(instances.gameDir(id), account); if (edited) cosmetics.save(account.uuid, edited, false); } catch {}
       try { cosmetics.writeForGame(instances.gameDir(id), config.cosmeticsApi, account, { showCapePictures: s.showCapePictures }); } catch (e) { send('launch:log', { instId: id, line: `[Catgirl] Couldn't write cosmetics: ${e.message}` }); }
       cosmetics.retryIfNeeded(config.cosmeticsApi, account);
     }
@@ -332,6 +357,7 @@ app.whenReady().then(() => {
   createWindow();
   if (process.argv.includes('--wardrobe')) { win.minimize(); openWardrobe({ fromGame: true }); }
   setupUpdates();
+  watchGameCosmeticEdits();
   updatePresence();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });

@@ -21,6 +21,7 @@
     "java": ">=21",
     "fabric-screen-api-v1": "*",
     "fabric-lifecycle-events-v1": "*",
-    "fabric-rendering-v1": "*"
+    "fabric-rendering-v1": "*",
+    "fabric-key-binding-api-v1": "*"
   }
 }

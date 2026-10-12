@@ -208,6 +208,36 @@ const cosmetics = require('../src/main/cosmetics');
   // a wrong-sized upload straight to the service is refused
   assert.throws(() => worker.checkCapeImage({ png: png(60, 100).toString('base64'), frames: 1 }), /wrong size/);
 
+  // ---- changes made in the game's Catgirl menu
+  const editGame = fs.mkdtempSync(path.join(os.tmpdir(), 'game-'));
+  fs.mkdirSync(path.join(editGame, 'config'));
+  const editPath = path.join(editGame, 'config', 'catgirl-cosmetics-edit.json');
+  const before = cosmetics.get(acc.uuid).items;
+  assert.ok(before.cape.custom, 'test account has a cape picture');
+  assert.strictEqual(cosmetics.hasGameEdits(editGame), false);
+  assert.strictEqual(cosmetics.applyGameEdits(editGame, acc), null, 'nothing to apply');
+  fs.writeFileSync(editPath, JSON.stringify({ uuid: acc.uuid.replace(/-/g, ''), at: 1, items: {
+    ears: { on: true, color: '#5A3A28', inner: '#fff4ea' }, tail: { on: false }, wings: { style: 'demon' },
+    cape: { on: true, style: 'heart', custom: { sha: 'f'.repeat(64) } }, hat: { on: true }, horns: { color: 'not a colour' },
+  } }));
+  assert.strictEqual(cosmetics.hasGameEdits(editGame), true);
+  const merged = cosmetics.applyGameEdits(editGame, acc);
+  assert.strictEqual(fs.existsSync(editPath), false, 'edit file is used up');
+  assert.deepStrictEqual(merged.ears, { on: true, color: '#5a3a28', inner: '#fff4ea' });
+  assert.strictEqual(merged.tail.on, false);
+  assert.strictEqual(merged.wings.style, 'demon');
+  assert.strictEqual(merged.cape.style, 'heart');
+  assert.deepStrictEqual(merged.cape.custom, before.cape.custom, 'the game cannot change your cape picture');
+  assert.strictEqual(merged.horns.color, '#5a1a1a', 'bad colours fall back to the default');
+  assert.strictEqual(merged.hat, undefined);
+  // someone else's edits (another account) are thrown away
+  fs.writeFileSync(editPath, JSON.stringify({ uuid: 'a'.repeat(32), items: { ears: { on: false } } }));
+  assert.strictEqual(cosmetics.applyGameEdits(editGame, acc), null);
+  assert.strictEqual(fs.existsSync(editPath), false);
+  // a broken file doesn't crash anything
+  fs.writeFileSync(editPath, '{oops');
+  assert.strictEqual(cosmetics.applyGameEdits(editGame, acc), null);
+
   global.fetch = realFetch;
   assert.ok(certCalls >= 2);
   console.log('cosmetics tests passed');

@@ -4,7 +4,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.KeyMapping;
+import org.lwjgl.glfw.GLFW;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.fabricmc.loader.api.FabricLoader;
@@ -67,6 +72,14 @@ public class CatgirlClient implements ClientModInitializer {
     private static DiscordRpc discord = null;
     private static long startedMs = System.currentTimeMillis();
     private static String versionLine = "Minecraft";
+    private static KeyMapping menuKey, zoomKey;
+
+    static boolean isMenuKey(int glfwKey) {
+        return menuKey != null && KeyBindingHelper.getBoundKeyOf(menuKey).getValue() == glfwKey;
+    }
+
+    static String menuKeyName() { return menuKey == null ? "Right Shift" : menuKey.getTranslatedKeyMessage().getString(); }
+    static String zoomKeyName() { return zoomKey == null ? "C" : zoomKey.getTranslatedKeyMessage().getString(); }
 
     @Override
     public void onInitializeClient() {
@@ -84,13 +97,19 @@ public class CatgirlClient implements ClientModInitializer {
             discord.start();
         }
 
-        // "Now playing" card for the song playing on this PC (can be turned off in the launcher).
-        if (config.nowPlaying) {
-            NowPlaying.start(config.nowPlayingPosition);
-            net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
-                net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", "now_playing"),
-                (graphics, delta) -> NowPlaying.render(graphics, config.accent));
-        }
+        // HUD extras (FPS, CPS, keystrokes, ... and the "Now playing" card), switched on in the Catgirl menu.
+        NowPlaying.setCorner(config.nowPlayingPosition);
+        Hud.load(FabricLoader.getInstance().getConfigDir().resolve("catgirl-hud.json").toFile(), config.nowPlaying, config.nowPlayingPosition);
+        if (Hud.MODULES.get("nowplaying").on) NowPlaying.start();
+        net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
+            net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", "hud"),
+            (graphics, delta) -> Hud.renderAll(graphics, config.accent));
+
+        // Right Shift opens the Catgirl menu; C zooms (both can be changed in Controls).
+        KeyMapping.Category category = KeyMapping.Category.register(net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", "main"));
+        menuKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, category));
+        zoomKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.catgirl.zoom", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, category));
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> Zoom.stop(client));
 
         // Free cosmetics (cat ears, tail, bow) on every player who picked some in Catgirl Launcher.
         Cosmetics.init(FabricLoader.getInstance().getConfigDir().resolve("catgirl-cosmetics.json").toFile());
@@ -100,6 +119,10 @@ public class CatgirlClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             tick++;
+            while (menuKey.consumeClick()) {
+                if (client.screen == null && client.player != null) client.setScreen(new CatgirlMenuScreen(config.accent));
+            }
+            Zoom.tick(client, Hud.zoom && client.screen == null && zoomKey.isDown());
             Cosmetics.tick(tick);
             // Minecraft re-sets its own title now and then; put ours back a few times a second.
             if (tick % 5 == 0 && client.getWindow() != null) client.getWindow().setTitle(title);

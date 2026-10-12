@@ -54,6 +54,7 @@ public final class Cosmetics {
     private static volatile UUID mine = null;
     private static volatile Look myLook = null;
     private static volatile boolean showOthersPictures = true;
+    private static JsonObject root = null; // the whole file, so the menu can change your cosmetics
 
     static String api() { return api; }
 
@@ -98,6 +99,7 @@ public final class Cosmetics {
         if (stamp == 0) return;
         try {
             JsonObject o = JsonParser.parseString(Files.readString(file.toPath(), StandardCharsets.UTF_8)).getAsJsonObject();
+            root = o;
             api = str(o, "api").replaceAll("/+$", "");
             mine = parseUuid(str(o, "uuid"));
             showOthersPictures = !o.has("showCapePictures") || !o.get("showCapePictures").isJsonPrimitive() || o.get("showCapePictures").getAsBoolean();
@@ -105,6 +107,82 @@ public final class Cosmetics {
             myLook = l != null && l.any() ? l : null;
         } catch (Exception ex) {
             CatgirlClient.LOG.warn("[Catgirl] Couldn't read cosmetics: {}", ex.toString());
+        }
+    }
+
+    // ------------------------------------------------------------------ changing yours in game (Catgirl menu)
+    // Changes show straight away for you. They're also written to catgirl-cosmetics-edit.json, which
+    // Catgirl Launcher picks up (right away if it's open, otherwise next launch), saves and shares online.
+
+    static boolean canEdit() { return root != null && mine != null && root.has("items") && root.get("items").isJsonObject(); }
+
+    private static JsonObject itemJson(String key) {
+        JsonObject items = root.getAsJsonObject("items");
+        if (!items.has(key) || !items.get(key).isJsonObject()) items.add(key, new JsonObject());
+        return items.getAsJsonObject(key);
+    }
+
+    static boolean editOn(String key) {
+        if (!canEdit()) return false;
+        JsonObject i = itemJson(key);
+        return i.has("on") && i.get("on").isJsonPrimitive() && i.get("on").getAsBoolean();
+    }
+
+    static String editString(String key, String field, String def) {
+        if (!canEdit()) return def;
+        String v = str(itemJson(key), field);
+        return v.isEmpty() ? def : v;
+    }
+
+    /** ARGB colour of an item's field ("color" or "inner"), with the same defaults as the launcher. */
+    static int editColor(String key, String field) {
+        if (!canEdit()) return 0xFF888888;
+        Look defaults = parseLook(new JsonObject());
+        int def = switch (key) {
+            case "ears" -> field.equals("inner") ? defaults.earsInner() : defaults.ears().color();
+            case "tail" -> defaults.tail().color();
+            case "bow" -> defaults.bow().color();
+            case "wings" -> defaults.wings().color();
+            case "halo" -> defaults.halo().color();
+            case "horns" -> defaults.horns().color();
+            case "pet" -> defaults.pet().color();
+            case "cape" -> defaults.cape().color();
+            case "trim" -> defaults.trim().color();
+            default -> 0xFF888888;
+        };
+        return color(itemJson(key), field, def & 0xFFFFFF);
+    }
+
+    /** Changes one thing (e.g. "ears", "on", true or "tail", "color", "#5a3a28"). */
+    static void edit(String key, String field, Object value) {
+        if (!canEdit()) return;
+        JsonObject i = itemJson(key);
+        if (value instanceof Boolean b) i.addProperty(field, b);
+        else i.addProperty(field, String.valueOf(value));
+        Look l = parseLook(root.get("items"));
+        myLook = l != null && l.any() ? l : null;
+        try {
+            com.google.gson.Gson gson = new com.google.gson.GsonBuilder().setPrettyPrinting().create();
+            Files.writeString(file.toPath(), gson.toJson(root), StandardCharsets.UTF_8);
+            fileStamp = file.lastModified(); // don't re-read our own write
+            JsonObject edits = new JsonObject();
+            JsonObject items = root.getAsJsonObject("items");
+            for (String k : new String[] {"ears", "tail", "bow", "wings", "halo", "horns", "pet", "cape", "trim"}) {
+                if (!items.has(k) || !items.get(k).isJsonObject()) continue;
+                JsonObject src = items.getAsJsonObject(k), out = new JsonObject();
+                for (String f : new String[] {"on", "color", "inner", "style"}) if (src.has(f)) out.add(f, src.get(f));
+                edits.add(k, out);
+            }
+            JsonObject o = new JsonObject();
+            o.addProperty("uuid", mine.toString().replace("-", ""));
+            o.addProperty("at", System.currentTimeMillis());
+            o.add("items", edits);
+            File editFile = new File(file.getParentFile(), "catgirl-cosmetics-edit.json");
+            File tmp = new File(file.getParentFile(), "catgirl-cosmetics-edit.json.tmp");
+            Files.writeString(tmp.toPath(), gson.toJson(o), StandardCharsets.UTF_8);
+            Files.move(tmp.toPath(), editFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } catch (Exception ex) {
+            CatgirlClient.LOG.warn("[Catgirl] Couldn't save your cosmetics: {}", ex.toString());
         }
     }
 

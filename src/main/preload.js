@@ -62,6 +62,7 @@ contextBridge.exposeInMainWorld('cat', {
     save: (items) => call('cosmetics:save', items),
     pickCapeFile: () => call('cosmetics:pickCapeFile'),
     saveCapePicture: (d) => call('cosmetics:saveCapePicture', d),
+    onChanged: on('cosmetics:changed'),
   },
   update: {
     check: () => call('update:check'),

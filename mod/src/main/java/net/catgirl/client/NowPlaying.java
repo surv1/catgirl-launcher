@@ -29,7 +29,8 @@ import java.util.Locale;
  */
 public final class NowPlaying {
     // Card size and colours (dark see-through purple, thin lavender edge, rounded corners).
-    private static final int W = 180, H = 52, ART = 40, MARGIN = 8, R = 5;
+    static final int W = 180, H = 52;
+    private static final int ART = 40, MARGIN = 8, R = 5;
     private static final int BG = 0x8A1B1730, EDGE = 0xFFA99CFF, GLOW = 0x9C8CFF, BAR = 0xFF7D6BFF, TRACK = 0xFF4A4361;
     private static final int LABEL = 0xFF9A93B5, ARTIST = 0xFFC6C0DC, TIME = 0xFF8D86A8;
 
@@ -55,8 +56,14 @@ public final class NowPlaying {
 
     private NowPlaying() {}
 
-    static void start(String position) {
-        corner = position == null ? "bottom-right" : position;
+    private static boolean started = false;
+
+    static void setCorner(String position) { corner = position == null ? "bottom-right" : position; }
+
+    /** Starts reading what's playing (once; safe to call again). */
+    static synchronized void start() {
+        if (started) return;
+        started = true;
         if (!System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")) {
             CatgirlClient.LOG.info("[Catgirl] Now playing works on Windows for now.");
             return;
@@ -186,14 +193,8 @@ public final class NowPlaying {
     private static double num(JsonObject o, String k) { try { return o.has(k) ? o.get(k).getAsDouble() : 0; } catch (Exception e) { return 0; } }
 
     // ------------------------------------------------------------------ drawing
-    static void render(GuiGraphics g, int accent) {
-        Minecraft mc = Minecraft.getInstance();
-        Track t = track;
-        if (t == null || mc.options.hideGui || t.title.isEmpty()) return;
-        long now = System.currentTimeMillis();
-        if (!t.playing && now - lastPlayingAt > 30_000) return; // paused for a while: tuck it away
-
-        int sw = g.guiWidth(), sh = g.guiHeight();
+    /** Where the card goes unless you've dragged it somewhere in the HUD editor (the launcher's position setting). */
+    static int[] defaultPos(int sw, int sh) {
         int x = corner.endsWith("left") ? MARGIN : sw - W - MARGIN;
         int y = corner.startsWith("top") ? MARGIN : sh - H - MARGIN;
         if (corner.equals("video")) { // the exact spot from the video: right of the crosshair, above the hotbar
@@ -204,6 +205,20 @@ public final class NowPlaying {
             x = Math.min(sw / 2 + 91 + 12, sw - W - MARGIN);
             y = sh - H - 4;
             if (x < sw / 2 + 95) y = sh - H - 52; // small window: no room beside it, so sit just above the hotbar
+        }
+        return new int[] {x, y};
+    }
+
+    /** Draws the card with its top-left at (x, y). In the HUD editor (preview) it shows a sample song if nothing's playing. */
+    static void renderAt(GuiGraphics g, int x, int y, int accent, boolean preview) {
+        Minecraft mc = Minecraft.getInstance();
+        Track t = track;
+        long now = System.currentTimeMillis();
+        boolean sample = false;
+        if (t == null || t.title.isEmpty() || (!t.playing && now - lastPlayingAt > 30_000)) {
+            if (!preview) return; // nothing playing (or paused for a while): tuck it away
+            t = new Track("Your song here", "Plays from Spotify and more", "", 0, 0, true, now);
+            sample = true;
         }
 
         // soft blue-purple glow around the card (gently breathing)
@@ -220,7 +235,7 @@ public final class NowPlaying {
 
         // cover, with rounded corners (or a music note while there's none)
         int ax = x + 6, ay = y + (H - ART) / 2;
-        if (art != null) {
+        if (art != null && !sample) {
             g.pose().pushMatrix();
             g.pose().translate(ax, ay);
             g.pose().scale(ART / 64F, ART / 64F);
@@ -240,7 +255,7 @@ public final class NowPlaying {
         g.drawString(f, ellipsis(f, t.artist, tw), tx, y + 25, ARTIST, false);
 
         // progress bar under the text, times underneath
-        double pos = anchorPos + (anchorPlaying ? (now - anchorAt) / 1000.0 : 0);
+        double pos = sample ? 0 : anchorPos + (anchorPlaying ? (now - anchorAt) / 1000.0 : 0);
         if (t.dur > 0) pos = Math.max(0, Math.min(pos, t.dur));
         int by = y + 36;
         rounded(g, tx, by, tw, 3, 1, TRACK);

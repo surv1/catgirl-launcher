@@ -172,8 +172,30 @@ async function saveAndSync(api, account, items) {
 // Quietly retry an earlier save that couldn't reach the service.
 async function retryIfNeeded(api, account) {
   const cur = get(account.uuid);
-  if (cur.synced || !ITEMS.some((k) => cur.items[k].on)) return;
+  if (cur.synced || !store()[account.uuid]) return;
   try { await upload(api, account, cur.items); save(account.uuid, cur.items, true); } catch { /* next time */ }
+}
+
+// Changes made in game (Catgirl menu, Right Shift) land in <game>/config/catgirl-cosmetics-edit.json.
+// Merge them into what's saved for this account (keeping things the game can't change, like your
+// cape picture) and remove the file. Returns the merged items, or null if there was nothing to apply.
+const EDITABLE = ['on', 'color', 'inner', 'style'];
+const editFile = (gameDir) => path.join(gameDir, 'config', 'catgirl-cosmetics-edit.json');
+function hasGameEdits(gameDir) { return fs.existsSync(editFile(gameDir)); }
+function applyGameEdits(gameDir, account) {
+  const f = editFile(gameDir);
+  let edit;
+  try { edit = JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; }
+  try { fs.unlinkSync(f); } catch { /* already gone */ }
+  const uuid = String(account?.uuid || '').replace(/-/g, '').toLowerCase();
+  if (!uuid || String(edit?.uuid || '').replace(/-/g, '').toLowerCase() !== uuid || !edit.items || typeof edit.items !== 'object') return null;
+  const merged = JSON.parse(JSON.stringify(get(account.uuid).items));
+  for (const k of ITEMS) {
+    const e = edit.items[k];
+    if (!e || typeof e !== 'object') continue;
+    for (const field of EDITABLE) if (field in e) merged[k][field] = e[field];
+  }
+  return normalize(merged);
 }
 
 // What the in-game mod reads: <game>/config/catgirl-cosmetics.json. The mod watches this file,
@@ -189,4 +211,4 @@ function writeForGame(gameDir, api, account, { showCapePictures = true } = {}) {
   fs.writeFileSync(f, JSON.stringify({ api: api || '', uuid, showCapePictures: showCapePictures !== false, items }, null, 2));
 }
 
-module.exports = { isoToMillis, ITEMS, DEFAULTS, normalize, get, save, upload, saveAndSync, retryIfNeeded, writeForGame, serverIdFor, saveCapePicture, capePictureDataUrl, CAPE_W, CAPE_H, MAX_FRAMES };
+module.exports = { hasGameEdits, applyGameEdits, isoToMillis, ITEMS, DEFAULTS, normalize, get, save, upload, saveAndSync, retryIfNeeded, writeForGame, serverIdFor, saveCapePicture, capePictureDataUrl, CAPE_W, CAPE_H, MAX_FRAMES };
