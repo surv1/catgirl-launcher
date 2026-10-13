@@ -84,6 +84,7 @@ else
   log "joined"
   sleep 25
   WID=$(xdotool search --name 'Minecraft|CatGirl|Client' | head -1)
+  xdotool windowmove "$WID" 0 0 2>/dev/null; sleep 0.5   # whole window on screen, so the mouse can reach its bottom too
   log "window $WID: $(xdotool getwindowname "$WID")"
   xdotool windowsize "$WID" 1280 720 2>/dev/null; sleep 2
   xdotool windowfocus --sync "$WID" 2>/dev/null
