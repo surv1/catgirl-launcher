@@ -59,7 +59,7 @@ shot crosshair-settings 1
 click 425 81; click 425 81; click 425 81   # style: dot, circle, cross + dot
 click 421 169          # colour -> the colour picker
 shot colour-picker 0.8
-click 351 247          # pink preset
+click 509 247          # pink preset
 key Escape             # close the picker
 shot crosshair-settings-changed 1
 key Escape; key Escape

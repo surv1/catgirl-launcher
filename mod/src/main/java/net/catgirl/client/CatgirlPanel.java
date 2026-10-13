@@ -921,6 +921,7 @@ public final class CatgirlPanel extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
         double mx = e.x(), my = e.y();
+        if (Boolean.getBoolean("catgirl.debugClicks")) CatgirlClient.LOG.info("[Catgirl] panel click {} {} button {} page {} gear {}", mx, my, e.button(), page, Arrays.toString(gearBox()));
         if (picker.isOpen()) return picker.mouseClicked(mx, my) || true;
         // the pages are drawn slid a little while they appear; clicks use their final spot
 
