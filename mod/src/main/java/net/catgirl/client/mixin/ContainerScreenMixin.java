@@ -28,12 +28,19 @@ public abstract class ContainerScreenMixin {
 
     @Inject(method = "mouseScrolled", at = @At("HEAD"), cancellable = true)
     private void catgirl$wheel(double mx, double my, double sx, double sy, CallbackInfoReturnable<Boolean> cir) {
+        if (creative()) return;
         if (InventoryHooks.scroll(menu, hoveredSlot, sy)) cir.setReturnValue(true);
     }
 
     @Inject(method = "mouseDragged", at = @At("HEAD"), cancellable = true)
     private void catgirl$drag(MouseButtonEvent e, double dx, double dy, CallbackInfoReturnable<Boolean> cir) {
+        if (creative()) return;
         if (InventoryHooks.drag(menu, hoveredSlot, e.button())) cir.setReturnValue(true);
+    }
+
+    /** The creative inventory isn't a normal container (its clicks work differently): leave it alone. */
+    private boolean creative() {
+        return (Object) this instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
     }
 
     @Inject(method = "mouseReleased", at = @At("HEAD"))

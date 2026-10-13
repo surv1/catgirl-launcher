@@ -78,21 +78,21 @@ key Shift_R
 shot bloom 1.2
 click 320 118   # the Mods petal
 shot panel-mods 1
-# panel: px=60 py=30 (520x300), sidebar 112; cards 91x60 in 4 columns from (185, 80), 97/66 apart
-for i in 0 1 2 3 4 5 6; do click $(( 185 + (i % 4) * 97 + 45 )) $(( 80 + (i / 4) * 66 + 30 )); done
+# panel: px=30 py=15 (580x330), sidebar 118; cards 104x71 in 4 columns from (161, 69), 110/77 apart
+for i in 0 1 2 3 4 5 6; do click $(( 213 + (i % 4) * 110 )) $(( 104 + (i / 4) * 77 )); done
 shot panel-mods-on 1
 xdotool type --delay 80 apple
 shot panel-search 1
-click 230 110   # AppleSkin, the only card left
+click 213 104   # Food Info, the only card left
 sleep 8
 shot panel-addon 1
 ls -la "$G/mods" > "$OUT/mods-after.txt"
 for k in 1 2 3 4 5; do xdotool key BackSpace; sleep 0.1; done
-click 228 67    # HUD category
+click 311 55    # HUD category
 shot panel-hud-category 1
-click 110 123   # Cosmetics in the sidebar
+click 90 115    # Cosmetics in the sidebar
 shot panel-cosmetics 1.5
-click 110 71    # Edit HUD in the sidebar
+click 90 59     # Edit HUD in the sidebar
 shot hud-editor 1.5
 xdotool mousemove --window "$WID" 20 20; sleep 0.3; xdotool mousedown 1; sleep 0.2
 for s in 1 2 3 4 5 6 7 8 9 10; do xdotool mousemove --window "$WID" $(( 20 + s * 30 )) $(( 20 + s * 20 )); sleep 0.05; done

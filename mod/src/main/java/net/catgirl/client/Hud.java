@@ -49,6 +49,7 @@ final class Hud {
         final String id, name, desc, category;
         final ItemStack icon;
         final boolean hud;
+        boolean hidden = false; // not a card on the Mods page (Catgirl settings)
         final List<Setting> settings = new ArrayList<>();
         final JsonObject opts = new JsonObject();
         boolean on;
@@ -150,6 +151,13 @@ final class Hud {
             Setting.slider("fps", "FPS when tabbed out", 10, 60, 5, 15), Setting.slider("volume", "Volume when tabbed out", 0, 1, 0.1, 0.3));
         feature("outline", "Block Outline", "your own block outline colour", "Visual", Items.GLASS).with(
             Setting.color("color", "Colour", "#ff7eb6"), Setting.slider("width", "Thickness", 1, 6, 1, 2), Setting.bool("rainbow", "Rainbow", false));
+        // Catgirl's own settings (the gear at the bottom of the menu's sidebar)
+        Module client = feature("client", "Catgirl settings", "how the menu looks and feels", "Utility", Items.PINK_DYE).with(
+            Setting.color("accent", "Theme colour", "theme"), Setting.bool("sounds", "Menu sounds", true),
+            Setting.bool("animations", "Animations", true), Setting.bool("flower", "Open with the flower menu", true),
+            Setting.bool("tooltips", "Tips when you hover a mod", true));
+        client.hidden = true;
+        client.on = true;
         // Every HUD piece also gets the same "Look" settings (like Lunar's background / text options).
         for (Module m : MODULES.values()) {
             if (!m.hud || m.id.equals("nowplaying") || m.id.equals("minimap")) continue;
@@ -190,6 +198,15 @@ final class Hud {
         double v = m.opts.has(key) ? m.opts.get(key).getAsDouble() : ((Number) s.def()).doubleValue();
         return Math.max(s.min(), Math.min(s.max(), v));
     }
+    /** The theme colour: yours from Catgirl settings, or the launcher's theme. */
+    static int accent(int launcherTheme) {
+        Module c = MODULES.get("client");
+        if (c == null || !c.opts.has("accent")) return launcherTheme;
+        String hex = c.opts.get("accent").getAsString();
+        if (!hex.startsWith("#")) return launcherTheme;
+        try { return 0xFF000000 | Integer.parseInt(hex.substring(1), 16); } catch (Exception e) { return launcherTheme; }
+    }
+
     /** A colour setting; "accent" (the default for some) means your theme colour. */
     static int optColor(String id, String key, int accent) {
         String hex = optStr(id, key);
@@ -199,6 +216,14 @@ final class Hud {
         String hex = optStr(id, key);
         try { return 0xFF000000 | Integer.parseInt(hex.substring(1), 16); } catch (Exception e) { return 0xFFFFFFFF; }
     }
+    /** Changes a setting without saving yet (while dragging a slider or colour); setOpt saves. */
+    static void setOptQuiet(String id, String key, Object value) {
+        Module m = MODULES.get(id);
+        if (value instanceof Boolean b) m.opts.addProperty(key, b);
+        else if (value instanceof Number n) m.opts.addProperty(key, n);
+        else m.opts.addProperty(key, String.valueOf(value));
+    }
+
     static void setOpt(String id, String key, Object value) {
         Module m = MODULES.get(id);
         if (value instanceof Boolean b) m.opts.addProperty(key, b);
@@ -236,6 +261,7 @@ final class Hud {
                     }
                 }
                 if (o.has("zoom")) MODULES.get("zoom").on = o.get("zoom").getAsBoolean(); // older files
+                MODULES.get("client").on = true; // Catgirl settings are always "on"
                 if (o.has("seenNowPlaying")) seenNowPlaying = o.get("seenNowPlaying").getAsString();
                 if (o.has("seenNpPosition")) seenNpPosition = o.get("seenNpPosition").getAsString();
             }

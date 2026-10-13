@@ -14,16 +14,16 @@ shot 2-their-fullbright 1
 key Shift_R; sleep 2.5
 xdotool getmouselocation >> "$OUT/mouse.txt"; click 320 118; sleep 1     # Mods
 xdotool getmouselocation >> "$OUT/mouse.txt"
-click 301 67; sleep 0.5    # Visual
+click 384 55; sleep 0.5    # Visual
 shot 3-visual-page 1
-click 520 110; sleep 1.5   # our Fullbright on (you can still choose ours)...
+click 543 104; sleep 1.5   # our Fullbright on (you can still choose ours)...
 shot 4-ours-on 0.5
-click 520 110; sleep 1.5   # ...and off again: their brightness must come back exactly
+click 543 104; sleep 1.5   # ...and off again: their brightness must come back exactly
 key Escape; sleep 1
 shot 5-still-their-fullbright 1
 key Shift_R; sleep 2.5
 click 320 118; sleep 1
-click 196 67; sleep 0.5    # All
+click 173 55; sleep 0.5    # All
 xdotool mousemove --window "$WID" 640 400; for i in 1 2 3 4 5 6 7 8; do xdotool click 5; sleep 0.15; done
 shot 6-all-scrolled 0.8
 key Escape; sleep 0.5

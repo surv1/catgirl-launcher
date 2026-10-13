@@ -108,7 +108,7 @@ public class CatgirlClient implements ClientModInitializer {
         if (Hud.MODULES.get("nowplaying").on) NowPlaying.start();
         net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
             net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", "hud"),
-            (graphics, delta) -> Hud.renderAll(graphics, config.accent));
+            (graphics, delta) -> Hud.renderAll(graphics, accent()));
 
         // Right Shift opens the Catgirl menu; C zooms (both can be changed in Controls).
         KeyMapping.Category category = KeyMapping.Category.register(net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", "main"));
@@ -135,7 +135,7 @@ public class CatgirlClient implements ClientModInitializer {
             tick++;
             Hud.installClickCounter(client);
             while (menuKey.consumeClick()) {
-                if (client.screen == null && client.player != null) client.setScreen(new BloomScreen(config.accent));
+                if (client.screen == null && client.player != null) client.setScreen(Hud.optBool("client", "flower") ? new BloomScreen(accent()) : new CatgirlPanel(accent(), CatgirlPanel.Page.MODS));
             }
             Zoom.tick(client, Hud.on("zoom") && client.screen == null && zoomKey.isDown());
             Features.tick(client, snaplookKey.isDown());
@@ -161,8 +161,8 @@ public class CatgirlClient implements ClientModInitializer {
 
             ScreenEvents.afterRender(screen).register((s, g, mouseX, mouseY, delta) -> {
                 if (!placed[0]) { placed[0] = true; layout[0] = addMenu(client, screen, width, height); }
-                int accent = config.accent;
-                int soft = 0xFF000000 | blend(config.accent & 0xFFFFFF, 0xFFFFFF, 0.55f);
+                int accent = accent();
+                int soft = 0xFF000000 | blend(accent & 0xFFFFFF, 0xFFFFFF, 0.55f);
 
                 Component brand = Component.literal("CatGirl Launcher").withStyle(ChatFormatting.BOLD);
                 int bw = client.font.width(brand);
@@ -372,6 +372,9 @@ public class CatgirlClient implements ClientModInitializer {
      * launcher to show the Wardrobe (or starts it if it was closed). Without the launcher,
      * falls back to Minecraft's own skin page in the browser.
      */
+    /** Your theme colour (Catgirl settings, else the launcher's theme). */
+    static int accent() { return Hud.accent(config.accent); }
+
     static String versionShort() { return "Fabric " + mcVersionName; }
     private static String mcVersionName = "";
 

@@ -27,6 +27,7 @@ final class Ui {
 
     /** One of the Catgirl menu sounds: bloom, pop, on, off, close (assets/catgirl/sounds.json). */
     static void sound(String name) {
+        if (!Hud.optBool("client", "sounds")) return;
         net.minecraft.sounds.SoundEvent ev = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(
             net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", "ui." + name));
         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(ev, 1.0F));
@@ -70,6 +71,8 @@ final class Ui {
     static final String[] G_CLOSE = {"#.....#", ".#...#.", "..#.#..", "...#...", "..#.#..", ".#...#.", "#.....#"};
     static final String[] G_GEAR = {"..#.#..", ".#####.", "##...##", ".#...#.", "##...##", ".#####.", "..#.#.."};
     static final String[] G_BACK = {"...#...", "..#....", ".#.....", "#######", ".#.....", "..#....", "...#..."};
+    static final String[] G_FAV = {".##.##.", "#..#..#", "#.....#", ".#...#.", "..#.#..", "...#...", "......."};
+    static final String[] G_FAV_ON = {".##.##.", "#######", "#######", ".#####.", "..###..", "...#...", "......."};
     static final String[] G_DOWN = {"...#...", "...#...", "...#...", "#######", ".#####.", "..###..", "...#..."};
 
     /** Pixel circle (filled). */
@@ -116,14 +119,36 @@ final class Ui {
         for (int i = 0; i < h; i++) if (((i + offset) / 3) % 2 == 0) { g.fill(x, y + i, x + 1, y + i + 1, color); g.fill(x + w - 1, y + i, x + w, y + i + 1, color); }
     }
 
+    /** A rectangle with its four corner pixels cut (soft, pixel-rounded corners). */
+    static void round(GuiGraphics g, int x, int y, int w, int h, int color) {
+        g.fill(x + 1, y, x + w - 1, y + h, color);
+        g.fill(x, y + 1, x + 1, y + h - 1, color);
+        g.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
+    }
+
+    /** A 1px outline that follows round(). */
+    static void roundFrame(GuiGraphics g, int x, int y, int w, int h, int color) {
+        g.fill(x + 1, y, x + w - 1, y + 1, color);
+        g.fill(x + 1, y + h - 1, x + w - 1, y + h, color);
+        g.fill(x, y + 1, x + 1, y + h - 1, color);
+        g.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
+    }
+
     /** The on/off switch: a little track with a paw-pad knob. 18 x 10. */
     static void toggle(GuiGraphics g, int x, int y, boolean on, int accent, boolean hover) {
-        int track = on ? accent : (hover ? BERRY3 : BERRY2);
+        toggle(g, x, y, on ? 1F : 0F, accent, hover);
+    }
+
+    /** The switch part-way between off (0) and on (1), for the sliding animation. */
+    static void toggle(GuiGraphics g, int x, int y, float k, int accent, boolean hover) {
+        boolean on = k >= 0.5F;
+        int off = hover ? BERRY3 : BERRY2;
+        int track = mix(off, accent, k);
         g.fill(x + 1, y, x + 17, y + 10, track);
         g.fill(x, y + 1, x + 18, y + 9, track);
         g.fill(x + 1, y + 9, x + 17, y + 10, 0x40000000);
-        int kx = on ? x + 9 : x + 1;
-        int knob = on ? MILK : HAZE;
+        int kx = x + 1 + Math.round(8 * k);
+        int knob = mix(HAZE, MILK, k);
         // paw pad: a round-ish pad with three toe beans on top
         g.fill(kx + 1, y + 4, kx + 7, y + 8, knob);
         g.fill(kx + 2, y + 3, kx + 6, y + 9, knob);
@@ -131,6 +156,7 @@ final class Ui {
         g.fill(kx + 3, y + 1, kx + 5, y + 2, knob);
         g.fill(kx + 6, y + 1, kx + 7, y + 3, knob);
         if (on) g.fill(kx + 3, y + 5, kx + 5, y + 7, Ui.mix(accent, MILK, 0.55F));
+        if (hover) g.fill(x + 1, y, x + 17, y + 1, 0x30FFFFFF);
     }
 
     /** A flat button with a 2px "pressed-in" bottom edge. */

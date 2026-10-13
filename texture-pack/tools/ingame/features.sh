@@ -52,12 +52,15 @@ xdotool keyup c; sleep 0.8
 key Shift_R; sleep 1
 click 320 118          # Mods petal
 shot mods-icons 1
-click 301 67           # Visual
+click 384 55           # Visual
 shot visual-category 1
-rclick 230 110         # Crosshair -> settings
+rclick 213 104         # Crosshair -> settings
 shot crosshair-settings 1
-click 300 96; click 300 96; click 300 96   # style: dot, circle, cross + dot
-click 483 157          # pink
+click 425 81; click 425 81; click 425 81   # style: dot, circle, cross + dot
+click 421 169          # colour -> the colour picker
+shot colour-picker 0.8
+click 351 247          # pink preset
+key Escape             # close the picker
 shot crosshair-settings-changed 1
 key Escape; key Escape
 shot crosshair-pink 1.5
@@ -82,18 +85,28 @@ key Escape
 # ---- a mod's settings, with the Look section (scrolls)
 key Shift_R; sleep 1
 click 320 118          # Mods petal
-click 196 67           # "All" (the menu remembers Visual from before)
-rclick 230 110         # first card, FPS -> its settings
+click 173 55           # "All" (the menu remembers Visual from before)
+xdotool mousemove --window "$WID" $(( 323 * 2 )) $(( 104 * 2 )); sleep 1.4
+shot card-tooltip 0.2  # pointing at CPS for a moment shows its tip
+click 369 76           # heart on CPS: a favourite
+click 254 55           # Favourites
+shot favourites 0.8
+click 201 55           # On
+shot on-filter 0.8
+click 173 55           # All
+rclick 213 104         # first card (CPS, the favourite) -> its settings, with the live preview
 shot fps-settings 1
-xdotool mousemove --window "$WID" 640 400; for i in 1 2 3 4 5 6; do xdotool click 5; sleep 0.15; done
+xdotool mousemove --window "$WID" 400 400; for i in 1 2 3 4 5 6; do xdotool click 5; sleep 0.15; done
 shot fps-settings-look 0.8
+click 135 328          # the Catgirl settings gear under your name
+shot catgirl-settings 0.8
 key Escape; key Escape; sleep 0.5   # settings -> mods -> game
 # ---- add-ons that switch live (only when the test installed them)
 if ls "$G/mods" | grep -qi continuity; then
   key Shift_R; sleep 1
-  click 320 118; click 301 67   # Mods, Visual
+  click 320 118; click 384 55   # Mods, Visual
   shot addons-ready 1
-  click 520 242                 # Continuity on (a quick resource reload)
+  click 543 258                 # Continuity on (a quick resource reload)
   sleep 8
   shot continuity-on 0.2
   key Escape
@@ -101,8 +114,8 @@ if ls "$G/mods" | grep -qi continuity; then
   cmd "tp $P 2.5 -60 0.5 180 0"; sleep 3
   shot continuity-glass 0.5
   key Shift_R; sleep 1
-  click 320 118; click 301 67
-  click 425 242                 # Iris on (downloads a shader pack the first time)
+  click 320 118; click 384 55
+  click 433 258                 # Iris on (downloads a shader pack the first time)
   sleep 3
   shot iris-downloading 0.2
   key Escape

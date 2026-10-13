@@ -31,7 +31,7 @@ public final class Freelook {
         if (held && !wasHeld && mc.screen == null) toggled = !toggled;
         wasHeld = held;
         if (!toggle) toggled = false;
-        if (!Hud.on("freelook") || mc.player == null) toggled = false;
+        if (!Hud.on("freelook") || mc.player == null || mc.screen != null) toggled = false;
         boolean want = (toggle ? toggled : held) && Hud.on("freelook") && mc.player != null && mc.screen == null;
         if (want && !active) {
             yaw = mc.player.getYRot();
