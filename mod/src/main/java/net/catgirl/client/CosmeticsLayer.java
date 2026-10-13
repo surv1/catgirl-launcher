@@ -304,7 +304,8 @@ public class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
             float ex = b[0] - a[0], ey = b[1] - a[1], el = (float) Math.sqrt(ex * ex + ey * ey);
             float nx = -ey / el, ny = ex / el;
             if ((a[0] + nx - cx) * nx + (a[1] + ny - cy) * ny < 0) { nx = -nx; ny = -ny; }
-            float tx = outer[1][0] - a[0], ty = outer[1][1] - a[1]; // towards the tip
+            float[] root = e == 0 ? a : b; // the edge's end at the base of the ear (the other end is the tip)
+            float tx = outer[1][0] - root[0], ty = outer[1][1] - root[1]; // towards the tip
             float tl = (float) Math.sqrt(tx * tx + ty * ty);
             for (int k = 0; k < 6; k++) {
                 float f = (k + 0.3F) / 6F, r = rnd(e * 13 + s, k);

@@ -1,7 +1,6 @@
 /* Catgirl Client website: the cosmetics preview.
    Everything above the "website glue" line is copied unchanged from the launcher
-   (src/renderer/cosmetics.js), which draws with the same numbers as the in-game mod,
-   except one guarded line in earFur (marked "website fix"). */
+   (src/renderer/cosmetics.js), which draws with the same numbers as the in-game mod. */
 const COS_ITEMS = [
   { id: 'ears', name: 'Cat ears', emoji: '🐱', colors: [['color', 'Fur'], ['inner', 'Inside']] },
   { id: 'tail', name: 'Cat tail', emoji: '🐈', colors: [['color', 'Fur']] },
@@ -192,8 +191,8 @@ function earFur(ctx, it, view, e, s, pivot, a, t) {
     const ex = q[0] - p[0], ey = q[1] - p[1], el = Math.hypot(ex, ey);
     let nx = -ey / el, ny = ex / el;
     if ((p[0] + nx - cx) * nx + (p[1] + ny - cy) * ny < 0) { nx = -nx; ny = -ny; }
-    const tx = outer[1][0] - p[0], ty = outer[1][1] - p[1], tl = Math.hypot(tx, ty);
-    if (!tl) continue; // website fix: this edge starts at the tip, so "towards the tip" is 0/0 (NaN). In game those strands don't draw; here they'd throw.
+    const root = ed === 0 ? p : q; // the edge's end at the base of the ear (the other end is the tip)
+    const tx = outer[1][0] - root[0], ty = outer[1][1] - root[1], tl = Math.hypot(tx, ty);
     for (let k = 0; k < 6; k++) {
       const f = (k + 0.3) / 6, r = frand(ed * 13 + s, k), wave = Math.sin(t * 0.25 + k + ed * 3) * 0.06;
       const d = [(tx / tl) * 0.8 + nx * (0.35 + wave), (ty / tl) * 0.8 + ny * (0.35 + wave)], dl = Math.hypot(...d);

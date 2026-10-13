@@ -191,7 +191,8 @@ function earFur(ctx, it, view, e, s, pivot, a, t) {
     const ex = q[0] - p[0], ey = q[1] - p[1], el = Math.hypot(ex, ey);
     let nx = -ey / el, ny = ex / el;
     if ((p[0] + nx - cx) * nx + (p[1] + ny - cy) * ny < 0) { nx = -nx; ny = -ny; }
-    const tx = outer[1][0] - p[0], ty = outer[1][1] - p[1], tl = Math.hypot(tx, ty);
+    const root = ed === 0 ? p : q; // the edge's end at the base of the ear (the other end is the tip)
+    const tx = outer[1][0] - root[0], ty = outer[1][1] - root[1], tl = Math.hypot(tx, ty);
     for (let k = 0; k < 6; k++) {
       const f = (k + 0.3) / 6, r = frand(ed * 13 + s, k), wave = Math.sin(t * 0.25 + k + ed * 3) * 0.06;
       const d = [(tx / tl) * 0.8 + nx * (0.35 + wave), (ty / tl) * 0.8 + ny * (0.35 + wave)], dl = Math.hypot(...d);
