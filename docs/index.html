@@ -230,8 +230,108 @@
     .menu .mcb.primary { grid-column: span 2; }
     .title-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 20px; padding: 90px 0 18px; font: 400 18px var(--pixel); color: rgba(255,244,248,.75); }
 
+    /* ---------- the Catgirl menu, recreated from the mod ---------- */
+    .cgm { position: relative; display: grid; grid-template-columns: 210px minmax(0, 1fr); max-width: 100%; min-height: 560px; background: var(--plum); border: 2px solid #3d2848; border-radius: 6px; box-shadow: 0 0 0 6px rgba(11,4,16,.6), 0 40px 80px -40px #000; font-family: var(--pixel); color: #fcf1f5; overflow: hidden; }
+    .cgm-side { display: flex; flex-direction: column; gap: 2px; padding: 18px 12px 12px; background: #140b19; border-right: 2px solid #2a1734; }
+    .cgm-logo { display: flex; align-items: center; gap: 10px; font-size: 24px; color: var(--sakura); margin: 0 6px 18px; }
+    .cgm-logo svg { width: 22px; height: 22px; }
+    .cgm-group { font-size: 15px; letter-spacing: .06em; color: #9b8aa6; margin: 14px 8px 4px; }
+    .cgm-link { display: flex; align-items: center; gap: 10px; padding: 6px 10px; font-size: 20px; color: #e9dcef; text-decoration: none; border-radius: 3px; position: relative; }
+    .cgm-link svg { width: 14px; height: 14px; flex: none; }
+    a.cgm-link:hover { background: #24152d; }
+    .cgm-link.on { background: #3a2343; }
+    .cgm-link.on::before { content: ""; position: absolute; left: -2px; top: 4px; bottom: 4px; width: 3px; background: var(--sakura); }
+    .cgm-me { margin-top: auto; display: flex; gap: 10px; align-items: center; padding: 12px 8px 4px; border-top: 2px solid #2a1734; }
+    .cgm-me i { width: 32px; height: 32px; flex: none; background: url(img/skin.png) -32px -32px / 256px 256px; image-rendering: pixelated; box-shadow: inset 0 0 0 0 transparent; position: relative; }
+    .cgm-me i::after { content: ""; position: absolute; inset: 0; background: url(img/skin.png) -160px -32px / 256px 256px; image-rendering: pixelated; }
+    .cgm-me b { display: block; font-weight: 400; font-size: 19px; } .cgm-me small { font-size: 15px; color: #9b8aa6; }
+    .cgm-main { position: relative; padding: 18px 20px 20px; min-width: 0; }
+    .cgm-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+    .cgm-title { display: block; font-weight: 400; font-size: 26px; line-height: 1; }
+    .cgm-top small { font-size: 16px; color: #b9a8c4; font-variant-numeric: tabular-nums; }
+    .cgm-search { display: flex; align-items: center; gap: 8px; width: min(280px, 50%); padding: 5px 10px; background: #140b19; border: 2px solid #3d2848; border-radius: 3px; }
+    .cgm-search svg { width: 14px; height: 14px; flex: none; color: #9b8aa6; }
+    .cgm-search input { flex: 1; min-width: 0; background: none; border: 0; color: #fcf1f5; font: 400 18px var(--pixel); outline: none; }
+    .cgm-search input::placeholder { color: #8a7896; }
+    .cgm-search:focus-within { border-color: var(--sakura); }
+    .cgm-cats { display: flex; gap: 6px; margin: 14px 0 16px; overflow-x: auto; scrollbar-width: none; }
+    .cgm-cats button { flex: none; font: 400 18px/1 var(--pixel); color: #e9dcef; background: var(--plum); border: 2px solid #3d2848; border-radius: 3px; padding: 5px 10px 6px; cursor: pointer; }
+    .cgm-cats button:hover { border-color: #6b4a7c; }
+    .cgm-cats button[aria-pressed="true"] { background: var(--sakura); border-color: var(--sakura); color: var(--plum); }
+    .cgm-grid { display: grid; min-width: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; max-height: 420px; overflow-y: auto; padding-right: 4px; scrollbar-color: #3d2848 transparent; }
+    .cgm-card { position: relative; min-width: 0; display: grid; grid-template-rows: 1fr auto; justify-items: center; align-items: center; height: 118px; padding: 10px 10px 8px; color: #fcf1f5; background: linear-gradient(#3e2a49, #2d1c37); border: 2px solid #3d2848; border-radius: 3px; cursor: pointer; font: 400 19px/1 var(--pixel); text-align: left; }
+    .cgm-card:hover { border-color: #8a5f9c; }
+    .cgm-card[aria-pressed="true"] { border-color: var(--sakura); background: linear-gradient(#4b2d55, #351f40); }
+    .cgm-card img { width: 46px; height: 46px; }
+    .cgm-card .row { justify-self: stretch; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .cgm-card .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cgm-card .gear { position: absolute; left: 7px; top: 6px; width: 9px; height: 9px; border: 2px dotted #8a7896; border-radius: 50%; }
+    .cgm-card .fav { position: absolute; right: 8px; top: 4px; color: var(--sakura); font-size: 15px; }
+    .tg { position: relative; flex: none; width: 34px; height: 16px; background: #2c1638; border-radius: 2px; transition: background .15s; }
+    .tg i { position: absolute; left: 2px; top: 1px; width: 14px; height: 14px; transition: transform .15s; background: no-repeat center / 14px 14px; }
+    .cgm-card[aria-pressed="true"] .tg { background: var(--sakura); }
+    .cgm-card[aria-pressed="true"] .tg i { transform: translateX(16px); }
+    .cgm-empty { grid-column: 1 / -1; padding: 30px 0; text-align: center; color: #9b8aa6; font-size: 19px; }
+    .cgm-tip { position: absolute; z-index: 5; pointer-events: none; max-width: 300px; }
+    .cgm-tip .hint { color: #8a7896; font-size: 15px; }
+    .cgm-note { margin: 16px 0 0; color: var(--mc-gray); font: 400 17px var(--pixel); }
+
+    /* ---------- cosmetics try-on ---------- */
+    .dress-band { background: var(--plum-deep); border-block: 2px solid #0b0410; }
+    .dress { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 40px; align-items: start; }
+    .dress-stage { position: sticky; top: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 22px 22px 18px; border-radius: 10px; border: 2px solid var(--line); background: radial-gradient(120% 80% at 50% 100%, #3a1f49 0%, #22122c 55%, #1a0d22 100%); }
+    .dress-stage figure { margin: 0; display: grid; justify-items: center; gap: 8px; }
+    .dress-stage canvas { width: 100%; max-width: 240px; aspect-ratio: 3 / 4; image-rendering: auto; filter: drop-shadow(0 18px 14px rgba(0,0,0,.45)); }
+    .dress-stage figcaption { font: 400 18px var(--pixel); color: var(--mc-gray); }
+    .seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 2px solid #3d2848; border-radius: 3px; overflow: hidden; }
+    .seg button { font: 400 17px/1 var(--pixel); color: #e9dcef; background: var(--plum); border: 0; padding: 5px 10px 6px; cursor: pointer; }
+    .seg button + button { border-left: 2px solid #3d2848; }
+    .seg button.on { background: var(--sakura); color: var(--plum); }
+    .skin-form { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; margin-top: 8px; padding-top: 16px; border-top: 2px dashed var(--line); }
+    .skin-form label { font: 400 19px var(--pixel); color: var(--milk); }
+    .skin-form div { display: flex; gap: 8px; }
+    .skin-form input { flex: 1 1 0; width: 100%; min-width: 0; font: 500 16px var(--body); color: var(--milk); background: #140b19; border: 2px solid #3d2848; border-radius: 3px; padding: 8px 10px; }
+    .skin-form input:focus { outline: none; border-color: var(--sakura); }
+    .skin-form small { color: var(--haze); font-size: 14px; }
+    .dress-items { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .ditem { padding: 12px 14px; background: var(--berry); border: 2px solid #3d2848; border-radius: 4px; }
+    .ditem.on { border-color: rgba(255,126,182,.6); }
+    .ditem header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .ditem header b { font: 400 22px var(--pixel); font-weight: 400; }
+    .ditem .opts { display: none; gap: 10px; margin-top: 10px; }
+    .ditem.on .opts { display: grid; }
+    .crow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .crow > span { font: 400 16px var(--pixel); color: var(--mc-gray); min-width: 56px; }
+    .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(0,0,0,.45); cursor: pointer; padding: 0; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+    .dot.on { outline: 2px solid var(--milk); outline-offset: 2px; }
+    .crow input[type="color"] { width: 30px; height: 26px; padding: 0; border: 2px solid #3d2848; border-radius: 3px; background: none; cursor: pointer; }
+    .sw { position: relative; flex: none; width: 46px; height: 24px; }
+    .sw input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+    .sw i { position: absolute; inset: 0; background: #2c1638; border: 2px solid #0b0410; border-radius: 3px; pointer-events: none; }
+    .sw i::after { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: #c8b2d6; transition: transform .15s; }
+    .sw input:checked + i { background: var(--sakura); }
+    .sw input:checked + i::after { transform: translateX(22px); background: #fff; }
+    .sw input:focus-visible + i { outline: 3px solid var(--butter); outline-offset: 2px; }
+    .dress-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 4px; }
+
+    /* ---------- pack weapons ---------- */
+    .armory-row { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 28px; margin: 36px 0 0; }
+    .armory { display: flex; padding: 4px; background: #0b0410; box-shadow: 0 0 0 2px var(--line); }
+    .islot { position: relative; width: 70px; height: 70px; padding: 0; border: 0; background: rgba(58, 31, 73, .75); box-shadow: inset 2px 2px 0 rgba(0,0,0,.45), inset -2px -2px 0 rgba(255,255,255,.08); display: grid; place-items: center; cursor: help; }
+    .islot + .islot { border-left: 2px solid #0b0410; }
+    .islot:hover, .islot:focus-visible { background: rgba(110, 60, 130, .8); outline: none; }
+    .spr { width: 54px; height: 54px; background: no-repeat 0 0 / 100% 900%; image-rendering: pixelated; }
+    .listen { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .listen span { font: 400 18px var(--pixel); color: var(--mc-gray); }
+    .float-tip { position: fixed; z-index: 20; pointer-events: none; }
+
     @media (max-width: 980px) {
       .hero, .panel, .pack, .head { grid-template-columns: minmax(0, 1fr); }
+      .dress { grid-template-columns: minmax(0, 1fr); }
+      .dress-stage { position: static; }
+      .cgm { grid-template-columns: minmax(0, 1fr); }
+      .cgm-side { display: none; }
+      .cgm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .hero { gap: 64px; padding: 24px 0 110px; }
       .panel { gap: 30px; align-items: start; }
       .sticker { width: 30%; left: -3%; bottom: -18%; }
@@ -263,11 +363,20 @@
       .mcb.big { width: 100%; font-size: 23px; }
       .lede { font-size: 18px; }
       .shot-stack .thumb { display: none; } .shot-stack { padding: 0; }
+      .cgm-main { padding: 14px 12px; }
+      .cgm-top { flex-direction: column; }
+      .cgm-search { width: 100%; }
+      .cgm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 460px; }
+      .cgm-card { height: 104px; font-size: 18px; }
+      .dress-stage { padding: 14px; }
+      .crow { gap: 6px; } .crow > span { min-width: 48px; } .dot { width: 19px; height: 19px; }
+      .islot { width: 52px; height: 52px; } .spr { width: 40px; height: 40px; }
+      .armory { flex-wrap: wrap; }
     }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       .splash, .sticker:not(.live) .foil { animation: none; }
-      .panel, .sticker, .item-name, .slot svg { transition: none; }
+      .panel, .sticker, .item-name, .slot svg, .tg, .tg i, .sw i::after { transition: none; }
     }
   </style>
 </head>
@@ -279,6 +388,7 @@
         <a class="brand" href="#"><img src="favicon.png" alt="" />Catgirl Client</a>
         <nav aria-label="Page">
           <a href="#inside">What's inside</a>
+          <a href="#dressup">Cosmetics</a>
           <a href="#pack">Texture pack</a>
           <a href="#install">Install</a>
           <a href="https://github.com/surv1/catgirl-launcher">GitHub</a>
@@ -389,18 +499,11 @@
           </div>
 
           <div class="panel" id="p5" role="tabpanel" aria-labelledby="t5" aria-hidden="true">
-            <div class="keyvis">
-              <div class="keycap">Right Shift</div>
-              <p class="hint">opens the Catgirl menu in game</p>
-              <ul class="chips" aria-label="Some of the built-in mods">
-                <li>Keystrokes</li><li>CPS</li><li>Zoom</li><li>Freelook</li><li>Minimap</li><li>Waypoints</li>
-                <li>Food Info</li><li>Shulker Peek</li><li>Mouse Tweaks</li>
-                <li class="inst">Sodium</li><li class="inst">Iris shaders</li><li class="inst">Continuity</li><li class="more">and more</li>
-              </ul>
-            </div>
+            <figure class="shot" style="margin:0"><img src="menu.png" alt="The Catgirl menu's Mods page in game, showing the Visual category" loading="lazy" width="1156" height="658" /></figure>
             <div>
               <h3>40+ mods, built in</h3>
               <p>Press Right Shift in game for the Catgirl menu. Every built-in mod has its own settings, and Sodium, Iris shaders and Continuity switch on instantly, no restart.</p>
+              <p class="real" style="margin-top:0">That's a real screenshot. <a class="text-link" href="#menu">Try the menu below</a></p>
               <ul>
                 <li>Drag your HUD anywhere and resize it</li>
                 <li>Keystrokes, CPS, zoom, freelook, minimap and waypoints</li>
@@ -437,6 +540,7 @@
                 <li>Put your own picture or GIF on your cape</li>
                 <li>Everyone playing with Catgirl Client sees them on you</li>
               </ul>
+              <p style="margin-top:16px"><a class="text-link" href="#dressup">Try them on below</a></p>
             </div>
           </div>
 
@@ -516,6 +620,64 @@
       </div>
     </section>
 
+
+    <section id="menu" aria-labelledby="menu-h">
+      <div class="wrap">
+        <div class="head">
+          <h2 id="menu-h">The Catgirl menu</h2>
+          <p>Press <kbd>Right Shift</kbd> in game and this opens. Here's its Mods page, working: pick a category, search, and click mods on and off. Hover a card to see what it does.</p>
+        </div>
+        <div class="cgm" id="cgm">
+          <aside class="cgm-side" aria-label="Menu pages">
+            <div class="cgm-logo"><svg viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true" fill="currentColor"><rect x="0" y="0" width="1" height="1"/><rect x="6" y="0" width="1" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="1" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="0" y="2" width="1" height="1"/><rect x="1" y="2" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="5" y="2" width="1" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="1" y="3" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="5" y="3" width="1" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="5" y="4" width="1" height="1"/><rect x="6" y="4" width="1" height="1"/><rect x="1" y="5" width="1" height="1"/><rect x="2" y="5" width="1" height="1"/><rect x="3" y="5" width="1" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/></svg>Catgirl</div>
+            <a class="cgm-link" href="#inside" data-slot="5"><svg viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true" fill="currentColor"><rect x="0" y="0" width="1" height="1"/><rect x="1" y="0" width="1" height="1"/><rect x="2" y="0" width="1" height="1"/><rect x="3" y="0" width="1" height="1"/><rect x="4" y="0" width="1" height="1"/><rect x="5" y="0" width="1" height="1"/><rect x="6" y="0" width="1" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="0" y="2" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="6" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="0" y="6" width="1" height="1"/><rect x="1" y="6" width="1" height="1"/><rect x="2" y="6" width="1" height="1"/><rect x="3" y="6" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/></svg>Edit HUD</a>
+            <div class="cgm-group">MODS &amp; LOOKS</div>
+            <span class="cgm-link on"><svg viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true" fill="currentColor"><rect x="4" y="0" width="1" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="1" y="1" width="1" height="1"/><rect x="2" y="1" width="1" height="1"/><rect x="3" y="1" width="1" height="1"/><rect x="4" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="1" y="5" width="1" height="1"/><rect x="2" y="5" width="1" height="1"/><rect x="3" y="5" width="1" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="2" y="6" width="1" height="1"/></svg>Mods</span>
+            <a class="cgm-link" href="#dressup"><svg viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true" fill="currentColor"><rect x="1" y="0" width="1" height="1"/><rect x="2" y="0" width="1" height="1"/><rect x="4" y="0" width="1" height="1"/><rect x="5" y="0" width="1" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="1" y="1" width="1" height="1"/><rect x="2" y="1" width="1" height="1"/><rect x="3" y="1" width="1" height="1"/><rect x="4" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="0" y="2" width="1" height="1"/><rect x="1" y="2" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="5" y="2" width="1" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="1" y="3" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="5" y="3" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="3" y="5" width="1" height="1"/></svg>Cosmetics</a>
+            <span class="cgm-link"><svg viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true" fill="currentColor"><rect x="0" y="0" width="1" height="1"/><rect x="1" y="0" width="1" height="1"/><rect x="3" y="0" width="1" height="1"/><rect x="4" y="0" width="1" height="1"/><rect x="6" y="0" width="1" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="1" y="1" width="1" height="1"/><rect x="3" y="1" width="1" height="1"/><rect x="4" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="1" y="3" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="6" y="4" width="1" height="1"/><rect x="0" y="6" width="1" height="1"/><rect x="1" y="6" width="1" height="1"/><rect x="3" y="6" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/></svg>Keybinds</span>
+            <div class="cgm-group">YOU</div>
+            <a class="cgm-link" href="#inside" data-slot="6"><svg viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true" fill="currentColor"><rect x="0" y="0" width="1" height="1"/><rect x="1" y="0" width="1" height="1"/><rect x="5" y="0" width="1" height="1"/><rect x="6" y="0" width="1" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="1" y="1" width="1" height="1"/><rect x="2" y="1" width="1" height="1"/><rect x="4" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="0" y="2" width="1" height="1"/><rect x="1" y="2" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="5" y="2" width="1" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="1" y="3" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="5" y="3" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="5" y="4" width="1" height="1"/><rect x="1" y="5" width="1" height="1"/><rect x="2" y="5" width="1" height="1"/><rect x="3" y="5" width="1" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="1" y="6" width="1" height="1"/><rect x="2" y="6" width="1" height="1"/><rect x="3" y="6" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/></svg>Wardrobe</a>
+            <span class="cgm-link"><svg viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true" fill="currentColor"><rect x="0" y="0" width="1" height="1"/><rect x="1" y="0" width="1" height="1"/><rect x="2" y="0" width="1" height="1"/><rect x="3" y="0" width="1" height="1"/><rect x="4" y="0" width="1" height="1"/><rect x="5" y="0" width="1" height="1"/><rect x="6" y="0" width="1" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="0" y="2" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="6" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="1" y="5" width="1" height="1"/><rect x="2" y="5" width="1" height="1"/><rect x="3" y="5" width="1" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/></svg>Screenshots</span>
+            <div class="cgm-me"><i aria-hidden="true"></i><div><b>Jerrix3</b><small>Fabric 1.21.11</small></div></div>
+          </aside>
+          <div class="cgm-main">
+            <div class="cgm-top">
+              <div><b class="cgm-title">Mods</b><small id="cgmCount">40 mods</small></div>
+              <label class="cgm-search"><svg viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true" fill="currentColor"><rect x="1" y="0" width="1" height="1"/><rect x="2" y="0" width="1" height="1"/><rect x="3" y="0" width="1" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="4" y="1" width="1" height="1"/><rect x="0" y="2" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/></svg><input id="cgmSearch" type="search" placeholder="Search mods..." aria-label="Search mods" autocomplete="off" /></label>
+            </div>
+            <div class="cgm-cats" id="cgmCats"><button type="button" aria-pressed="true" data-cat="All">All</button><button type="button" aria-pressed="false" data-cat="On">On</button><button type="button" aria-pressed="false" data-cat="Favourites">&#9829;Favourites</button><button type="button" aria-pressed="false" data-cat="HUD">HUD</button><button type="button" aria-pressed="false" data-cat="PvP">PvP</button><button type="button" aria-pressed="false" data-cat="Visual">Visual</button><button type="button" aria-pressed="false" data-cat="Performance">Performance</button><button type="button" aria-pressed="false" data-cat="Utility">Utility</button></div>
+            <div class="cgm-grid" id="cgmGrid"></div>
+            <div class="tip cgm-tip" id="cgmTip" hidden></div>
+          </div>
+        </div>
+        <p class="cgm-note">Icons, names, blurbs and categories come straight from the mod. Add-ons like Sodium, Iris shaders and Continuity show up in this menu too.</p>
+      </div>
+    </section>
+
+    <section id="dressup" class="dress-band" aria-labelledby="dress-h">
+      <div class="wrap">
+        <div class="head">
+          <h2 id="dress-h">Try the cosmetics on</h2>
+          <p>This is the launcher's own preview, drawn with the same numbers as the game. Switch things on, pick colours, or load your skin. Everyone playing with Catgirl Client sees what you wear.</p>
+        </div>
+        <div class="dress">
+          <div class="dress-stage">
+            <figure><canvas id="cvFront" role="img" aria-label="Your player from the front, wearing the cosmetics you picked"></canvas><figcaption>Front</figcaption></figure>
+            <figure><canvas id="cvTwo" role="img" aria-label="Your player from behind, wearing the cosmetics you picked"></canvas><figcaption><span class="seg" id="view2"><button type="button" data-v="back" class="on">Back</button><button type="button" data-v="side">Side</button></span></figcaption></figure>
+            <form class="skin-form" id="skinForm">
+              <label for="skinName">Try it on your own skin</label>
+              <div><input id="skinName" name="skinName" placeholder="Minecraft username" autocomplete="off" spellcheck="false" maxlength="16" /><button class="mcb small" type="submit">Load</button></div>
+              <small id="skinMsg">Showing Jerrix's skin.</small>
+            </form>
+          </div>
+          <div>
+            <div class="dress-tools"><button class="mcb small" type="button" id="matchHair">Match ears and tail to hair</button><button class="mcb small" type="button" id="dressReset">Reset</button></div>
+            <div class="dress-items" id="dressItems"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="pack" aria-labelledby="pack-h">
       <div class="wrap">
         <div class="head">
@@ -550,12 +712,15 @@
             <p class="pack-note">Drop the zip in your <b>resourcepacks</b> folder (Options, Resource Packs, Open Pack Folder) and switch it on. Use it, share it, put it in your modpacks. Just please don't sell it. nya~</p>
           </div>
         </div>
+<div class="armory-row"><div class="armory" aria-label="Weapons from the pack: hover to inspect"><button class="islot" type="button" data-name="Diamond Sword"><i class="spr" style="background-image:url(img/items/diamond_sword.png)"></i><span class="sr">Diamond Sword</span></button><button class="islot" type="button" data-name="Netherite Sword"><i class="spr" style="background-image:url(img/items/netherite_sword.png)"></i><span class="sr">Netherite Sword</span></button><button class="islot" type="button" data-name="Golden Sword"><i class="spr" style="background-image:url(img/items/golden_sword.png)"></i><span class="sr">Golden Sword</span></button><button class="islot" type="button" data-name="Iron Sword"><i class="spr" style="background-image:url(img/items/iron_sword.png)"></i><span class="sr">Iron Sword</span></button><button class="islot" type="button" data-name="Copper Sword"><i class="spr" style="background-image:url(img/items/copper_sword.png)"></i><span class="sr">Copper Sword</span></button><button class="islot" type="button" data-name="Mace"><i class="spr" style="background-image:url(img/items/mace.png)"></i><span class="sr">Mace</span></button><button class="islot" type="button" data-name="Diamond Axe"><i class="spr" style="background-image:url(img/items/diamond_axe.png)"></i><span class="sr">Diamond Axe</span></button><button class="islot" type="button" data-name="Netherite Axe"><i class="spr" style="background-image:url(img/items/netherite_axe.png)"></i><span class="sr">Netherite Axe</span></button></div>
+          <div class="listen"><span>Hear it:</span><button class="mcb small" type="button" data-sound="sounds/totem.ogg">&#9654; Totem pop</button><button class="mcb small" type="button" data-sound="sounds/sweep.ogg">&#9654; Sweep</button></div>
+        </div>
         <div class="shots3">
           <figure><img src="pack-hand.jpg" alt="Holding a diamond sword with a soft pink glow around it" loading="lazy" width="480" height="360" /><figcaption>That glow follows your sword around</figcaption></figure>
           <figure><img src="pack-sweep.jpg" alt="A big pink sweep slash in front of the player" loading="lazy" width="480" height="360" /><figcaption>Sweeps go pink</figcaption></figure>
           <figure><img src="pack-dolls.jpg" alt="A player in copper armour holding two little catgirl totems" loading="lazy" width="480" height="360" /><figcaption>Two totems, double the cuteness</figcaption></figure>
         </div>
-        <p class="real">Real screenshots from the game, just cropped.</p>
+        <p class="real">The weapons above are the pack's real textures, glow and all. The screenshots are from the game, just cropped.</p>
       </div>
     </section>
 
@@ -591,6 +756,7 @@
     </footer>
   </div>
 
+  <script src="cosmetics.js"></script>
   <style>.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }</style>
   <script>
   (() => {
@@ -707,17 +873,10 @@
       select(cur + (e.deltaY > 0 || e.deltaX > 0 ? 1 : -1));
     }, { passive: false });
     fadeT = setTimeout(() => itemName.classList.add('fade'), 3200);
+    document.querySelectorAll('[data-slot]').forEach((a) => a.addEventListener('click', () => select(+a.dataset.slot - 1)));
 
     /* ---------- splash facts ---------- */
-    const FACTS = [
-      'Nya~!', 'Catgirls purr when they\'re happy!', 'A swishing tail means she\'s thinking!',
-      'Catgirl rule #1: headpats are mandatory!', 'Neko means cat, mimi means ears!',
-      'A group of cats is called a clowder!', 'Cats sleep 12 to 16 hours a day!',
-      'Creepers are scared of cats!', 'Slow blinks mean "I trust you"!', 'Ramen is a valid catgirl food group!',
-      'Catgirls get the zoomies at 3am!', 'Cardboard box? Instant catgirl bed!', 'Purr-fectly optimised!',
-      'You\'ve got to be kitten me!', 'Cats can rotate their ears 180 degrees!', ':3',
-      'Catgirls hiss at cucumbers!', 'Headpats accepted!', 'Tame a cat with raw cod!', 'Now pink!'
-    ];
+    const FACTS = ["Nya~!", "Powered by Catgirl Launcher!", "Now with 100% more cat ears!", "Cats sleep 12 to 16 hours a day!", "A group of cats is called a clowder!", "Cats can rotate their ears 180 degrees!", "Cats have 32 muscles in each ear!", "Purring can happen at 25 to 150 Hz!", "Cats walk like camels and giraffes!", "A cat's nose print is unique!", "Cats can't taste sweet things!", "Slow blinks mean \"I trust you\"!", "Cats have five toes on their front paws!", "Kittens start purring at a few days old!", "The oldest cat lived to 38!", "Cats spend a third of their day grooming!", "A cat's whiskers are as wide as its body!", "Cats can jump six times their length!", "Nekomimi means \"cat ears\"!", "\"Nya\" is the Japanese \"meow\"!", "Cat ears: the best hat!", "Headpats accepted!", "Tail sold separately!", "Fluffy and dangerous!", "Purr-fectly optimised!", "Meow-velous!", "Pawsitively crafted!", "Cat-tastic!", "Feline fine!", "You've got to be kitten me!", "Hiss-terical!", "Claw-some!", "Fur real!", "Purr-haps the best launcher!", "Not a creeper. Probably.", "Creepers are scared of cats!", "Phantoms avoid cats too!", "Cats land on their feet!", "Ocelots were here first!", "Tame a cat with raw cod!", "Cats bring you gifts at night!", "Now pink!", "Pink is a personality!", "Ribbons equipped!", "+1 cuteness!", "Critical cuteness hit!", "Boop!", "Mrrp?", ":3", "UwU", "OwO", ">w<", "^-^", "Certified cozy!", "Hydrate, then mine!", "Touch grass, then mine it!", "Diamonds? Meow!", "Built with yarn!", "Yarn is a mapping AND a toy!", "Fabric-powered!", "Sit, stay, craft!", "Who needs sleep when cats exist?", "Nine lives, one hardcore world!", "The floor is lava, the bed is mine!", "Shh, the cat is sleeping on the keyboard!", "Respawn with whiskers!", "Catgirls are called \"nekomimi\" in Japan!", "Neko means cat, mimi means ears!", "Four ears or two? The great catgirl debate!", "A swishing tail means she's thinking!", "Catgirls end sentences with \"nya\"!", "Ear twitch = listening very closely!", "Catgirls love sunny windowsills!", "Never pet a catgirl's tail without asking!", "Catgirls purr when they're happy!", "A catgirl's favourite food: fish, obviously!", "Catgirls can't resist a laser pointer!", "Catgirls always land on their feet!", "Catgirls nap 12 hours a day, minimum!", "Catgirls knock things off tables for fun!", "Cardboard box? Instant catgirl bed!", "Catgirls have been in anime since the 1970s!", "\"Kemonomimi\" means animal ears!", "Catgirl rule #1: headpats are mandatory!", "Catgirl rule #2: the warm spot is hers!", "Catgirls get the zoomies at 3am!", "A catgirl's slow blink means she likes you!", "Catgirls are part cat, part chaos!", "Bell collar: optional. Cuteness: required!", "Catgirls hiss at cucumbers!", "Ramen is a valid catgirl food group!", "Every catgirl has a favourite cosy hoodie!", "Catgirls tuck their tails when shy!", "Catgirls are certified fluff experts!", "Catgirls can hear a snack bag from 3 rooms away!", "Catgirl ears point forward when curious!"];
     const splash = document.getElementById('splash'), mcSplash = document.getElementById('mcSplash');
     let last = 0;
     const SHORT = FACTS.map((f, i) => i).filter((i) => FACTS[i].length <= 26);
@@ -783,6 +942,167 @@
     size(); draw(0);
     addEventListener('resize', () => { size(); draw(performance.now()); });
     if (!reduce) new IntersectionObserver((es) => { running = es[0].isIntersecting; if (running) { lastT = 0; requestAnimationFrame(tick); } }).observe(cv);
+
+
+    /* ---------- the Catgirl menu's Mods page ---------- */
+    const MODS = [{"id": "fps", "name": "FPS", "desc": "frames per second", "cat": "HUD"}, {"id": "cps", "name": "CPS", "desc": "clicks per second", "cat": "PvP"}, {"id": "keys", "name": "Keystrokes", "desc": "WASD and mouse", "cat": "PvP"}, {"id": "coords", "name": "Coordinates", "desc": "where you are", "cat": "HUD"}, {"id": "armour", "name": "Armour", "desc": "durability left", "cat": "PvP"}, {"id": "ping", "name": "Ping", "desc": "delay to the server", "cat": "PvP"}, {"id": "clock", "name": "Clock", "desc": "the real time", "cat": "HUD"}, {"id": "nowplaying", "name": "Now Playing", "desc": "the song you're on", "cat": "HUD"}, {"id": "effects", "name": "Potion Effects", "desc": "effects and time left", "cat": "HUD"}, {"id": "direction", "name": "Direction", "desc": "a compass strip", "cat": "HUD"}, {"id": "day", "name": "Day Counter", "desc": "days in this world", "cat": "HUD"}, {"id": "server", "name": "Server Address", "desc": "where you're playing", "cat": "HUD"}, {"id": "speed", "name": "Speed", "desc": "blocks per second", "cat": "HUD"}, {"id": "items", "name": "Item Counter", "desc": "totems, pearls, gapples", "cat": "PvP"}, {"id": "reach", "name": "Reach Display", "desc": "how far your last hit was", "cat": "PvP"}, {"id": "combo", "name": "Combo Counter", "desc": "hits in a row", "cat": "PvP"}, {"id": "memory", "name": "Memory", "desc": "how much RAM is used", "cat": "HUD"}, {"id": "stopwatch", "name": "Play Time", "desc": "time since you joined", "cat": "HUD"}, {"id": "packs", "name": "Pack Display", "desc": "your resource packs", "cat": "HUD"}, {"id": "saturation", "name": "Food Info", "desc": "hunger and saturation, like AppleSkin", "cat": "HUD"}, {"id": "crosshair", "name": "Crosshair", "desc": "your own crosshair", "cat": "Visual"}, {"id": "scoreboard", "name": "Scoreboard", "desc": "resize or hide it", "cat": "Visual"}, {"id": "bossbar", "name": "Boss Bar", "desc": "resize or hide it", "cat": "Visual"}, {"id": "fullbright", "name": "Fullbright", "desc": "see in the dark", "cat": "Visual"}, {"id": "time", "name": "Time Changer", "desc": "your own time of day", "cat": "Visual"}, {"id": "weather", "name": "Weather", "desc": "your own weather", "cat": "Visual"}, {"id": "nohurtcam", "name": "No Hurt Shake", "desc": "no camera shake when hit", "cat": "Visual"}, {"id": "particles", "name": "Hit Particles", "desc": "more particles when you hit", "cat": "Visual"}, {"id": "snaplook", "name": "Snaplook", "desc": "hold a key to look behind", "cat": "Utility"}, {"id": "sneak", "name": "Toggle Sneak", "desc": "tap once to sneak", "cat": "Utility"}, {"id": "sprint", "name": "Toggle Sprint", "desc": "tap once to sprint", "cat": "PvP"}, {"id": "zoom", "name": "Zoom", "desc": "hold a key to zoom", "cat": "Utility"}, {"id": "freelook", "name": "Freelook", "desc": "look around without turning", "cat": "Utility"}, {"id": "minimap", "name": "Minimap", "desc": "a map of what's around you", "cat": "Utility"}, {"id": "waypoints", "name": "Waypoints", "desc": "mark places to find again", "cat": "Utility"}, {"id": "hitcolor", "name": "Hit Colour", "desc": "the flash when things get hit", "cat": "Visual"}, {"id": "shulker", "name": "Shulker Peek", "desc": "see inside shulker boxes", "cat": "Utility"}, {"id": "mousetweaks", "name": "Mouse Tweaks", "desc": "scroll and drag to move items", "cat": "Utility"}, {"id": "dynamicfps", "name": "Dynamic FPS", "desc": "rests the game when you tab out", "cat": "Performance"}, {"id": "outline", "name": "Block Outline", "desc": "your own block outline colour", "cat": "Visual"}];
+    const cgmGrid = document.getElementById('cgmGrid'), cgmTip = document.getElementById('cgmTip'), cgmCount = document.getElementById('cgmCount');
+    const cgmSearch = document.getElementById('cgmSearch'), cgmMain = cgmGrid.closest('.cgm-main');
+    const ON = new Set(['fps', 'keys', 'cps', 'zoom', 'freelook', 'minimap', 'saturation']);
+    const FAV = new Set(['keys', 'cps', 'zoom', 'freelook', 'minimap']);
+    const CATFACE = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="#fff4f8" d="M0 0h1v1H0zM6 0h1v1H6zM0 1h2v1H0zM5 1h2v1H5zM0 2h7v3H0zM1 5h5v1H1z"/><path fill="#1d1026" d="M2 3h1v1H2zM4 3h1v1H4z"/></svg>');
+    let cgmCat = 'All';
+    const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    function renderMods() {
+      const q = cgmSearch.value.trim().toLowerCase();
+      const list = MODS.filter((m) => (cgmCat === 'All' || (cgmCat === 'On' ? ON.has(m.id) : cgmCat === 'Favourites' ? FAV.has(m.id) : m.cat === cgmCat))
+        && (!q || (m.name + ' ' + m.desc).toLowerCase().includes(q)));
+      cgmGrid.innerHTML = list.length ? list.map((m) => `<button type="button" class="cgm-card" data-id="${m.id}" aria-pressed="${ON.has(m.id)}" aria-label="${esc(m.name)}: ${esc(m.desc)}">
+        <span class="gear" aria-hidden="true"></span>${FAV.has(m.id) ? '<span class="fav" aria-hidden="true">&#9829;</span>' : ''}
+        <img src="img/mods/${m.id}.png" alt="" width="64" height="64" loading="lazy" />
+        <span class="row"><span class="nm">${esc(m.name)}</span><span class="tg" aria-hidden="true"><i style="background-image:url('${CATFACE}')"></i></span></span></button>`).join('')
+        : '<p class="cgm-empty">No mods match that. Try another word.</p>';
+      cgmCount.textContent = `${MODS.length} mods · ${ON.size} on`;
+    }
+    function showTip(card, x, y) {
+      const m = MODS.find((k) => k.id === card.dataset.id); if (!m) return;
+      cgmTip.innerHTML = `<div class="name">${esc(m.name)}</div><div>${esc(m.desc[0].toUpperCase() + m.desc.slice(1))}.</div><div class="g">${m.cat}</div><div class="hint">Click to switch</div>`;
+      cgmTip.hidden = false;
+      const r = cgmMain.getBoundingClientRect(), tw = cgmTip.offsetWidth, th = cgmTip.offsetHeight;
+      let left = x - r.left + 16, top = y - r.top + 16;
+      if (left + tw > r.width - 6) left = x - r.left - tw - 12;
+      if (top + th > r.height - 6) top = y - r.top - th - 12;
+      cgmTip.style.left = `${Math.max(6, left)}px`; cgmTip.style.top = `${Math.max(6, top)}px`;
+    }
+    cgmGrid.addEventListener('pointermove', (e) => { const c = e.target.closest('.cgm-card'); if (c && e.pointerType === 'mouse') showTip(c, e.clientX, e.clientY); else if (!c) cgmTip.hidden = true; });
+    cgmGrid.addEventListener('pointerleave', () => { cgmTip.hidden = true; });
+    cgmGrid.addEventListener('focusin', (e) => { const c = e.target.closest('.cgm-card'); if (c) { const r = c.getBoundingClientRect(); showTip(c, r.left + 20, r.bottom - 10); } });
+    cgmGrid.addEventListener('focusout', () => { cgmTip.hidden = true; });
+    cgmGrid.addEventListener('click', (e) => {
+      const c = e.target.closest('.cgm-card'); if (!c) return;
+      const id = c.dataset.id; ON.has(id) ? ON.delete(id) : ON.add(id);
+      c.setAttribute('aria-pressed', ON.has(id)); cgmCount.textContent = `${MODS.length} mods · ${ON.size} on`;
+      if (cgmCat === 'On') renderMods();
+      if (e.pointerType !== 'mouse') { const r = c.getBoundingClientRect(); showTip(c, r.left + 20, r.bottom - 10); clearTimeout(c._t); c._t = setTimeout(() => { cgmTip.hidden = true; }, 1800); }
+    });
+    document.getElementById('cgmCats').addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      cgmCat = b.dataset.cat;
+      document.querySelectorAll('#cgmCats button').forEach((x) => x.setAttribute('aria-pressed', x === b));
+      cgmGrid.scrollTop = 0; renderMods();
+    });
+    cgmSearch.addEventListener('input', renderMods);
+    renderMods();
+
+    /* ---------- cosmetics try-on (drawing code shared with the launcher) ---------- */
+    const CC = window.CatgirlCosmetics;
+    if (CC) {
+      const { cos, COS_ITEMS, COS_DEFAULTS, WING_DEFAULT } = CC;
+      const cvFront = document.getElementById('cvFront'), cvTwo = document.getElementById('cvTwo'), itemsEl = document.getElementById('dressItems');
+      const skinMsg = document.getElementById('skinMsg');
+      let view2 = 'back', hair = null;
+      const START = { ears: { on: true }, tail: { on: true }, bow: { on: true }, cape: { on: true, style: 'catmeow' } };
+      function reset() {
+        cos.items = structuredClone(COS_DEFAULTS);
+        for (const [k, v] of Object.entries(START)) Object.assign(cos.items[k], v);
+        if (hair) { cos.items.ears.color = hair; cos.items.tail.color = hair; }
+        renderItems();
+      }
+      const label = (n) => n.replace(/\s*[✨]+/u, '');
+      function renderItems() {
+        itemsEl.innerHTML = COS_ITEMS.map((d) => {
+          const v = cos.items[d.id];
+          const styles = d.styles ? `<div class="crow"><span>Style</span><span class="seg">${d.styles.map(([k, l]) => `<button type="button" data-style="${d.id}" data-v="${k}" class="${v.style === k ? 'on' : ''}">${label(l)}</button>`).join('')}</span></div>` : '';
+          const colours = d.colors.map(([key, l]) => `<div class="crow"><span>${l}</span>${CC.presetsFor(d.id, key).map((c) => `<button type="button" class="dot ${v[key] === c ? 'on' : ''}" style="background:${c}" data-c="${c}" data-k="${d.id}.${key}" aria-label="${l} ${c}"></button>`).join('')}<input type="color" value="${v[key]}" data-k="${d.id}.${key}" aria-label="Pick any ${l.toLowerCase()} colour" /></div>`).join('');
+          return `<div class="ditem ${v.on ? 'on' : ''}" data-item="${d.id}"><header><b>${label(d.name)}</b><label class="sw"><input type="checkbox" data-on="${d.id}" ${v.on ? 'checked' : ''} aria-label="Wear ${label(d.name).toLowerCase()}" /><i></i></label></header>
+            ${d.hint ? `<p class="real" style="margin:6px 0 0">${d.hint}</p>` : ''}<div class="opts">${styles}${colours}</div></div>`;
+        }).join('');
+      }
+      function setColour(item, key, c) {
+        cos.items[item][key] = c;
+        itemsEl.querySelectorAll(`[data-k="${item}.${key}"]`).forEach((el) => { if (el.type === 'color') el.value = c; else el.classList.toggle('on', el.dataset.c === c); });
+      }
+      itemsEl.addEventListener('change', (e) => {
+        const on = e.target.closest('[data-on]');
+        if (on) { cos.items[on.dataset.on].on = on.checked; on.closest('.ditem').classList.toggle('on', on.checked); if (['cape'].includes(on.dataset.on) && on.checked) setView2('back'); }
+      });
+      itemsEl.addEventListener('input', (e) => { const c = e.target.closest('input[type="color"]'); if (c) { const [i, k] = c.dataset.k.split('.'); setColour(i, k, c.value); } });
+      itemsEl.addEventListener('click', (e) => {
+        const d = e.target.closest('.dot'); if (d) { const [i, k] = d.dataset.k.split('.'); setColour(i, k, d.dataset.c); }
+        const st = e.target.closest('[data-style]');
+        if (st) {
+          const item = st.dataset.style, old = cos.items[item].style;
+          cos.items[item].style = st.dataset.v;
+          if (item === 'wings' && cos.items.wings.color === WING_DEFAULT[old]) setColour('wings', 'color', WING_DEFAULT[st.dataset.v]);
+          itemsEl.querySelectorAll(`[data-style="${item}"]`).forEach((b) => b.classList.toggle('on', b === st));
+        }
+      });
+      function setView2(v) { view2 = v; document.querySelectorAll('#view2 button').forEach((b) => b.classList.toggle('on', b.dataset.v === v)); cvTwo.setAttribute('aria-label', `Your player from the ${v === 'back' ? 'back' : 'side'}, wearing the cosmetics you picked`); }
+      document.getElementById('view2').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setView2(b.dataset.v); });
+      document.getElementById('dressReset').addEventListener('click', reset);
+      document.getElementById('matchHair').addEventListener('click', () => {
+        const h = cos.skin && CC.hairColor(cos.skin);
+        if (!h) { skinMsg.textContent = "Couldn't find any hair on this skin."; return; }
+        setColour('ears', 'color', h); setColour('tail', 'color', h);
+        skinMsg.textContent = 'Ears and tail now match the hair.';
+      });
+      const loadImg = (src, cors) => new Promise((res, rej) => { const i = new Image(); if (cors) i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = rej; i.src = src; });
+      function useSkin(img, who) {
+        cos.skin = img; cos.variant = CC.skinVariant(img); hair = CC.hairColor(img);
+        if (hair) { setColour('ears', 'color', hair); setColour('tail', 'color', hair); }
+        skinMsg.textContent = who;
+      }
+      loadImg('img/skin.png').then((img) => { useSkin(img, "Showing Jerrix's skin."); CC.draw({ front: cvFront, back: cvTwo }, 0); }).catch(() => {});
+      document.getElementById('skinForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('skinName').value.trim();
+        if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) { skinMsg.textContent = 'Usernames are 3 to 16 letters, numbers or underscores.'; return; }
+        skinMsg.textContent = `Looking for ${name}'s skin…`;
+        const url = `https://mc-heads.net/skin/${encodeURIComponent(name)}`;
+        try { useSkin(await loadImg(url, true), `Showing ${name}'s skin.`); }
+        catch (err) {
+          try { const img = await loadImg(url, false); cos.skin = img; cos.variant = 'classic'; skinMsg.textContent = `Showing ${name}'s skin.`; }
+          catch (err2) { skinMsg.textContent = `Couldn't find a skin for ${name}. Check the spelling and try again.`; }
+        }
+      });
+      reset();
+      CC.draw({ front: cvFront, back: cvTwo }, 0); // never blank, even before it scrolls into view
+      let dressOn = false;
+      const frame = () => { if (!dressOn) return; CC.draw({ front: cvFront, [view2]: cvTwo }, performance.now() / 50); requestAnimationFrame(frame); };
+      const still = () => CC.draw({ front: cvFront, [view2]: cvTwo }, 0);
+      if (reduce) { setInterval(still, 400); still(); }
+      else new IntersectionObserver((es) => { const was = dressOn; dressOn = es[0].isIntersecting; if (dressOn && !was) requestAnimationFrame(frame); }).observe(document.querySelector('.dress-stage'));
+    }
+
+    /* ---------- the pack's weapons: real textures, real glow animation ---------- */
+    const sprites = [...document.querySelectorAll('.spr')];
+    const floatTip = document.createElement('div'); floatTip.className = 'tip float-tip'; floatTip.hidden = true; document.body.appendChild(floatTip);
+    // .mcmeta: frames 0-7 at 2 ticks each, then frame 8 held for 50 ticks (1 tick = 50 ms)
+    const glowFrame = (ms) => { const m = ms % 3300; return m < 800 ? Math.floor(m / 100) : 8; };
+    function tickSprites(now) { sprites.forEach((sp, i) => { sp.style.backgroundPositionY = `${glowFrame(now + i * 260) / 8 * 100}%`; }); }
+    let armOn = false;
+    if (reduce) tickSprites(900);
+    else new IntersectionObserver((es) => { armOn = es[0].isIntersecting; if (armOn) requestAnimationFrame(function loop(t) { tickSprites(t); if (armOn) requestAnimationFrame(loop); }); }).observe(document.querySelector('.armory'));
+    function itemTip(slot, x, y) {
+      floatTip.innerHTML = `<div class="name">${slot.dataset.name}</div><div class="g">Catgirl Pack</div><div class="sp"></div><div class="g">When held:</div><div class="b in">Glows pink, sparkles drift up</div><div class="b in">Sweeps leave a pink slash</div>`;
+      floatTip.hidden = false;
+      const w = floatTip.offsetWidth, h = floatTip.offsetHeight;
+      floatTip.style.left = `${Math.min(innerWidth - w - 8, x + 14)}px`; floatTip.style.top = `${Math.max(8, y - h - 14)}px`;
+    }
+    document.querySelectorAll('.islot').forEach((sl) => {
+      sl.addEventListener('pointermove', (e) => itemTip(sl, e.clientX, e.clientY));
+      sl.addEventListener('pointerleave', () => { floatTip.hidden = true; });
+      sl.addEventListener('focus', () => { const r = sl.getBoundingClientRect(); itemTip(sl, r.left, r.top); });
+      sl.addEventListener('blur', () => { floatTip.hidden = true; });
+    });
+    addEventListener('scroll', () => { floatTip.hidden = true; }, { passive: true });
+
+    /* ---------- sounds from the pack, only when you ask ---------- */
+    const audio = {};
+    document.querySelectorAll('[data-sound]').forEach((b) => b.addEventListener('click', () => {
+      const src = b.dataset.sound; const a = audio[src] || (audio[src] = new Audio(src));
+      a.currentTime = 0; a.volume = .7; a.play().catch(() => {});
+    }));
 
     /* ---------- point every download button at the newest installer ---------- */
     fetch('https://api.github.com/repos/surv1/catgirl-launcher/releases/latest')
