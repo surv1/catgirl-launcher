@@ -325,6 +325,14 @@
     .listen span { font: 400 18px var(--pixel); color: var(--mc-gray); }
     .float-tip { position: fixed; z-index: 20; pointer-events: none; }
 
+    /* ---------- cookie notice: a cookie's item tooltip ---------- */
+    .cookie-tip { position: fixed; z-index: 30; right: 20px; bottom: 20px; width: min(380px, calc(100% - 40px)); font-size: 18px; }
+    .cookie-tip .cname { display: flex; align-items: center; gap: 10px; }
+    .cookie-tip .cname svg { width: 26px; height: 26px; flex: none; }
+    .cookie-tip .cbtns { display: flex; gap: 10px; margin-top: 14px; }
+    .linkbtn { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+    .linkbtn:hover { color: var(--milk); }
+
     @media (max-width: 980px) {
       .hero, .panel, .pack, .head { grid-template-columns: minmax(0, 1fr); }
       .dress { grid-template-columns: minmax(0, 1fr); }
@@ -372,6 +380,8 @@
       .crow { gap: 6px; } .crow > span { min-width: 48px; } .dot { width: 19px; height: 19px; }
       .islot { width: 52px; height: 52px; } .spr { width: 40px; height: 40px; }
       .armory { flex-wrap: wrap; }
+      .cookie-tip { right: 12px; bottom: 12px; width: calc(100% - 24px); font-size: 17px; padding: 10px 14px; }
+      .cookie-tip .cbtns { margin-top: 10px; }
     }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
@@ -752,8 +762,17 @@
     </div>
     <footer class="wrap title-foot">
       <span id="verLine">Catgirl Client</span>
-      <span>Made with love by Jerrix. Not affiliated with Mojang or Microsoft.</span>
+      <span>Made with love by Jerrix. Not affiliated with Mojang or Microsoft. <button class="linkbtn" type="button" id="cookieOpen">Cookies</button></span>
     </footer>
+  </div>
+
+  <div class="tip cookie-tip" id="cookieTip" role="region" aria-label="Cookie notice" hidden>
+    <div class="cname"><span data-icon="cookie"></span><span class="name">Cookie</span></div>
+    <div class="g">The only cookie here. It remembers that you closed this, for a year.</div>
+    <div class="gr">No tracking, no ads</div>
+    <div class="sp"></div>
+    <div class="lore">Fonts load from Google, downloads from GitHub, and skins from mc-heads.net when you try one on.</div>
+    <div class="cbtns"><button class="mcb small primary" type="button" id="cookieOk">Got it</button></div>
   </div>
 
   <script src="cosmetics.js"></script>
@@ -808,6 +827,10 @@
         '................', '...kkkk.........', '..kywyyk........', '.kyk..kyk.......', '.kyk..kyk.......', '..kyyyyYk.......',
         '...kkkyYk.......', '......kyYk......', '.......kyYk.....', '........kyYk....', '.........kyYkk..', '..........kyyYk.',
         '...........kyk..', '............k...', '................', '................'] },
+      cookie: { pal: { k: '#3b2010', l: '#f0b866', c: '#d6893a', s: '#a9622a', h: '#4a2410' }, map: [
+        '................', '.....kkkkkk.....', '...kkllllllkk...', '..kklcccccclkk..', '..klchhcccccsk..', '.klccchcchhccsk.',
+        '.klccccccchccsk.', '.klccccccccccsk.', '.klchhcchccccsk.', '.klchccchhcccsk.', '.klcccccccchhsk.', '..klccchccchsk..',
+        '..kkschhcccskk..', '...kksssssskk...', '.....kkkkkk.....', '................'] },
       cake: { pal: { k: '#3a2414', w: '#fff7fb', W: '#f0dbe6', r: '#ff4f7a', s: '#e0a56a', S: '#b9773f' }, map: [
         '................', '................', '................', '.......rr.......', '......krrk......', '..kkkkkkkkkkkk..',
         '.kwwwwwwwwwwwwk.', '.kwrwwwwrwwwrwk.', '.kwwWwwwwWwwwWk.', '.kssWsssssWsssk.', '.kssssssssssssk.', '.kSSSSSSSSSSSSk.',
@@ -1103,6 +1126,15 @@
       const src = b.dataset.sound; const a = audio[src] || (audio[src] = new Audio(src));
       a.currentTime = 0; a.volume = .7; a.play().catch(() => {});
     }));
+
+    /* ---------- cookie notice ---------- */
+    const cookieTip = document.getElementById('cookieTip');
+    if (!/(?:^|;\s*)cg_cookies=/.test(document.cookie)) cookieTip.hidden = false;
+    document.getElementById('cookieOk').addEventListener('click', () => {
+      document.cookie = `cg_cookies=ok; Max-Age=31536000; Path=/; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;
+      cookieTip.hidden = true;
+    });
+    document.getElementById('cookieOpen').addEventListener('click', () => { cookieTip.hidden = false; document.getElementById('cookieOk').focus(); });
 
     /* ---------- point every download button at the newest installer ---------- */
     fetch('https://api.github.com/repos/surv1/catgirl-launcher/releases/latest')
