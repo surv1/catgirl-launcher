@@ -432,6 +432,7 @@ final class Hud {
         sampleClicks();
         if (mc.options.hideGui || mc.player == null) return;
         if (mc.screen instanceof HudEditorScreen) return; // the editor draws them itself
+        if (mc.getDebugOverlay().showDebugScreen()) return; // F3 screen: get out of its way (like Lunar)
         int sw = g.guiWidth(), sh = g.guiHeight();
         Waypoints.render(g, accent);
         for (Module m : MODULES.values()) {
