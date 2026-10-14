@@ -50,6 +50,9 @@ key Escape; key Escape; sleep 0.5
 cmd "time set 18000"
 cmd "tp $P 0.5 -60 0.5 160 -38"
 shot sky-starry-night 5
+cmd "tp $P 0.5 -60 0.5 200 -30"
+sleep 1
+burst shooting-stars 6 0.6
 cmd "tp $P 0.5 -60 0.5 180 8"
 shot fireflies 4
 
@@ -67,17 +70,17 @@ key Escape; key Escape; sleep 0.5
 
 # ---- Soft Focus: look at the pink pillar 5 blocks away; the far ones go soft
 cmd "time set 6000"
-find_mod soft
+find_mod focus
 click 213 104          # Soft Focus on
 key Escape; key Escape; sleep 0.5
 cmd "tp $P -1.5 -60 0.5 180 7"
 shot softfocus-depth 3
-find_mod soft
+find_mod focus
 rclick 213 104         # its settings
 click 590 81           # Focus: dreamy edges
 key Escape; key Escape; key Escape; sleep 0.5
 shot softfocus-edges 3
-find_mod soft
+find_mod focus
 click 213 104          # Soft Focus off
 key Escape; key Escape; sleep 0.5
 
@@ -91,8 +94,8 @@ cmd "tp $P 0.5 -60 0.5 180 20"
 cmd "summon pig 0.5 -60 -3 {NoAI:1b,Silent:1b}"
 sleep 1.5
 cmd "kill @e[type=pig]"
-sleep 0.15
-burst afterglow 4 0.25
+sleep 0.05
+burst afterglow 4 0.2
 
 cp "$G/config/catgirl-hud.json" "$OUT/catgirl-hud.json" 2>/dev/null
 grep -iE 'post|shader|soft_focus|catgirl' "$G/logs/latest.log" | grep -iE 'error|fail|warn|exception' | head -40 > "$OUT/visuals-errors.txt"

@@ -39,6 +39,7 @@ final class WorldFx {
     private WorldFx() {}
 
     private static final Random R = new Random();
+    private static final boolean TESTING = Boolean.getBoolean("catgirl.debugClicks"); // the in-game screenshot test
 
     static void tick(Minecraft mc) {
         ClientLevel level = mc.level;
@@ -114,7 +115,7 @@ final class WorldFx {
     private static void burst(ClientLevel level, LivingEntity e, String style, int color) {
         AABB b = e.getBoundingBox();
         double vol = b.getXsize() * b.getYsize() * b.getZsize();
-        int n = Mth.clamp((int) (vol * 22), 12, 44);
+        int n = Mth.clamp((int) (vol * 30), 18, 56);
         for (int i = 0; i < n; i++) {
             double x = Mth.lerp(R.nextDouble(), b.minX, b.maxX), y = Mth.lerp(R.nextDouble(), b.minY, b.maxY), z = Mth.lerp(R.nextDouble(), b.minZ, b.maxZ);
             switch (style) {
@@ -125,8 +126,8 @@ final class WorldFx {
                     level.addParticle(new TrailParticleOption(to, color, 22 + R.nextInt(16)), x, y, z, 0, 0, 0);
                 }
                 default -> {
-                    level.addParticle(new DustParticleOptions(color, 1.1F), x, y, z, (R.nextDouble() - 0.5) * 0.4, 0.3 + R.nextDouble() * 0.6, (R.nextDouble() - 0.5) * 0.4);
-                    if (i % 3 == 0) level.addParticle(ParticleTypes.END_ROD, x, y, z, (R.nextDouble() - 0.5) * 0.02, 0.03 + R.nextDouble() * 0.05, (R.nextDouble() - 0.5) * 0.02);
+                    level.addParticle(new DustParticleOptions(color, 1.7F), x, y, z, (R.nextDouble() - 0.5) * 0.5, 0.5 + R.nextDouble() * 0.9, (R.nextDouble() - 0.5) * 0.5);
+                    if (i % 2 == 0) level.addParticle(ParticleTypes.END_ROD, x, y, z, (R.nextDouble() - 0.5) * 0.03, 0.04 + R.nextDouble() * 0.06, (R.nextDouble() - 0.5) * 0.03);
                 }
             }
         }
@@ -136,7 +137,7 @@ final class WorldFx {
 
     private record Ring(double x, double y, double z, float radius, int color, long born) {}
     private static final List<Ring> RINGS = new ArrayList<>();
-    private static final long RING_NS = 650_000_000L;
+    private static final long RING_NS = 950_000_000L;
     private static boolean wasOnGround = true;
     private static double peakY = 0;
 
@@ -173,7 +174,7 @@ final class WorldFx {
 
     private static void shootingStars(ClientLevel level, LocalPlayer p, float day) {
         if (day > 0.25F || level.getRainLevel(1F) > 0.2F || STARS.size() > 2) return;
-        if (R.nextInt(70) != 0) return;
+        if (R.nextInt(TESTING ? 6 : 70) != 0) return;
         double a = R.nextDouble() * Math.PI * 2, dist = 30 + R.nextDouble() * 14;
         Vec3 from = new Vec3(p.getX() + Math.cos(a) * dist, p.getEyeY() + 26 + R.nextDouble() * 14, p.getZ() + Math.sin(a) * dist);
         double b = a + Math.PI / 2 + (R.nextDouble() - 0.5) * 1.4; // across your view, not at you
@@ -190,19 +191,21 @@ final class WorldFx {
         Vec3 cam = mc.gameRenderer.getMainCamera().position();
         PoseStack ps = ctx.matrices();
         Matrix4f m = ps.last().pose();
-        VertexConsumer vc = ctx.consumers().getBuffer(RenderTypes.lightning());
         long now = System.nanoTime();
+        VertexConsumer vc = ctx.consumers().getBuffer(RenderTypes.debugQuads()); // normal blending: the ring keeps its colour on any ground
 
         for (Iterator<Ring> it = RINGS.iterator(); it.hasNext(); ) {
             Ring r = it.next();
             float t = (now - r.born()) / (float) RING_NS;
             if (t >= 1F) { it.remove(); continue; }
             float ease = 1F - (1F - t) * (1F - t) * (1F - t);
-            float outer = 0.2F + r.radius() * ease;
-            float width = 0.08F + 0.32F * (1F - t);
-            float alpha = (float) Math.pow(1F - t, 1.4) * 0.85F;
+            float outer = 0.3F + r.radius() * ease;
+            float width = 0.18F + 0.5F * (1F - t);
+            float alpha = (float) Math.pow(1F - t, 1.2) * 0.9F;
             ring(vc, m, (float) (r.x() - cam.x), (float) (r.y() - cam.y), (float) (r.z() - cam.z), Math.max(0.05F, outer - width), outer, r.color(), alpha);
         }
+        if (STARS.isEmpty()) return;
+        vc = ctx.consumers().getBuffer(RenderTypes.lightning()); // stars glow (added light) against the night sky
 
         for (Iterator<Star> it = STARS.iterator(); it.hasNext(); ) {
             Star s = it.next();
