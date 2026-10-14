@@ -9,7 +9,8 @@
     "EntityTurnMixin",
     "EnvironmentAttributeProbeMixin",
     "GameRendererAccessor",
-    "MouseScrollMixin"
+    "MouseScrollMixin",
+    "PanoramaRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

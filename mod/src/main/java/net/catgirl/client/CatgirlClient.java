@@ -158,6 +158,7 @@ public class CatgirlClient implements ClientModInitializer {
             if (!(screen instanceof TitleScreen)) return;
             client.getWindow().setTitle(title);
             if (config.splashes) applyCatgirlSplash(screen);
+            List<Placed> scene = TitleScene.on() ? addSceneButtons(screen, width, height) : List.of();
             // Place the menu on the first frame, after every mod has added its own buttons.
             Layout[] layout = {null};
             boolean[] placed = {false};
@@ -174,6 +175,7 @@ public class CatgirlClient implements ClientModInitializer {
                 g.drawString(client.font, sub, width - client.font.width(sub) - 8, 20, soft, true);
 
                 if (layout[0] != null) drawMenuDecor(client, g, layout[0], mouseX, mouseY, accent, soft);
+                for (Placed p : scene) g.renderItem(p.icon(), p.button().getX() + 2, p.button().getY() + 2);
             });
         });
     }
@@ -298,6 +300,28 @@ public class CatgirlClient implements ClientModInitializer {
             }
         }
         return null; // no free space at this window size: skip the menu
+    }
+
+    /** The live main menu's two little buttons, bottom right: time of day, and grow the tree again. */
+    private static List<Placed> addSceneButtons(Screen screen, int width, int height) {
+        List<Placed> out = new ArrayList<>();
+        int y = height - 36;
+        Button time = Button.builder(Component.empty(), b -> {
+                String t = TitleScene.nextTime();
+                b.setTooltip(Tooltip.create(Component.literal("Time of day: " + t)));
+            })
+            .bounds(width - 50, y, 20, 20)
+            .tooltip(Tooltip.create(Component.literal("Time of day: " + Hud.optStr("client", "menuTime"))))
+            .build();
+        Button grow = Button.builder(Component.empty(), b -> { TitleScene.grow(); Ui.sound("bloom"); })
+            .bounds(width - 26, y, 20, 20)
+            .tooltip(Tooltip.create(Component.literal("Grow the tree again")))
+            .build();
+        Screens.getButtons(screen).add(time);
+        Screens.getButtons(screen).add(grow);
+        out.add(new Placed(time, new ItemStack(Items.CLOCK)));
+        out.add(new Placed(grow, new ItemStack(Items.CHERRY_SAPLING)));
+        return out;
     }
 
     private static boolean overlaps(int[] a, int[] b) {
