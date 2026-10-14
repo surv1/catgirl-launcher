@@ -1,0 +1,6 @@
+[17:37:29] [Render thread/WARN]: Removed resource pack fabric from options because it doesn't seem to exist anymore
+[17:37:34] [Download-1/ERROR]: Failed to retrieve profile key pair
+[17:38:08] [Render thread/WARN]: Client disconnected with reason: Back to the menu
+[17:38:21] [Render thread/ERROR]: ########## GL ERROR ##########
+[17:38:21] [Render thread/ERROR]: @ Render
+[17:38:21] [Render thread/ERROR]: 65547: X11: Standard cursor shape unavailable
