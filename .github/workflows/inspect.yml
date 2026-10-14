@@ -10,7 +10,7 @@ on:
         description: "Minecraft version"
         default: "1.21.11"
       classes:
-        description: "Space-separated class names to inspect (end one with ! to see its code; ls:<path prefix> lists game files, res:<path> prints one)"
+        description: "Space-separated class names to inspect (end one with ! to see its code; inner:<class> shows its nested classes' access; ls:<path prefix> lists game files, res:<path> prints one)"
         required: true
 
 permissions:
@@ -57,6 +57,7 @@ jobs:
             case "$C" in
               ls:*) for J in $(find ~/.gradle -name '*.jar' -path '*loom*' | grep -i minecraft); do unzip -l "$J" 2>/dev/null | awk '{print $4}' | grep -E "^${C#ls:}" ; done | sort -u | head -150 >> $F ;;
               res:*) for J in $(find ~/.gradle -name '*.jar' -path '*loom*' | grep -i minecraft); do unzip -p "$J" "${C#res:}" 2>/dev/null && break; done | head -c 6000 >> $F ;;
+              inner:*) javap -v -cp "$JARS" "${C#inner:}" 2>&1 | sed -n '/InnerClasses:/,/^[A-Z]/p' | head -60 >> $F ;;
               *!) javap -p -c -cp "$JARS" "${C%!}" 2>&1 | grep -E 'invoke|getfield|putfield|getstatic|class |public|protected|private|ldc|bipush|sipush|fconst|fmul|fadd|fsub' >> $F ;;
               *Layer) javap -p -c -cp "$JARS" "$C" 2>&1 | grep -E 'invoke|getfield|getstatic|class |public|protected|private' >> $F ;;
               *) javap -p -cp "$JARS" "$C" 2>&1 | grep -v '^Compiled' >> $F ;;
