@@ -1,0 +1,16 @@
+click dial:open at 320 273
+click chip:Visual at 258 88
+right-click card:crosshair at 81 131
+click set:style at 486 114
+click set:style at 486 114
+click set:style at 486 114
+click set:color at 478 202
+click preset:#ff7eb6 at 407 280
+click dial:open at 320 273
+click chip:All at 37 88
+click heart:cps at 363 118
+click chip:Favourites at 122 88
+click chip:On at 67 88
+click chip:All at 37 88
+right-click card:cps at 81 131
+click nav:Settings at 423 26

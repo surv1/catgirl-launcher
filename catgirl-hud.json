@@ -1,0 +1,277 @@
+{
+  "modules": {
+    "fps": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "st_brackets": true,
+        "st_text": "#ffd34d",
+        "colour": true
+      }
+    },
+    "cps": {
+      "on": true,
+      "scale": 1.0
+    },
+    "keys": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "arrows": true,
+        "pressed": "#8ce99a"
+      }
+    },
+    "coords": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "other": true,
+        "biome": true,
+        "decimals": true
+      }
+    },
+    "armour": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "row": true,
+        "dura": "bar",
+        "offhand": true
+      }
+    },
+    "ping": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "st_bgcolor": "#7ec8ff",
+        "st_bgalpha": 0.4
+      }
+    },
+    "clock": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "seconds": true,
+        "date": true
+      }
+    },
+    "nowplaying": {
+      "on": false,
+      "scale": 1.0
+    },
+    "effects": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "compact": true
+      }
+    },
+    "direction": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "degrees": true
+      }
+    },
+    "day": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "time": true
+      }
+    },
+    "server": {
+      "on": true,
+      "scale": 1.0
+    },
+    "speed": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "unit": "km/h"
+      }
+    },
+    "items": {
+      "on": true,
+      "scale": 1.0
+    },
+    "reach": {
+      "on": true,
+      "scale": 1.0
+    },
+    "combo": {
+      "on": true,
+      "scale": 1.0
+    },
+    "memory": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "st_bg": false,
+        "st_shadow": true
+      }
+    },
+    "stopwatch": {
+      "on": true,
+      "scale": 1.0
+    },
+    "packs": {
+      "on": true,
+      "scale": 1.0
+    },
+    "saturation": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "number": true
+      }
+    },
+    "crosshair": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "style": "dot",
+        "thickness": 2,
+        "targetOn": true,
+        "target": "#ff8a8a",
+        "color": "#ff7eb6"
+      }
+    },
+    "scoreboard": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "size": 0.7
+      }
+    },
+    "bossbar": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "size": 0.7
+      }
+    },
+    "fullbright": {
+      "on": true,
+      "scale": 1.0
+    },
+    "time": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "time": 18000
+      }
+    },
+    "weather": {
+      "on": true,
+      "scale": 1.0
+    },
+    "nohurtcam": {
+      "on": true,
+      "scale": 1.0
+    },
+    "particles": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "amount": 4
+      }
+    },
+    "snaplook": {
+      "on": true,
+      "scale": 1.0
+    },
+    "sneak": {
+      "on": false,
+      "scale": 1.0
+    },
+    "sprint": {
+      "on": false,
+      "scale": 1.0
+    },
+    "zoom": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "fov": 10
+      }
+    },
+    "freelook": {
+      "on": true,
+      "scale": 1.0
+    },
+    "minimap": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "players": true,
+        "waypoints": true
+      }
+    },
+    "waypoints": {
+      "on": true,
+      "scale": 1.0
+    },
+    "hitcolor": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "color": "#40c8ff",
+        "strength": 0.8
+      }
+    },
+    "shulker": {
+      "on": true,
+      "scale": 1.0
+    },
+    "mousetweaks": {
+      "on": true,
+      "scale": 1.0
+    },
+    "dynamicfps": {
+      "on": true,
+      "scale": 1.0
+    },
+    "outline": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "rainbow": true,
+        "width": 4
+      }
+    },
+    "sky": {
+      "on": false,
+      "scale": 1.0
+    },
+    "ambience": {
+      "on": false,
+      "scale": 1.0
+    },
+    "mist": {
+      "on": false,
+      "scale": 1.0
+    },
+    "softfocus": {
+      "on": false,
+      "scale": 1.0
+    },
+    "landing": {
+      "on": false,
+      "scale": 1.0
+    },
+    "afterglow": {
+      "on": false,
+      "scale": 1.0
+    },
+    "client": {
+      "on": true,
+      "scale": 1.0,
+      "opts": {
+        "favs": "cps"
+      }
+    }
+  },
+  "seenNowPlaying": "true",
+  "seenNpPosition": "bottom-right"
+}
