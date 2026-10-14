@@ -120,6 +120,7 @@ public class CatgirlClient implements ClientModInitializer {
         Waypoints.load(FabricLoader.getInstance().getConfigDir().resolve("catgirl-waypoints.json").toFile());
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> { Zoom.stop(client); Features.restoreAll(client); DynamicFps.restore(client); });
         Features.register();
+        net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.END_MAIN.register(WorldFx::render);
         Food.register();
         Addons.load();
         // once every mod has added its keys: don't take a key another mod uses
@@ -145,6 +146,8 @@ public class CatgirlClient implements ClientModInitializer {
             while (waypointKey.consumeClick()) addWaypoint = true;
             Waypoints.tick(client, addWaypoint && client.screen == null);
             HitColor.tick(client);
+            WorldFx.tick(client);
+            SoftFocus.tick(client);
             Cosmetics.tick(tick);
             // Minecraft re-sets its own title now and then; put ours back a few times a second.
             if (tick % 5 == 0 && client.getWindow() != null) client.getWindow().setTitle(title);

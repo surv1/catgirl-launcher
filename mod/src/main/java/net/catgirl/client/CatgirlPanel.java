@@ -33,7 +33,7 @@ import java.util.Set;
 public final class CatgirlPanel extends Screen {
     enum Page { MODS, COSMETICS, SETTINGS }
 
-    private static final String[] CATEGORIES = {"All", "On", "Favourites", "HUD", "PvP", "Visual", "Performance", "Utility"};
+    private static final String[] CATEGORIES = {"All", "On", "Favourites", "HUD", "PvP", "Visual", "World", "Performance", "Utility"};
     private static int lastCategory = 0;
 
     private final int accent;
@@ -645,6 +645,15 @@ public final class CatgirlPanel extends Screen {
                     g.drawString(f, v, right - vw - 6, y + 6, hover ? Ui.MILK : Ui.HAZE, false);
                     Ui.glyph(g, ARROW_R, right - 3, y + 7, hover && !l ? accent : Ui.DIM);
                 }
+                case "style" -> {
+                    String v = Hud.optStr(m.id, st.key());
+                    int vw = f.width(v);
+                    boolean l = hover && mx < right - vw / 2 - 6;
+                    Ui.glyph(g, ARROW_L, right - vw - 16, y + 7, hover && l ? accent : Ui.DIM);
+                    g.drawString(f, v, right - vw - 6, y + 6, hover ? Ui.MILK : Ui.HAZE, false);
+                    Ui.glyph(g, ARROW_R, right - 3, y + 7, hover && !l ? accent : Ui.DIM);
+                    strip(g, right - vw - 50, y + 5, 28, 10, WorldFx.swatch(m.id, v, accent));
+                }
                 case "slider" -> {
                     double v = Hud.optNum(m.id, st.key());
                     String label = sliderLabel(st, v);
@@ -696,6 +705,16 @@ public final class CatgirlPanel extends Screen {
             Ui.round(g, x + w + 3, sy, 3, barH, Ui.BERRY3);
         }
         if (previewW() > 0) renderPreview(g, f, m, mx, my);
+    }
+
+    /** A colour strip (a style's colours blended left to right) with a dark frame. */
+    private static void strip(GuiGraphics g, int x, int y, int w, int h, int[] cols) {
+        Ui.round(g, x - 1, y - 1, w + 2, h + 2, Ui.INK);
+        for (int i = 0; i < w; i++) {
+            float k = cols.length == 1 ? 0 : i / (float) (w - 1) * (cols.length - 1);
+            int a = Math.min(cols.length - 1, (int) k), b = Math.min(cols.length - 1, a + 1);
+            g.fill(x + i, y, x + i + 1, y + h, 0xFF000000 | Sky.mix(cols[a], cols[b], k - a));
+        }
     }
 
     private static final String[] ARROW_L = {"..#", ".##", "###", ".##", "..#"};
@@ -777,7 +796,7 @@ public final class CatgirlPanel extends Screen {
             if (!Ui.in(mx, my, x, y, w, 20)) continue;
             switch (st.type()) {
                 case "bool" -> { boolean v = Hud.optBool(m.id, st.key()); Hud.setOpt(m.id, st.key(), !v); Ui.sound(v ? "off" : "on"); }
-                case "cycle" -> {
+                case "cycle", "style" -> {
                     int vw = this.font.width(Hud.optStr(m.id, st.key()));
                     cycle(m, st, button == 1 || mx < right - vw / 2 - 6 ? -1 : 1);
                 }

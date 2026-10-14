@@ -79,6 +79,9 @@ final class LiveAddons {
         return Class.forName("net.irisshaders.iris.Iris").getMethod("getIrisConfig").invoke(null);
     }
 
+    /** Shaders on through Iris right now (Soft Focus steps aside then). */
+    static boolean shadersOn() { return irisOn(); }
+
     private static boolean irisOn() {
         try {
             Object c = irisApiConfig();

@@ -424,6 +424,88 @@ def _(d):
     text(d, (218, 18), 'z', 36, LILAC)
 
 
+
+def gradient_disc(img, box, top, bottom):
+    """A disc filled with a top-to-bottom gradient (outline drawn separately)."""
+    x0, y0, x1, y1 = box
+    grad = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(grad)
+    for y in range(y0, y1 + 1):
+        k = (y - y0) / max(1, y1 - y0)
+        c = tuple(round(top[i] + (bottom[i] - top[i]) * k) for i in range(3)) + (255,)
+        gd.line([(x0, y), (x1, y)], fill=c)
+    mask = Image.new('L', (S, S), 0)
+    ImageDraw.Draw(mask).ellipse(box, fill=255)
+    img.paste(grad, (0, 0), mask)
+
+
+def petal(d, cx, cy, size, angle, fill):
+    a = math.radians(angle)
+    pts = []
+    for i in range(24):
+        t = math.pi * 2 * i / 24
+        # a teardrop: round at one end, pointed at the other
+        r = size * (0.55 + 0.45 * math.cos(t))
+        x, y = math.cos(t) * r, math.sin(t) * r * 0.62
+        pts.append((cx + x * math.cos(a) - y * math.sin(a), cy + x * math.sin(a) + y * math.cos(a)))
+    poly(d, pts, fill, w=10)
+
+
+@icon('sky')
+def _(d):
+    img = d._image
+    gradient_disc(img, (28, 28, 228, 228), (120, 96, 220), (255, 196, 222))
+    d.ellipse((28, 28, 228, 228), outline=INK, width=W)
+    ell(d, (64, 58, 128, 122), BUTTER, w=8)
+    d.ellipse((84, 50, 144, 110), fill=(130, 104, 222, 255))
+    star(d, 168, 82, 26, CREAM, w=7)
+    star(d, 190, 144, 15, CREAM, w=5)
+    star(d, 104, 170, 11, CREAM, w=4)
+
+
+@icon('ambience')
+def _(d):
+    petal(d, 92, 86, 96, 35, PINK)
+    petal(d, 182, 140, 80, -30, LIGHT)
+    petal(d, 88, 196, 70, 75, DEEP)
+    star(d, 200, 44, 24, BUTTER, w=7)
+
+
+@icon('mist')
+def _(d):
+    d.pieslice((20, 120, 236, 330), 180, 360, fill=LILAC, outline=INK, width=W)
+    for (x0, x1, y, c) in ((34, 170, 70, CREAM), (86, 222, 116, LIGHT), (44, 196, 162, CREAM)):
+        d.rounded_rectangle((x0, y, x1, y + 30), 15, fill=c, outline=INK, width=10)
+
+
+@icon('softfocus')
+def _(d):
+    for (box, c) in (((150, 24, 226, 100), (255, 208, 230, 200)), ((176, 150, 236, 210), (200, 155, 255, 200))):
+        d.ellipse(box, fill=c)
+    ell(d, (30, 44, 200, 214), LILAC)
+    ell(d, (64, 78, 166, 180), DARK, w=10)
+    d.ellipse((86, 98, 120, 132), fill=CREAM)
+    d.arc((44, 58, 186, 200), 200, 250, fill=CREAM, width=10)
+
+
+@icon('landing')
+def _(d):
+    d.ellipse((24, 150, 232, 230), fill=(255, 208, 230, 255), outline=INK, width=W)
+    d.ellipse((70, 168, 186, 212), fill=(255, 126, 182, 255), outline=INK, width=8)
+    poly(d, [(110, 24), (146, 24), (146, 96), (176, 96), (128, 150), (80, 96), (110, 96)], BUTTER, w=10)
+
+
+@icon('afterglow')
+def _(d):
+    heart = [(96, 218), (34, 156), (34, 112), (58, 88), (96, 98), (134, 88), (158, 112), (158, 156)]
+    poly(d, heart, PINK)
+    star(d, 186, 72, 30, BUTTER, w=8)
+    star(d, 214, 150, 16, LIGHT, w=6)
+    star(d, 140, 34, 14, LILAC, w=5)
+    for (x, y, r) in ((178, 118, 7), (160, 178, 6), (208, 30, 6)):
+        d.ellipse((x - r, y - r, x + r, y + r), fill=CREAM)
+
+
 def main(out, preview=None):
     os.makedirs(out, exist_ok=True)
     tiles = []
