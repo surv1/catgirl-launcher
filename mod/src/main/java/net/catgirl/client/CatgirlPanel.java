@@ -22,11 +22,11 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * The full Catgirl menu: a sidebar (Edit HUD, Mods, Cosmetics, Keybinds, Wardrobe, Screenshots,
- * and Catgirl settings under your name) and a page.
+ * The full Catgirl menu: a bar along the top (Mods, Configs, Cosmetics, then Edit HUD, Keybinds,
+ * Wardrobe, Screenshots, and Catgirl settings) and a page under a big title.
  *  - Mods: a searchable grid of cards with categories, an "On" filter and your favourites. Click a
  *    card to switch it, right-click (or the gear) for its settings, the heart to favourite it.
- *  - A mod's settings: every option, with a live preview of HUD pieces and a colour picker.
+ *  - A mod's settings: a card in the middle, every option, a live preview of HUD pieces and a colour picker.
  *  - Cosmetics: your ears, tail and the rest, with a preview of you.
  * Everything eases in and slides (Catgirl settings > Animations turns that off).
  */
@@ -63,6 +63,15 @@ public final class CatgirlPanel extends Screen {
         this.page = page;
     }
 
+    /** Opens the Mods page already searching for some text (typing on the dial). */
+    static CatgirlPanel searching(int accent, String text) {
+        CatgirlPanel p = new CatgirlPanel(accent, Page.MODS);
+        p.search = text;
+        p.searchFocused = true;
+        p.category = 0;
+        return p;
+    }
+
     /** Opens straight onto one mod's settings (back goes to the Mods page). */
     static CatgirlPanel settingsFor(int accent, String id) {
         CatgirlPanel p = new CatgirlPanel(accent, Page.SETTINGS);
@@ -73,11 +82,11 @@ public final class CatgirlPanel extends Screen {
 
     @Override
     protected void init() {
-        pw = Math.min(width - 20, 580);
-        ph = Math.min(height - 20, 330);
+        pw = Math.min(width - 16, 640);
+        ph = Math.min(height - 12, 380);
         px = (width - pw) / 2;
         py = (height - ph) / 2;
-        sb = pw >= 480 ? 118 : 100;
+        sb = 0;
         openedAt = pageAt = System.currentTimeMillis();
         Addons.rescan(true);
         Anim.set("mods.scroll", (float) scroll);
@@ -215,15 +224,17 @@ public final class CatgirlPanel extends Screen {
     }
 
     // ------------------------------------------------------------------ layout
-    private int mainX() { return px + sb + 1; }
-    private int mainW() { return pw - sb - 1; }
-    private int gridTop() { return py + 54; }
+    // The content area runs from mainX() + 12 to mainX() + mainW() - 12; the page starts at top().
+    private int mainX() { return px + 4; }
+    private int mainW() { return pw - 8; }
+    private int top() { return py + 74; }
+    private int gridTop() { return top() + 22; }
     private boolean pending() { return Addons.pendingCount() > 0; }
-    private int gridBottom() { return py + ph - (pending() ? 30 : 8); }
-    private int cols() { return mainW() >= 420 ? 4 : 3; }
-    private static final int GAP = 6;
+    private int gridBottom() { return py + ph - (pending() ? 30 : 10); }
+    private int cols() { return mainW() - 24 >= 520 ? 3 : 2; }
+    private static final int GAP = 8;
     private int cardW() { return (mainW() - 24 - GAP * (cols() - 1)) / cols(); }
-    private int cardH() { return Math.max(50, Math.round(cardW() * 0.68F)); }
+    private int cardH() { return 58; }
 
     private int[] cardBox(int i) {
         int col = i % cols(), row = i / cols();
@@ -237,43 +248,93 @@ public final class CatgirlPanel extends Screen {
         return Math.max(0, rows * (cardH() + GAP) - GAP - (gridBottom() - gridTop()));
     }
 
-    private int[] searchBox() { int w = Math.min(140, mainW() / 3); return new int[] {px + pw - 28 - w, py + 9, w, 16}; }
-    private int[] closeBox() { return new int[] {px + pw - 21, py + 11, 12, 12}; }
+    private int[] searchBox() { int w = Math.min(130, mainW() / 4); return new int[] {px + pw - 16 - w, top(), w, 16}; }
+    private int[] closeBox() { return new int[] {px + pw - 24, py + 14, 12, 12}; }
 
     private int[] chipBox(int i) {
         int x = mainX() + 12;
         for (int j = 0; j < i; j++) x += chipW(j) + 4;
-        return new int[] {x, py + 33, chipW(i), 14};
+        return new int[] {x, top(), chipW(i), 16};
     }
-    private int chipW(int i) { return this.font.width(CATEGORIES[i]) + 12 + (CATEGORIES[i].equals("Favourites") ? 9 : 0); }
+    private int chipW(int i) { return this.font.width(CATEGORIES[i]) + 14 + (CATEGORIES[i].equals("Favourites") ? 9 : 0); }
     private int chipsShown() {
-        int n = 0;
-        for (int i = 0; i < CATEGORIES.length; i++) { int[] b = chipBox(i); if (b[0] + b[2] > px + pw - 10) break; n++; }
+        int n = 0, limit = searchBox()[0] - 6;
+        for (int i = 0; i < CATEGORIES.length; i++) { int[] b = chipBox(i); if (b[0] + b[2] > limit) break; n++; }
         return n;
     }
 
-    private record Side(String label, String[] glyph, String action) {}
-    private static final Side[] SIDE = {
-        new Side("Edit HUD", Ui.G_HUD, "hud"),
+    /** The bar along the top: the pages, then things that open somewhere else, then Catgirl settings. */
+    private record Nav(String label, String[] glyph, String action) {}
+    private static final Nav[] NAV = {
+        new Nav("Mods", Ui.G_MODS, "mods"),
+        new Nav("Configs", Ui.G_CONFIGS, "configs"),
+        new Nav("Cosmetics", Ui.G_HEART, "cosmetics"),
         null,
-        new Side("Mods", Ui.G_MODS, "mods"),
-        new Side("Configs", Ui.G_CONFIGS, "configs"),
-        new Side("Cosmetics", Ui.G_HEART, "cosmetics"),
-        new Side("Keybinds", Ui.G_KEYS, "keys"),
+        new Nav("Edit HUD", Ui.G_HUD, "hud"),
+        new Nav("Keybinds", Ui.G_KEYS, "keys"),
+        new Nav("Wardrobe", Ui.G_SHIRT, "wardrobe"),
+        new Nav("Screenshots", Ui.G_PICTURE, "screenshots"),
         null,
-        new Side("Wardrobe", Ui.G_SHIRT, "wardrobe"),
-        new Side("Screenshots", Ui.G_PICTURE, "screenshots"),
+        new Nav("Settings", Ui.G_GEAR, "settings"),
     };
-    private static final String[] SECTIONS = {"MODS & LOOKS", "YOU"};
+    private static final int NAV_H = 24, NAV_ICON = 18;
 
-    /** y of each sidebar row (and of the section labels, for the nulls). */
-    private int sideY(int i) { return py + 36 + i * 18 + (i >= 1 ? 2 : 0) + (i >= 6 ? 2 : 0); }
-    private int[] gearBox() { return new int[] {px + sb - 20, py + ph - 24, 14, 14}; }
+    /** The page whose tab is lit (a mod's settings count as Mods; Catgirl settings as Settings). */
+    private String activeNav() {
+        if (page == Page.SETTINGS) return "client".equals(settingsFor) ? "settings" : settingsFrom == Page.COSMETICS ? "cosmetics" : "mods";
+        return switch (page) { case CONFIGS -> "configs"; case COSMETICS -> "cosmetics"; default -> "mods"; };
+    }
+
+    private int navItemW(Nav n) {
+        return n.action().equals(activeNav()) ? NAV_ICON + this.font.width(n.label()) + 10 : NAV_ICON;
+    }
+
+    /** x, y, w, h of each item of the top bar (null for the gaps), and the bar itself last. */
+    private int[][] navBoxes() {
+        int w = 6;
+        for (Nav n : NAV) w += n == null ? 9 : navItemW(n) + 4;
+        w += 2;
+        int x = px + (pw - w) / 2, y = py + 8;
+        int[][] out = new int[NAV.length + 1][];
+        int cx = x + 6;
+        for (int i = 0; i < NAV.length; i++) {
+            if (NAV[i] == null) { cx += 9; continue; }
+            int iw = navItemW(NAV[i]);
+            out[i] = new int[] {cx, y + (NAV_H - NAV_ICON) / 2, iw, NAV_ICON};
+            cx += iw + 4;
+        }
+        out[NAV.length] = new int[] {x, y, w, NAV_H};
+        return out;
+    }
+
+    private void navAction(String a) {
+        Ui.click();
+        switch (a) {
+            case "mods" -> go(Page.MODS);
+            case "configs" -> go(Page.CONFIGS);
+            case "cosmetics" -> go(Page.COSMETICS);
+            case "settings" -> { if (page == Page.SETTINGS && "client".equals(settingsFor)) back(); else openSettings("client"); }
+            case "hud" -> minecraft.setScreen(new HudEditorScreen(this, accent));
+            case "keys" -> minecraft.setScreen(new KeyBindsScreen(this, minecraft.options));
+            case "wardrobe" -> { CatgirlClient.openWardrobe(); minecraft.setScreen(null); }
+            case "screenshots" -> { CatgirlClient.openFolder("screenshots"); minecraft.setScreen(null); }
+            default -> {}
+        }
+    }
 
     // ------------------------------------------------------------------ drawing
     @Override
     public void render(GuiGraphics g, int mx, int my, float delta) {
         super.render(g, mx, my, delta);
+        Ui.glass = Ui.glassStyle();
+        try {
+            draw(g, mx, my);
+        } finally {
+            Ui.glass = false;
+        }
+    }
+
+    private void draw(GuiGraphics g, int mx, int my) {
         Font f = this.font;
         long now = System.currentTimeMillis();
         // pop in: grows from 94% and drops into place
@@ -284,113 +345,192 @@ public final class CatgirlPanel extends Screen {
         g.pose().scale(s, s);
         g.pose().translate(-width / 2F, -height / 2F);
 
-        // soft glow of your theme colour behind the panel
-        for (int i = 3; i >= 1; i--) Ui.round(g, px - i * 2, py - i * 2, pw + i * 4, ph + i * 4, Ui.alpha(accent, (int) (10 * k)));
-        Ui.panel(g, px, py, pw, ph, 0xF61D1026, Ui.BERRY3);
-        g.fillGradient(px + 1, py + 1, px + sb, py + ph - 1, 0xF6170C1E, 0xF6120816);
-        g.fill(px + sb, py + 1, px + sb + 1, py + ph - 1, Ui.BERRY2);
-        renderSidebar(g, f, mx, my, now);
+        boolean modal = page == Page.SETTINGS;
+        Page base = !modal ? page : settingsFrom == Page.COSMETICS ? Page.COSMETICS : settingsFrom == Page.CONFIGS ? Page.CONFIGS : Page.MODS;
+        int bmx = modal ? -1000 : mx, bmy = modal ? -1000 : my;   // nothing under the settings card reacts to the mouse
 
-        // header
+        // the panel: see-through glass in the glass style, with a soft glow of your colour around it
+        if (Ui.glass) {
+            for (int i = 3; i >= 1; i--) Glass.fill(g, px - i * 2, py - i * 2, pw + i * 4, ph + i * 4, 14 + i * 2, Ui.alpha(accent, (int) (9 * k)));
+            Ui.panel(g, px, py, pw, ph, Ui.alpha(Ui.mix(Glass.base(accent), Ui.INK, 0.62F), 0xD8), Glass.rim(accent));
+        } else {
+            for (int i = 3; i >= 1; i--) Ui.round(g, px - i * 2, py - i * 2, pw + i * 4, ph + i * 4, Ui.alpha(accent, (int) (10 * k)));
+            Ui.panel(g, px, py, pw, ph, 0xF61D1026, Ui.BERRY3);
+        }
+        renderNav(g, f, bmx, bmy, now);
+
+        // the title: big, with a line under it
         int tx = mainX() + 12;
         String title, sub;
-        if (page == Page.MODS) {
-            List<Card> all = allCards();
-            long on = all.stream().filter(this::isOn).count();
-            title = "Mods";
-            sub = all.size() + " mods · " + on + " on";
-        } else if (page == Page.COSMETICS) {
+        if (base == Page.MODS) {
+            title = CATEGORIES[category].equals("All") ? "Mods" : CATEGORIES[category];
+            sub = switch (CATEGORIES[category]) {
+                case "On" -> "what you have switched on";
+                case "Favourites" -> "the ones you love";
+                case "HUD" -> "what's on your screen";
+                case "PvP" -> "for the fight";
+                case "Visual" -> "how the game looks";
+                case "World" -> "see the world in a different light";
+                case "Performance" -> "smooth and fast";
+                case "Utility" -> "handy things";
+                default -> "everything Catgirl can do";
+            };
+        } else if (base == Page.COSMETICS) {
             title = "Cosmetics";
             sub = "what everyone sees on you";
-        } else if (page == Page.CONFIGS) {
+        } else {
             title = "Configs";
             sub = "save your setups and switch in one click";
-        } else {
-            Hud.Module m = Hud.MODULES.get(settingsFor);
-            title = m.name;
-            sub = desc(m);
-            boolean hb = Ui.in(mx, my, mainX() + 6, py + 6, f.width(title) + 30, 22);
-            float bk = Anim.to("back.hover", hb ? 1 : 0, 18);
-            Ui.glyph(g, Ui.G_BACK, tx - Math.round(bk * 2), py + 13, Ui.mix(Ui.HAZE, accent, bk));
-            tx += 12;
         }
         float pk = Anim.since(pageAt, 200);
         int slide = Math.round((1 - pk) * 10);
-        g.drawString(f, Component.literal(title).withStyle(ChatFormatting.BOLD), tx + slide, py + 10, Ui.MILK, false);
-        Ui.small(g, sub, tx + slide, py + 21, Ui.DIM);
+        g.pose().pushMatrix();
+        g.pose().translate(tx + slide, py + 40);
+        g.pose().scale(1.6F, 1.6F);
+        g.drawString(f, Component.literal(title).withStyle(ChatFormatting.BOLD), 0, 0, Ui.MILK, false);
+        g.pose().popMatrix();
+        Ui.small(g, sub, tx + slide, py + 58, Ui.HAZE);
+        if (base == Page.MODS) {
+            List<Card> all = allCards();
+            long on = all.stream().filter(this::isOn).count();
+            String count = on + " of " + all.size() + " on";
+            int cw = Ui.smallWidth(count) + 18, cx = px + pw - 16 - cw;
+            Ui.round(g, cx, py + 45, cw, 12, Ui.alpha(Ui.INK, 0x90));
+            Ui.disc(g, cx + 7, py + 51, 2, accent);
+            Ui.small(g, count, cx + 12, py + 48, Ui.HAZE);
+        }
         int[] c = closeBox();
-        boolean ch = Ui.in(mx, my, c[0] - 2, c[1] - 2, c[2] + 4, c[3] + 4);
-        if (ch) Ui.round(g, c[0] - 2, c[1] - 2, c[2] + 4, c[3] + 4, Ui.BERRY2);
+        boolean ch = Ui.in(bmx, bmy, c[0] - 3, c[1] - 3, c[2] + 6, c[3] + 6);
+        if (ch) Ui.round(g, c[0] - 3, c[1] - 3, c[2] + 6, c[3] + 6, Ui.BERRY2);
         Ui.glyph(g, Ui.G_CLOSE, c[0] + 2, c[1] + 2, ch ? accent : Ui.HAZE);
 
         g.pose().pushMatrix();
         g.pose().translate(slide, 0);
-        if (page == Page.MODS) renderMods(g, f, mx - slide, my, now);
-        else if (page == Page.SETTINGS) renderSettings(g, f, mx - slide, my);
-        else if (page == Page.CONFIGS) { configs.layout(mainX() + 12, py + 34, mainW() - 24, ph - 34 - 8); configs.render(g, f, mx - slide, my, accent, now); }
-        else renderCosmetics(g, f, mx - slide, my);
+        if (base == Page.MODS) renderMods(g, f, bmx - slide, bmy, now);
+        else if (base == Page.CONFIGS) { configs.layout(mainX() + 12, top(), mainW() - 24, py + ph - 10 - top()); configs.render(g, f, bmx - slide, bmy, accent, now); }
+        else renderCosmetics(g, f, bmx - slide, bmy);
         g.pose().popMatrix();
+
+        if (modal) {
+            float mk = Anim.since(pageAt, 180);
+            Glass.fill(g, px, py, pw, ph, 12, Ui.alpha(0xFF0A0510, (int) (0x90 * mk)));
+            renderSettings(g, f, mx, my);
+        }
         g.pose().popMatrix();
 
         if (page == Page.MODS) renderTooltip(g, f, mx, my, now);
+        if (!modal) renderNavTip(g, f, mx, my);
         picker.render(g, mx, my, accent);
+        if (CatgirlClient.TESTING) logLayout();
     }
 
-    private void renderSidebar(GuiGraphics g, Font f, int mx, int my, long now) {
-        g.pose().pushMatrix();
-        g.pose().translate(px + 9, py + 10);
-        Ui.cat(g, 0, 0, accent, now);
-        g.pose().popMatrix();
-        g.drawString(f, Component.literal("Catgirl").withStyle(ChatFormatting.BOLD), px + 29, py + 14, accent, false);
+    // ------------------------------------------------------------------ for the screenshot tests
+    private String loggedLayout = "";
 
-        // the highlight glides to the page you're on
-        int activeRow = -1;
-        for (int i = 0; i < SIDE.length; i++) {
-            if (SIDE[i] == null) continue;
-            String a = SIDE[i].action();
-            boolean settingsFromMods = page == Page.SETTINGS && !"client".equals(settingsFor) && settingsFrom == Page.MODS;
-            if ((a.equals("mods") && (page == Page.MODS || settingsFromMods)) || (a.equals("cosmetics") && page == Page.COSMETICS)
-                || (a.equals("configs") && page == Page.CONFIGS)) activeRow = i;
+    private static void logBox(String label, int x, int y, int w, int h) {
+        CatgirlClient.LOG.info("[Catgirl] widget \"{}\" {} {} {} {}", label, x, y, w, h);
+    }
+
+    /** Where everything clickable is, written to the log whenever it moves (tests click by name). */
+    private void logLayout() {
+        String sig = page + "|" + category + "|" + search + "|" + settingsFor + "|" + width + "x" + height + "|" + Math.round(scroll) + "|"
+            + Math.round(setScroll) + "|" + cards().size() + "|" + configs.layoutKey() + "|" + favs();
+        if (sig.equals(loggedLayout)) return;
+        loggedLayout = sig;
+        int[][] nb = navBoxes();
+        for (int i = 0; i < NAV.length; i++) if (NAV[i] != null) logBox("nav:" + NAV[i].label(), nb[i][0], nb[i][1], nb[i][2], nb[i][3]);
+        int[] c = closeBox();
+        logBox("close", c[0], c[1], c[2], c[3]);
+        if (page == Page.MODS) {
+            for (int i = 0; i < chipsShown(); i++) { int[] b = chipBox(i); logBox("chip:" + CATEGORIES[i], b[0], b[1], b[2], b[3]); }
+            int[] sbx = searchBox();
+            logBox("search", sbx[0], sbx[1], sbx[2], sbx[3]);
+            List<Card> list = cards();
+            for (int i = 0; i < list.size(); i++) {
+                int col = i % cols(), row = i / cols();
+                int x = mainX() + 12 + col * (cardW() + GAP), y = gridTop() + row * (cardH() + GAP) - (int) Math.round(scroll);
+                if (y + cardH() < gridTop() || y > gridBottom()) continue;
+                int[] b = {x, y, cardW(), cardH()};
+                Card card = list.get(i);
+                logBox("card:" + card.key(), x, y, b[2], b[3]);
+                logBox("card#" + i, x, y, b[2], b[3]);
+                int[] fb = cardHeart(b, hasSettings(card) || irisGear(card)), gb = cardGear(b);
+                logBox("heart:" + card.key(), fb[0], fb[1], fb[2], fb[3]);
+                if (hasSettings(card)) logBox("gear:" + card.key(), gb[0], gb[1], gb[2], gb[3]);
+            }
+        } else if (page == Page.SETTINGS) {
+            Hud.Module m = Hud.MODULES.get(settingsFor);
+            int[] mc = modalClose();
+            logBox("set:close", mc[0], mc[1], mc[2], mc[3]);
+            logBox("set:on", setX(), setRowY(0), setW(), 20);
+            for (int i = 0; i < m.settings.size(); i++) logBox("set:" + m.settings.get(i).key(), setX(), setRowY(i + 1), setW(), 20);
+            if (previewW() > 0) {
+                int[] b = previewBox();
+                logBox("set:move", b[0], b[1] + b[3] + 6, b[2], 16);
+                logBox("set:reset", b[0], b[1] + b[3] + 26, b[2], 16);
+            } else {
+                logBox("set:reset", setX(), setRowY(m.settings.size() + 1) + 4, 70, 16);
+            }
+        } else if (page == Page.CONFIGS) {
+            configs.logLayout();
         }
-        if (activeRow >= 0) {
-            float ay = Anim.to("side.y", sideY(activeRow), 16);
-            int y = Math.round(ay);
-            Ui.round(g, px + 5, y, sb - 10, 16, Ui.mix(accent, Ui.PLUM, 0.74F));
-            g.fill(px + 5, y + 3, px + 7, y + 13, accent);
+    }
+
+    private void renderNav(GuiGraphics g, Font f, int mx, int my, long now) {
+        // Catgirl, top left
+        int[][] nb = navBoxes();
+        int[] bar = nb[NAV.length];
+        if (bar[0] > px + 96) {
+            g.pose().pushMatrix();
+            g.pose().translate(px + 12, py + 13);
+            Ui.cat(g, 0, 0, accent, now);
+            g.pose().popMatrix();
+            g.drawString(f, Component.literal("Catgirl").withStyle(ChatFormatting.BOLD), px + 32, py + 17, accent, false);
         }
-        for (int i = 0, sec = 0; i < SIDE.length; i++) {
-            int y = sideY(i);
-            if (SIDE[i] == null) { Ui.small(g, SECTIONS[sec++], px + 10, y + 6, Ui.DIM); continue; }
-            Side e = SIDE[i];
-            boolean active = i == activeRow;
-            boolean hover = Ui.in(mx, my, px + 5, y, sb - 10, 16);
-            float hk = Anim.to("side.h" + i, hover && !active ? 1 : 0, 18);
-            if (hk > 0.02F && !active) Ui.round(g, px + 5, y, sb - 10, 16, Ui.alpha(Ui.BERRY2, (int) (255 * hk)));
-            int col = active ? Ui.MILK : Ui.mix(Ui.HAZE, Ui.MILK, hk);
-            Ui.glyph(g, e.glyph(), px + 12 + Math.round(hk), y + 5, active ? accent : col);
-            g.drawString(f, e.label(), px + 24 + Math.round(hk), y + 4, col, false);
+        Ui.round(g, bar[0], bar[1], bar[2], bar[3], Ui.alpha(Ui.INK, 0xA0));
+        Ui.roundFrame(g, bar[0], bar[1], bar[2], bar[3], Ui.glass ? Glass.rim(accent) : Ui.BERRY2);
+        String active = activeNav();
+        for (int i = 0; i < NAV.length; i++) {
+            if (NAV[i] == null) {
+                int gx = nb[i - 1][0] + nb[i - 1][2] + 4 + 2;
+                g.fill(gx, bar[1] + 7, gx + 1, bar[1] + bar[3] - 7, Ui.alpha(Ui.HAZE, 0x50));
+                continue;
+            }
+            Nav n = NAV[i];
+            int[] b = nb[i];
+            boolean on = n.action().equals(active), hover = Ui.in(mx, my, b[0], b[1], b[2], b[3]);
+            float hk = Anim.to("nav.h" + i, hover ? 1 : 0, 18);
+            if (on) {
+                Ui.round(g, b[0], b[1], b[2], b[3], Ui.alpha(accent, 0xE8));
+                Ui.glyph(g, n.glyph(), b[0] + 6, b[1] + 6, Ui.INK);
+                g.drawString(f, n.label(), b[0] + NAV_ICON + 2, b[1] + 5, Ui.INK, false);
+            } else {
+                if (hk > 0.02F) Ui.round(g, b[0], b[1], b[2], b[3], Ui.alpha(Ui.BERRY3, (int) (220 * hk)));
+                Ui.glyph(g, n.glyph(), b[0] + 6, b[1] + 6, Ui.mix(Ui.HAZE, Ui.MILK, hk));
+            }
         }
-        // you, at the bottom, with the Catgirl settings gear
-        int by = py + ph - 30;
-        g.fill(px + 1, by, px + sb, by + 1, Ui.BERRY2);
-        if (minecraft.player != null) {
-            PlayerFaceRenderer.draw(g, minecraft.player.getSkin(), px + 8, by + 7, 16);
-            String name = minecraft.player.getName().getString();
-            g.drawString(f, name.length() > 11 ? name.substring(0, 11) : name, px + 29, by + 7, Ui.MILK, false);
+    }
+
+    /** The name of a top-bar icon you're pointing at. */
+    private void renderNavTip(GuiGraphics g, Font f, int mx, int my) {
+        int[][] nb = navBoxes();
+        String active = activeNav();
+        for (int i = 0; i < NAV.length; i++) {
+            if (NAV[i] == null || NAV[i].action().equals(active)) continue;
+            int[] b = nb[i];
+            if (!Ui.in(mx, my, b[0], b[1], b[2], b[3])) continue;
+            String t = NAV[i].label();
+            int w = f.width(t) + 10, x = b[0] + b[2] / 2 - w / 2, y = b[1] + b[3] + 6;
+            Ui.round(g, x, y, w, 14, 0xF0140A18);
+            g.drawString(f, t, x + 5, y + 3, Ui.MILK, false);
         }
-        Ui.small(g, CatgirlClient.versionShort(), px + 29, by + 18, Ui.DIM);
-        int[] gb = gearBox();
-        boolean gh = Ui.in(mx, my, gb[0], gb[1], gb[2], gb[3]);
-        boolean gOn = page == Page.SETTINGS && "client".equals(settingsFor);
-        if (gh || gOn) Ui.round(g, gb[0], gb[1], gb[2], gb[3], gOn ? Ui.mix(accent, Ui.PLUM, 0.6F) : Ui.BERRY2);
-        Ui.glyph(g, Ui.G_GEAR, gb[0] + 4, gb[1] + 4, gh || gOn ? Ui.MILK : Ui.HAZE);
     }
 
     private void renderMods(GuiGraphics g, Font f, int mx, int my, long now) {
         // search
         int[] sbx = searchBox();
         float fk = Anim.to("search.focus", searchFocused ? 1 : 0, 16);
-        Ui.round(g, sbx[0], sbx[1], sbx[2], sbx[3], 0xFF140A18);
+        Ui.round(g, sbx[0], sbx[1], sbx[2], sbx[3], Ui.glass ? Ui.alpha(Ui.INK, 0xB0) : 0xFF140A18);
         Ui.roundFrame(g, sbx[0], sbx[1], sbx[2], sbx[3], Ui.mix(Ui.BERRY3, accent, fk));
         Ui.glyph(g, Ui.G_SEARCH, sbx[0] + 5, sbx[1] + 5, Ui.mix(Ui.DIM, accent, fk));
         String shown = search.isEmpty() && !searchFocused ? "Search mods..." : search + (searchFocused && (now / 500) % 2 == 0 ? "_" : "");
@@ -407,12 +547,12 @@ public final class CatgirlPanel extends Screen {
             int[] b = chipBox(i);
             boolean sel = i == category, hover = Ui.in(mx, my, b[0], b[1], b[2], b[3]);
             if (!sel) {
-                if (hover) Ui.round(g, b[0], b[1], b[2], b[3], Ui.BERRY2);
+                if (hover || Ui.glass) Ui.round(g, b[0], b[1], b[2], b[3], Ui.glass ? Ui.alpha(Ui.BERRY2, hover ? 0xE0 : 0x80) : Ui.BERRY2);
                 Ui.roundFrame(g, b[0], b[1], b[2], b[3], hover ? Ui.mix(Ui.BERRY3, accent, 0.4F) : Ui.BERRY2);
             }
-            int tx = b[0] + 6;
-            if (CATEGORIES[i].equals("Favourites")) { Ui.glyph(g, Ui.G_FAV_ON, tx, b[1] + 4, sel ? Ui.INK : 0xFFFF8AB8); tx += 9; }
-            g.drawString(f, CATEGORIES[i], tx, b[1] + 3, sel ? Ui.INK : (hover ? Ui.MILK : Ui.HAZE), false);
+            int tx = b[0] + 7;
+            if (CATEGORIES[i].equals("Favourites")) { Ui.glyph(g, Ui.G_FAV_ON, tx, b[1] + 5, sel ? Ui.INK : 0xFFFF8AB8); tx += 9; }
+            g.drawString(f, CATEGORIES[i], tx, b[1] + 4, sel ? Ui.INK : (hover ? Ui.MILK : Ui.HAZE), false);
         }
 
         // cards
@@ -432,8 +572,10 @@ public final class CatgirlPanel extends Screen {
         }
         g.disableScissor();
         // fade the edges of the scrolling grid
-        if (shownScroll > 1) g.fillGradient(mainX() + 1, top - 2, px + pw - 1, top + 6, 0xF61D1026, 0x001D1026);
-        if (shownScroll < maxScroll() - 1) g.fillGradient(mainX() + 1, bottom - 8, px + pw - 1, bottom, 0x001D1026, 0xF61D1026);
+        if (!Ui.glass) {
+            if (shownScroll > 1) g.fillGradient(mainX() + 1, top - 2, px + pw - 1, top + 6, 0xF61D1026, 0x001D1026);
+            if (shownScroll < maxScroll() - 1) g.fillGradient(mainX() + 1, bottom - 8, px + pw - 1, bottom, 0x001D1026, 0xF61D1026);
+        }
         if (!hovered_equals(hovered)) { hoverKey = hovered; hoverSince = now; }
 
         if (list.isEmpty()) {
@@ -479,6 +621,12 @@ public final class CatgirlPanel extends Screen {
         return new int[] {bx + bw - w - 2, by + 2, w, 14};
     }
 
+    // where things sit on a card (x, y, w, h), from its box
+    private int[] cardToggle(int[] b) { return new int[] {b[0] + b[2] - 26, b[1] + 11, 18, 10}; }
+    private int[] cardGear(int[] b) { return new int[] {b[0] + b[2] - 44, b[1] + 9, 14, 14}; }
+    private int[] cardHeart(int[] b, boolean gear) { return new int[] {b[0] + b[2] - (gear ? 60 : 44), b[1] + 9, 14, 14}; }
+
+    /** A card: the mod's picture on a tile, its switch and settings at the top, its name and what it does. */
     private void drawCard(GuiGraphics g, Font f, Card c, int[] b, boolean hover, int mx, int my, int index) {
         boolean on = isOn(c);
         String id = c.key();
@@ -488,53 +636,64 @@ public final class CatgirlPanel extends Screen {
         float in = Anim.since(pageAt + Math.min(index, 12) * 18L, 260);
         int lift = Math.round(hk * 2 + (1 - in) * 8);
         int x = b[0], y = b[1] - lift, w = b[2], h = b[3];
+        int[] bb = {x, y, w, h};
         Addons.State st = c.addon() == null ? null : Addons.state(c.addon());
         boolean pending = st == Addons.State.STARTS_NEXT_TIME || st == Addons.State.STOPS_NEXT_TIME || st == Addons.State.DOWNLOADING;
 
-        if (hk > 0.02F) Ui.round(g, x + 1, y + 3, w, h, Ui.alpha(0xFF000000, (int) (90 * hk)));
-        int body = Ui.mix(Ui.mix(Ui.BERRY, Ui.BERRY2, hk), Ui.mix(accent, Ui.PLUM, 0.8F), ok * 0.85F);
-        Ui.round(g, x, y, w, h, body);
-        g.fillGradient(x + 1, y + 1, x + w - 1, y + h / 2, 0x16FFFFFF, 0x00FFFFFF);
-        int edge = Ui.mix(Ui.mix(Ui.BERRY2, Ui.mix(accent, Ui.BERRY3, 0.45F), hk), accent, ok * 0.9F);
-        Ui.roundFrame(g, x, y, w, h, edge);
+        if (Ui.glass) {
+            int body = Ui.alpha(Ui.mix(Ui.mix(Glass.base(accent), Ui.INK, 0.35F), Ui.mix(Glass.base(accent), accent, 0.3F), ok * 0.8F), Math.round(0x90 + 0x30 * hk));
+            Glass.fill(g, x, y, w, h, 10, body);
+            Glass.ring(g, x, y, w, h, 10, Ui.alpha(Ui.mix(Ui.mix(accent, Ui.MILK, 0.6F), accent, ok), Math.round(0x30 + 0x50 * Math.max(hk, ok))));
+        } else {
+            if (hk > 0.02F) Ui.round(g, x + 1, y + 3, w, h, Ui.alpha(0xFF000000, (int) (90 * hk)));
+            Ui.round(g, x, y, w, h, Ui.mix(Ui.mix(Ui.BERRY, Ui.BERRY2, hk), Ui.mix(accent, Ui.PLUM, 0.8F), ok * 0.85F));
+            Ui.roundFrame(g, x, y, w, h, Ui.mix(Ui.mix(Ui.BERRY2, Ui.mix(accent, Ui.BERRY3, 0.45F), hk), accent, ok * 0.9F));
+        }
 
-        // picture, bobbing up a touch when you point at it
-        int isz = c.addon() != null ? 26 : 30;
-        int iy = y + 8 + Math.round((h - 34 - isz) / 2F) - Math.round(hk * 2);
-        Ui.modIcon(g, Ui.iconPath(id), c.icon(), x + w / 2 - isz / 2, Math.max(y + 4, iy), isz);
+        // the picture on a little tile that lights up in your colour when it's on
+        int ts = 26, tx = x + 8, ty = y + 7;
+        Ui.round(g, tx, ty, ts, ts, Ui.alpha(Ui.mix(Ui.INK, accent, ok * 0.85F), Math.round(0xA0 + 0x40 * ok)));
+        int isz = 18;
+        Ui.modIcon(g, Ui.iconPath(id), c.icon(), tx + (ts - isz) / 2, ty + (ts - isz) / 2 - Math.round(hk), isz);
 
-        // name and switch along the bottom
-        int ny = y + h - 13;
-        String name = c.name();
-        int room = w - 32;
-        while (f.width(name) > room && name.length() > 3) name = name.substring(0, name.length() - 1);
-        if (!name.equals(c.name())) name = name.substring(0, Math.max(1, name.length() - 1)) + "…";
-        g.drawString(f, name, x + 6, ny, on || hover ? Ui.MILK : Ui.HAZE, false);
+        // switch, settings and favourite along the top right
         boolean switchable = c.addon() == null || LiveAddons.live(c.addon()) || !pending;
-        if (switchable) Ui.toggle(g, x + w - 23, ny - 1, ok, accent, hover);
-        else Ui.glyph(g, Ui.G_DOWN, x + w - 15, ny, Ui.BUTTER);
-
-        // corners: settings gear (left), favourite heart (right)
+        int[] tg = cardToggle(bb);
+        if (switchable) Ui.toggle(g, tg[0], tg[1], ok, accent, hover);
+        else Ui.glyph(g, Ui.G_DOWN, tg[0] + 6, tg[1] + 1, Ui.BUTTER);
         boolean gear = hasSettings(c) || irisGear(c);
         if (gear) {
-            boolean gh = hover && Ui.in(mx, my, x, y, 14, 14);
-            if (gh) Ui.round(g, x + 2, y + 2, 11, 11, Ui.BERRY3);
-            Ui.glyph(g, Ui.G_GEAR, x + 4, y + 4, gh ? accent : Ui.DIM);
-        } else if (c.addon() != null) {
-            boolean loaded = net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded(c.addon().id());
-            Ui.small(g, loaded ? "add-on" : "download", x + 5, y + 5, Ui.DIM);
+            int[] gb = cardGear(bb);
+            boolean gh = hover && Ui.in(mx, my, gb[0], gb[1], gb[2], gb[3]);
+            if (gh) Ui.round(g, gb[0], gb[1], gb[2], gb[3], Ui.BERRY3);
+            Ui.glyph(g, Ui.G_GEAR, gb[0] + 4, gb[1] + 4, gh ? accent : Ui.DIM);
         }
         boolean fav = isFav(id);
         if (fav || hover) {
-            boolean fh = hover && Ui.in(mx, my, x + w - 14, y, 14, 14);
-            Ui.glyph(g, fav ? Ui.G_FAV_ON : Ui.G_FAV, x + w - 11, y + 4, fav ? 0xFFFF8AB8 : (fh ? Ui.MILK : Ui.DIM));
+            int[] fb = cardHeart(bb, gear);
+            boolean fh = hover && Ui.in(mx, my, fb[0], fb[1], fb[2], fb[3]);
+            Ui.glyph(g, fav ? Ui.G_FAV_ON : Ui.G_FAV, fb[0] + 3, fb[1] + 4, fav ? 0xFFFF8AB8 : (fh ? Ui.MILK : Ui.DIM));
+        }
+        if (c.addon() != null && !gear) {
+            boolean loaded = net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded(c.addon().id());
+            String tag = loaded ? "add-on" : "download";
+            Ui.small(g, tag, tg[0] - 8 - Ui.smallWidth(tag) - (fav || hover ? 16 : 0), tg[1] + 2, Ui.DIM);
         }
 
-        String status = status(c, hover);
-        if (!status.isEmpty()) {
-            while (Ui.smallWidth(status) > w - 8 && status.length() > 3) status = status.substring(0, status.length() - 1);
-            Ui.small(g, status, x + (w - Ui.smallWidth(status)) / 2, ny - 10, statusColor(c));
-        }
+        // name and what it does (or an add-on's state)
+        int room = w - 16;
+        String name = c.name();
+        while (f.width(name) > room && name.length() > 3) name = name.substring(0, name.length() - 1);
+        if (!name.equals(c.name())) name = name.substring(0, Math.max(1, name.length() - 1)) + "…";
+        g.drawString(f, Component.literal(name).withStyle(ChatFormatting.BOLD), x + 8, y + h - 21, on || hover ? Ui.MILK : Ui.mix(Ui.HAZE, Ui.MILK, 0.5F), false);
+        String line = status(c, true);
+        int lineColor = statusColor(c);
+        if (line.isEmpty()) line = c.desc();
+        String shown = line;
+        while (Ui.smallWidth(shown) > room && shown.length() > 3) shown = shown.substring(0, shown.length() - 1);
+        if (!shown.equals(line)) shown = shown.substring(0, Math.max(1, shown.length() - 1)) + "…";
+        if (!shown.isEmpty()) shown = Character.toUpperCase(shown.charAt(0)) + shown.substring(1);
+        Ui.small(g, shown, x + 8, y + h - 10, lineColor == Ui.DIM ? Ui.mix(Ui.DIM, Ui.HAZE, 0.4F) : lineColor);
     }
 
     /** After pointing at a card for a moment: what it does and how to use it. */
@@ -569,17 +728,25 @@ public final class CatgirlPanel extends Screen {
     }
 
     // ------------------------------------------------------------------ a mod's settings
-    private int previewW() { return settingsFor != null && Hud.MODULES.get(settingsFor).hud ? Math.min(150, mainW() / 3) : 0; }
-    private int setX() { return mainX() + 12; }
-    private int setW() { int p = previewW(); return mainW() - 24 - (p > 0 ? p + 8 : 0); }
-    private int setRowY(int i) { return i == 0 ? py + 34 : py + 34 + i * 22 - (int) Math.round(shownSetScroll); }
-    private int setTop() { return py + 56; }
-    private int setBottom() { return py + ph - 6; }
+    // The settings card sits in the middle of the menu, over the page you came from.
+    private boolean hudSettings() { return settingsFor != null && Hud.MODULES.get(settingsFor).hud; }
+    private int[] modalBox() {
+        int w = Math.min(pw - 40, hudSettings() ? 470 : 380);
+        int h = ph - 44;
+        return new int[] {px + (pw - w) / 2, py + 34, w, h};
+    }
+    private int previewW() { return hudSettings() ? Math.min(140, modalBox()[2] / 3) : 0; }
+    private int setX() { return modalBox()[0] + 14; }
+    private int setW() { int p = previewW(); return modalBox()[2] - 28 - (p > 0 ? p + 10 : 0); }
+    private int setRowY(int i) { int y0 = modalBox()[1] + 46; return i == 0 ? y0 : y0 + i * 22 - (int) Math.round(shownSetScroll); }
+    private int setTop() { return setRowY(0) + 22; }
+    private int setBottom() { int[] m = modalBox(); return m[1] + m[3] - 8; }
+    private int[] modalClose() { int[] m = modalBox(); return new int[] {m[0] + m[2] - 24, m[1] + 12, 12, 12}; }
     private boolean setVisible(double my) { return my >= setTop() && my < setBottom(); }
 
     /** How far the settings page can scroll. */
     private double maxSetScroll(Hud.Module m) {
-        int bottom = py + 34 + (m.settings.size() + 1) * 22 + 4 + (previewW() > 0 ? 0 : 20);
+        int bottom = setRowY(0) + (m.settings.size() + 1) * 22 + 4 + (previewW() > 0 ? 0 : 20);
         if (m.id.equals("waypoints")) bottom += 24 + 10 + Waypoints.here(minecraft).size() * 14;
         return Math.max(0, bottom + 4 - setBottom());
     }
@@ -604,6 +771,36 @@ public final class CatgirlPanel extends Screen {
         Hud.Module m = Hud.MODULES.get(settingsFor);
         int x = setX(), w = setW();
         boolean client = m.id.equals("client");
+        // the card, rising into place, with the mod's picture, name and what it does
+        int[] mb = modalBox();
+        float rise = Anim.since(pageAt, 200);
+        g.pose().pushMatrix();
+        g.pose().translate(0, Math.round((1 - rise) * 8));
+        if (Ui.glass) {
+            Glass.fill(g, mb[0], mb[1], mb[2], mb[3], 12, Ui.alpha(Ui.mix(Glass.base(accent), Ui.INK, 0.55F), 0xF4));
+            Glass.ring(g, mb[0], mb[1], mb[2], mb[3], 10, Glass.rimHover(accent));
+        } else {
+            Ui.panel(g, mb[0], mb[1], mb[2], mb[3], 0xFA1D1026, Ui.BERRY3);
+        }
+        int ts = 26, tx = mb[0] + 12, ty = mb[1] + 10;
+        Ui.round(g, tx, ty, ts, ts, Ui.alpha(accent, 0xE0));
+        Ui.modIcon(g, Ui.iconPath(m.id), m.icon, tx + 4, ty + 4, 18);
+        g.drawString(f, Component.literal(m.name).withStyle(ChatFormatting.BOLD), tx + ts + 8, ty + 3, Ui.MILK, false);
+        String about = client ? "how the menu looks and feels" : desc(m);
+        while (Ui.smallWidth(about) > mb[2] - ts - 60 && about.length() > 3) about = about.substring(0, about.length() - 1);
+        Ui.small(g, about, tx + ts + 8, ty + 15, Ui.HAZE);
+        int[] mc = modalClose();
+        boolean mch = Ui.in(mx, my, mc[0] - 3, mc[1] - 3, mc[2] + 6, mc[3] + 6);
+        if (mch) Ui.round(g, mc[0] - 3, mc[1] - 3, mc[2] + 6, mc[3] + 6, Ui.BERRY2);
+        Ui.glyph(g, Ui.G_CLOSE, mc[0] + 2, mc[1] + 2, mch ? accent : Ui.HAZE);
+        try {
+            renderSettingsRows(g, f, mx, my, m, x, w, client);
+        } finally {
+            g.pose().popMatrix();
+        }
+    }
+
+    private void renderSettingsRows(GuiGraphics g, Font f, int mx, int my, Hud.Module m, int x, int w, boolean client) {
         // row 0: on/off, with the mod's icon and what it does (Catgirl settings have no on/off)
         int y0 = setRowY(0);
         boolean on = isOn(card(m));
@@ -614,16 +811,16 @@ public final class CatgirlPanel extends Screen {
         if (client) {
             g.drawString(f, "Make the menu yours", x + 25, y0 + 6, Ui.MILK, false);
         } else {
-            g.drawString(f, on ? "On" : "Off", x + 25, y0 + 6, on ? Ui.MILK : Ui.HAZE, false);
+            g.drawString(f, "Enabled", x + 25, y0 + 6, on ? Ui.MILK : Ui.HAZE, false);
             String other = Compat.takenBy(m.id);
-            String note = other != null && !on ? "you have " + other + " for this" : desc(m);
-            Ui.small(g, note, x + 25 + f.width("Off") + 8, y0 + 7, Ui.DIM);
+            String note = other != null && !on ? "you have " + other + " for this" : "turn " + m.name + " on or off";
+            Ui.small(g, note, x + 25 + f.width("Enabled") + 8, y0 + 7, Ui.DIM);
             Ui.toggle(g, x + w - 24, y0 + 5, ok, accent, h0);
         }
 
         setScroll = Math.max(0, Math.min(maxSetScroll(m), setScroll));
         shownSetScroll = Anim.to("set.scroll", (float) setScroll, 18);
-        g.enableScissor(mainX(), setTop(), x + w + 2, setBottom());
+        g.enableScissor(x - 2, setTop(), x + w + 8, setBottom());
         for (int i = 0; i < m.settings.size(); i++) {
             Hud.Setting st = m.settings.get(i);
             int y = setRowY(i + 1);
@@ -736,8 +933,9 @@ public final class CatgirlPanel extends Screen {
 
     /** The right-hand column for HUD pieces: a live preview and the buttons. */
     private int[] previewBox() {
-        int w = previewW(), x = px + pw - 12 - w, y = py + 34;
-        return new int[] {x, y, w, Math.min(110, ph - 34 - 54)};
+        int[] mb = modalBox();
+        int w = previewW(), x = mb[0] + mb[2] - 14 - w, y = setRowY(0);
+        return new int[] {x, y, w, Math.min(110, mb[3] - 46 - 54)};
     }
 
     private void renderPreview(GuiGraphics g, Font f, Hud.Module m, int mx, int my) {
@@ -783,7 +981,9 @@ public final class CatgirlPanel extends Screen {
     private boolean settingsClick(double mx, double my, int button) {
         Hud.Module m = Hud.MODULES.get(settingsFor);
         int x = setX(), w = setW(), right = x + w - 6;
-        if (button == 0 && Ui.in(mx, my, mainX() + 6, py + 6, this.font.width(m.name) + 30, 22)) { back(); return true; }
+        int[] mc = modalClose(), mb = modalBox();
+        if (button == 0 && Ui.in(mx, my, mc[0] - 3, mc[1] - 3, mc[2] + 6, mc[3] + 6)) { back(); return true; }
+        if (button == 0 && !Ui.in(mx, my, mb[0], mb[1], mb[2], mb[3])) { back(); return true; } // a click outside the card closes it
         if (previewW() > 0) {
             int[] b = previewBox();
             int by = b[1] + b[3] + 6;
@@ -873,7 +1073,7 @@ public final class CatgirlPanel extends Screen {
     private static final String[] CAPE_STYLES = {"plain", "paw", "heart", "meow", "catmeow"};
     private static final String[] CAPE_NAMES = {"plain", "paw", "heart", "meow", "mascot"};
 
-    private int cTop() { return py + 36; }
+    private int cTop() { return top(); }
     private int cBottom() { return py + ph - 10; }
     private int cPreviewW() { return Math.min(110, mainW() / 3); }
     private int rowsX() { return mainX() + 12 + cPreviewW() + 10; }
@@ -947,34 +1147,23 @@ public final class CatgirlPanel extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
         double mx = e.x(), my = e.y();
-        if (Boolean.getBoolean("catgirl.debugClicks")) CatgirlClient.LOG.info("[Catgirl] panel click {} {} button {} page {} gear {}", mx, my, e.button(), page, Arrays.toString(gearBox()));
+        if (Boolean.getBoolean("catgirl.debugClicks")) CatgirlClient.LOG.info("[Catgirl] panel click {} {} button {} page {}", mx, my, e.button(), page);
         if (picker.isOpen()) return picker.mouseClicked(mx, my) || true;
         // the pages are drawn slid a little while they appear; clicks use their final spot
 
-        int[] c = closeBox();
-        if (e.button() == 0 && Ui.in(mx, my, c[0] - 2, c[1] - 2, c[2] + 4, c[3] + 4)) { Ui.sound("close"); minecraft.setScreen(null); return true; }
+        // a mod's settings: the card in the middle takes every click (outside it closes it)
+        if (page == Page.SETTINGS) return settingsClick(mx, my, e.button()) || true;
 
-        // sidebar
-        int[] gb = gearBox();
-        if (e.button() == 0 && Ui.in(mx, my, gb[0], gb[1], gb[2], gb[3])) {
-            if (page == Page.SETTINGS && "client".equals(settingsFor)) back(); else openSettings("client");
-            return true;
-        }
-        for (int i = 0; i < SIDE.length; i++) {
-            if (SIDE[i] == null || e.button() != 0) continue;
-            int y = sideY(i);
-            if (!Ui.in(mx, my, px + 5, y, sb - 10, 16)) continue;
-            Ui.click();
-            switch (SIDE[i].action()) {
-                case "hud" -> minecraft.setScreen(new HudEditorScreen(this, accent));
-                case "mods" -> { go(Page.MODS); }
-                case "configs" -> go(Page.CONFIGS);
-                case "cosmetics" -> go(Page.COSMETICS);
-                case "keys" -> minecraft.setScreen(new KeyBindsScreen(this, minecraft.options));
-                case "wardrobe" -> { CatgirlClient.openWardrobe(); minecraft.setScreen(null); }
-                case "screenshots" -> { CatgirlClient.openFolder("screenshots"); minecraft.setScreen(null); }
-                default -> {}
-            }
+        int[] c = closeBox();
+        if (e.button() == 0 && Ui.in(mx, my, c[0] - 3, c[1] - 3, c[2] + 6, c[3] + 6)) { Ui.sound("close"); minecraft.setScreen(null); return true; }
+
+        // the bar along the top
+        int[][] nb = navBoxes();
+        for (int i = 0; i < NAV.length; i++) {
+            if (NAV[i] == null || e.button() != 0) continue;
+            int[] b = nb[i];
+            if (!Ui.in(mx, my, b[0], b[1], b[2], b[3])) continue;
+            if (!NAV[i].action().equals(activeNav()) || NAV[i].action().equals("settings")) navAction(NAV[i].action());
             return true;
         }
 
@@ -1015,8 +1204,10 @@ public final class CatgirlPanel extends Screen {
                     }
                     if (e.button() == 2) { flipFav(card.key()); Ui.click(); return true; } // middle-click: favourite
                     if (e.button() != 0) return true;
-                    if (Ui.in(mx, my, b[0] + b[2] - 14, b[1], 14, 14)) { flipFav(card.key()); Ui.sound(isFav(card.key()) ? "on" : "off"); return true; }
-                    if (Ui.in(mx, my, b[0], b[1], 14, 14)) {
+                    boolean gear = hasSettings(card) || irisGear(card);
+                    int[] fb = cardHeart(b, gear), gb = cardGear(b);
+                    if (Ui.in(mx, my, fb[0], fb[1], fb[2], fb[3])) { flipFav(card.key()); Ui.sound(isFav(card.key()) ? "on" : "off"); return true; }
+                    if (gear && Ui.in(mx, my, gb[0], gb[1], gb[2], gb[3])) {
                         if (hasSettings(card)) { openSettings(card.key()); return true; }
                         if (irisGear(card)) { Ui.click(); LiveAddons.openIrisScreen(this); return true; }
                     }
@@ -1073,7 +1264,7 @@ public final class CatgirlPanel extends Screen {
         if (picker.isOpen() || sy == 0) return true;
         if (page == Page.CONFIGS) return configs.scrolled(mx, my, sy);
         if (page == Page.MODS) {
-            if (my < gridTop() && my >= py + 30) { // over the categories: flick between them
+            if (my < gridTop() && my >= top() - 2) { // over the categories: flick between them
                 int n = chipsShown();
                 category = ((category + (sy < 0 ? 1 : -1)) % n + n) % n;
                 lastCategory = category;

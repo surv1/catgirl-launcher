@@ -327,4 +327,35 @@ final class ConfigsPage {
     }
 
     boolean isRenaming() { return renaming != null; }
+
+    // ------------------------------------------------------------------ for the screenshot tests
+
+    /** Changes whenever something clickable moves. */
+    String layoutKey() {
+        return x + "," + y + "," + w + "," + h + "|" + selected + "|" + Configs.LIST.size() + "|" + (renaming != null) + "|" + Configs.canUndo()
+            + "|" + (System.currentTimeMillis() < deleteArmedUntil) + "|" + Math.round(scroll) + "|" + Configs.inUse;
+    }
+
+    void logLayout() {
+        log("cfg:save", x, y, 112, 16);
+        log("cfg:paste", x + 116, y, 70, 16);
+        for (int i = 0; i < Configs.LIST.size(); i++) {
+            int cy = listTop() + i * (cardH() + 4) - (int) Math.round(scroll);
+            log("cfg:" + Configs.LIST.get(i).name(), x, cy, listW(), cardH());
+        }
+        Configs.Config c = sel();
+        if (c != null) {
+            int bx = detailX() + 6, by = bottom() - 22;
+            for (Btn b : buttons(c)) { log("cfg:" + b.action(), bx, by, b.w(), 16); bx += b.w() + 4; }
+        }
+        if (Configs.canUndo()) {
+            String msg = "Loaded " + Configs.lastLoaded + " · Undo";
+            int mw = net.minecraft.client.Minecraft.getInstance().font.width(msg) + 16;
+            log("cfg:undo", x + (w - mw) / 2, bottom() - 44, mw, 16);
+        }
+    }
+
+    private static void log(String label, int x, int y, int w, int h) {
+        CatgirlClient.LOG.info("[Catgirl] widget \"{}\" {} {} {} {}", label, x, y, w, h);
+    }
 }

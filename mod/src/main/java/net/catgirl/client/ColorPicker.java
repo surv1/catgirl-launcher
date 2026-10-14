@@ -43,6 +43,9 @@ final class ColorPicker {
         dragging = 0;
         openedAt = System.currentTimeMillis();
         Ui.click();
+        if (CatgirlClient.TESTING) // the screenshot tests click the presets by colour
+            for (int i = 0; i < PRESETS.length; i++)
+                CatgirlClient.LOG.info("[Catgirl] widget \"preset:{}\" {} {} 8 8", PRESETS[i], x + 4 + i * 9 + (i >= 6 ? 4 : 0), y + 66);
     }
 
     void close() { open = false; typing = false; dragging = 0; }

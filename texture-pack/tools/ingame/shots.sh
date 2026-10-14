@@ -98,6 +98,23 @@ else
     local f; f=$(ls -t "$G"/screenshots/*.png 2>/dev/null | head -1)
     if [ -n "$f" ]; then mv "$f" "$name"; log "$1"; else import -window root "$name"; log "$1 (X capture)"; fi
   }
+  # GUI scale 2 on a 1280x720 window = 640x360 GUI pixels; these take GUI pixels.
+  click() { xdotool mousemove --window "$WID" $(( $1 * 2 )) $(( $2 * 2 )); sleep 0.3; xdotool click 1; sleep 0.5; }
+  rclick() { xdotool mousemove --window "$WID" $(( $1 * 2 )) $(( $2 * 2 )); sleep 0.3; xdotool click 3; sleep 0.5; }
+  hover() { xdotool mousemove --window "$WID" $(( $1 * 2 )) $(( $2 * 2 )); sleep 0.5; }
+  # Things by name: while testing, the mod logs where each button, card and setting is.
+  where() { grep -a '\[Catgirl\] widget "' "$G/logs/latest.log" | grep -aF "widget \"$1\"" | tail -1 | sed -E 's/.*" (-?[0-9]+) (-?[0-9]+) ([0-9]+) ([0-9]+).*/\1 \2 \3 \4/'; }
+  # at NAME [X]: a point on it; X is a percent across (default 50), or pixels from its right edge if negative
+  at() {
+    local r; r=$(where "$1"); [ -z "$r" ] && { log "no \"$1\" on screen" >&2; return 1; }
+    local x y w h p="${2:-50}"; read -r x y w h <<< "$r"
+    if [ "$p" -lt 0 ]; then echo "$(( x + w + p )) $(( y + h / 2 ))"; else echo "$(( x + w * p / 100 )) $(( y + h / 2 ))"; fi
+  }
+  btn() { local p; p=$(at "$1" "$2") || return 1; click $p; }
+  rbtn() { local p; p=$(at "$1" "$2") || return 1; rclick $p; }
+  point() { local p; p=$(at "$1" "$2") || return 1; hover $p; }
+  # menu PAGE: Right Shift, turn the dial to PAGE (Mods is at the front) and open it
+  menu() { key Shift_R; sleep 1.2; if [ "${1:-Mods}" != "Mods" ]; then btn "dial:$1"; sleep 0.9; fi; btn "dial:open"; sleep 1; }
   source "$HERE/$SCENARIO.sh"
 fi
 kill $CLIENT 2>/dev/null; sleep 2; kill $XVFB 2>/dev/null

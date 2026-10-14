@@ -75,24 +75,23 @@ cmd "item replace entity $P armor.head with diamond_helmet"
 cmd "item replace entity $P armor.chest with diamond_chestplate"
 cmd "item replace entity $P weapon.mainhand with diamond_sword"
 key Shift_R
-shot bloom 1.2
-click 320 118   # the Mods petal
+shot dial 1.2
+btn "dial:open"   # Mods is at the front of the dial
 shot panel-mods 1
-# panel: px=30 py=15 (580x330), sidebar 118; cards 104x71 in 4 columns from (161, 69), 110/77 apart
-for i in 0 1 2 3 4 5 6; do click $(( 213 + (i % 4) * 110 )) $(( 104 + (i / 4) * 77 )); done
+for i in 0 1 2 3 4 5 6; do btn "card#$i" 30; done
 shot panel-mods-on 1
 xdotool type --delay 80 apple
 shot panel-search 1
-click 213 104   # Food Info, the only card left
+btn "card#0" 30   # Food Info, the only card left
 sleep 8
 shot panel-addon 1
 ls -la "$G/mods" > "$OUT/mods-after.txt"
 for k in 1 2 3 4 5; do xdotool key BackSpace; sleep 0.1; done
-click 311 55    # HUD category
+btn "chip:HUD"
 shot panel-hud-category 1
-click 90 115    # Cosmetics in the sidebar
+btn "nav:Cosmetics"
 shot panel-cosmetics 1.5
-click 90 59     # Edit HUD in the sidebar
+btn "nav:Edit HUD"
 shot hud-editor 1.5
 xdotool mousemove --window "$WID" 20 20; sleep 0.3; xdotool mousedown 1; sleep 0.2
 for s in 1 2 3 4 5 6 7 8 9 10; do xdotool mousemove --window "$WID" $(( 20 + s * 30 )) $(( 20 + s * 20 )); sleep 0.05; done

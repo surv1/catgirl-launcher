@@ -141,7 +141,7 @@ public class CatgirlClient implements ClientModInitializer {
             tick++;
             Hud.installClickCounter(client);
             while (menuKey.consumeClick()) {
-                if (client.screen == null && client.player != null) client.setScreen(Hud.optBool("client", "flower") ? new BloomScreen(accent()) : new CatgirlPanel(accent(), CatgirlPanel.Page.MODS));
+                if (client.screen == null && client.player != null) client.setScreen(Hud.optBool("client", "flower") ? new DialScreen(accent()) : new CatgirlPanel(accent(), CatgirlPanel.Page.MODS));
             }
             Zoom.tick(client, Hud.on("zoom") && client.screen == null && zoomKey.isDown());
             Features.tick(client, snaplookKey.isDown());
@@ -286,7 +286,7 @@ public class CatgirlClient implements ClientModInitializer {
 
         List<int[]> blocked = new ArrayList<>();
         for (Object o : Screens.getButtons(screen)) {
-            if (o instanceof net.minecraft.client.gui.components.AbstractWidget w && w.visible) {
+            if (o instanceof net.minecraft.client.gui.components.AbstractWidget w && w.visible && !(w instanceof ScenePanel.Clicks)) {
                 blocked.add(new int[] {w.getX(), w.getY(), w.getWidth(), w.getHeight()});
             }
         }

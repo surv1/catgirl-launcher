@@ -175,7 +175,7 @@ final class Hud {
         // Catgirl's own settings (the gear at the bottom of the menu's sidebar)
         Module client = feature("client", "Catgirl settings", "how the menu looks and feels", "Utility", Items.PINK_DYE).with(
             Setting.color("accent", "Theme colour", "theme"), Setting.bool("sounds", "Menu sounds", true),
-            Setting.bool("animations", "Animations", true), Setting.bool("flower", "Open with the flower menu", true),
+            Setting.bool("animations", "Animations", true), Setting.bool("flower", "Open with the dial", true),
             Setting.bool("tooltips", "Tips when you hover a mod", true),
             Setting.bool("liveMenu", "Live main menu", true), Setting.cycle("menuTime", "Main menu time", TitleScene.TIMES),
             Setting.cycle("menuTrees", "Main menu trees", TitleScene.TREES), Setting.cycle("menuCamera", "Main menu camera", TitleScene.CAMERAS),

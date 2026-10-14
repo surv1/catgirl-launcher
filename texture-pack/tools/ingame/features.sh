@@ -49,17 +49,16 @@ xdotool keydown c; sleep 1.2
 shot zoom-10 0.2
 xdotool keyup c; sleep 0.8
 # a mod's settings page: Visual category, right-click Crosshair
-key Shift_R; sleep 1
-click 320 118          # Mods petal
+menu Mods
 shot mods-icons 1
-click 384 55           # Visual
+btn "chip:Visual"
 shot visual-category 1
-rclick 213 104         # Crosshair -> settings
+rbtn "card:crosshair" 30   # its settings
 shot crosshair-settings 1
-click 425 81; click 425 81; click 425 81   # style: dot, circle, cross + dot
-click 421 169          # colour -> the colour picker
+btn "set:style" -10; btn "set:style" -10; btn "set:style" -10   # style: dot, circle, cross + dot
+btn "set:color" -18    # colour -> the colour picker
 shot colour-picker 0.8
-click 509 247          # pink preset
+btn "preset:#ff7eb6"   # pink
 key Escape             # close the picker
 shot crosshair-settings-changed 1
 key Escape; key Escape
@@ -83,39 +82,37 @@ xdotool mousemove --window "$WID" 40 40; sleep 0.4
 shot mousetweaks-scroll 0.3
 key Escape
 # ---- a mod's settings, with the Look section (scrolls)
-key Shift_R; sleep 1
-click 320 118          # Mods petal
-click 173 55           # "All" (the menu remembers Visual from before)
-xdotool mousemove --window "$WID" $(( 323 * 2 )) $(( 104 * 2 )); sleep 1.4
+menu Mods
+btn "chip:All"         # (the menu remembers Visual from before)
+point "card:cps" 30; sleep 1.4
 shot card-tooltip 0.2  # pointing at CPS for a moment shows its tip
-click 369 76           # heart on CPS: a favourite
-click 254 55           # Favourites
+btn "heart:cps"        # a favourite
+btn "chip:Favourites"
 shot favourites 0.8
-click 201 55           # On
+btn "chip:On"
 shot on-filter 0.8
-click 173 55           # All
-rclick 213 104         # first card (CPS, the favourite) -> its settings, with the live preview
+btn "chip:All"
+rbtn "card:cps" 30     # CPS (the favourite, first) -> its settings, with the live preview
 shot fps-settings 1
-xdotool mousemove --window "$WID" 400 400; for i in 1 2 3 4 5 6; do xdotool click 5; sleep 0.15; done
+xdotool mousemove --window "$WID" 640 420; for i in 1 2 3 4 5 6; do xdotool click 5; sleep 0.15; done
 shot fps-settings-look 0.8
-click 135 328          # the Catgirl settings gear under your name
+key Escape; sleep 0.5  # back to the mods
+btn "nav:Settings"     # Catgirl settings
 shot catgirl-settings 0.8
 key Escape; key Escape; sleep 0.5   # settings -> mods -> game
 # ---- add-ons that switch live (only when the test installed them)
 if ls "$G/mods" | grep -qi continuity; then
-  key Shift_R; sleep 1
-  click 320 118; click 384 55   # Mods, Visual
+  menu Mods; btn "chip:Visual"
   shot addons-ready 1
-  click 543 258                 # Continuity on (a quick resource reload)
+  btn "card:addon:continuity" 30   # Continuity on (a quick resource reload)
   sleep 8
   shot continuity-on 0.2
   key Escape
   cmd "setblock 2 -59 -3 glass"; cmd "setblock 3 -59 -3 glass"; cmd "setblock 2 -58 -3 glass"; cmd "setblock 3 -58 -3 glass"
   cmd "tp $P 2.5 -60 0.5 180 0"; sleep 3
   shot continuity-glass 0.5
-  key Shift_R; sleep 1
-  click 320 118; click 384 55
-  click 433 258                 # Iris on (downloads a shader pack the first time)
+  menu Mods; btn "chip:Visual"
+  btn "card:addon:iris" 30      # Iris on (downloads a shader pack the first time)
   sleep 3
   shot iris-downloading 0.2
   key Escape

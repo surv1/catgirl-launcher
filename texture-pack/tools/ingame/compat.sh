@@ -11,19 +11,16 @@ xdotool mousemove --window "$WID" 640 360; sleep 0.3; xdotool click 3; sleep 0.5
 shot 1-night-normal 1
 key g; sleep 2            # their fullbright on
 shot 2-their-fullbright 1
-key Shift_R; sleep 2.5
-xdotool getmouselocation >> "$OUT/mouse.txt"; click 320 118; sleep 1     # Mods
-xdotool getmouselocation >> "$OUT/mouse.txt"
-click 384 55; sleep 0.5    # Visual
+menu Mods
+btn "chip:Visual"; sleep 0.5
 shot 3-visual-page 1
-click 543 104; sleep 1.5   # our Fullbright on (you can still choose ours)...
+btn "card:fullbright" 30; sleep 1.5   # our Fullbright on (you can still choose ours)...
 shot 4-ours-on 0.5
-click 543 104; sleep 1.5   # ...and off again: their brightness must come back exactly
+btn "card:fullbright" 30; sleep 1.5   # ...and off again: their brightness must come back exactly
 key Escape; sleep 1
 shot 5-still-their-fullbright 1
-key Shift_R; sleep 2.5
-click 320 118; sleep 1
-click 173 55; sleep 0.5    # All
+menu Mods
+btn "chip:All"; sleep 0.5
 xdotool mousemove --window "$WID" 640 400; for i in 1 2 3 4 5 6 7 8; do xdotool click 5; sleep 0.15; done
 shot 6-all-scrolled 0.8
 key Escape; sleep 0.5

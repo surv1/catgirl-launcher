@@ -16,7 +16,7 @@ burst() {
   log "$name x$i"
 }
 # open the Catgirl menu on the Mods page and search for a mod (the first card is then that mod)
-find_mod() { key Shift_R; sleep 1; click 320 118; sleep 0.5; xdotool type --delay 80 "$1"; sleep 0.8; }
+find_mod() { menu Mods; xdotool type --delay 80 "$1"; sleep 0.8; }
 
 cmd "gamerule doDaylightCycle false"; cmd "gamerule advance_time false"; cmd "weather clear"
 cmd "gamemode creative $P"; cmd "clear $P"; cmd "effect clear $P"
@@ -36,13 +36,12 @@ cmd "tp $P 0.5 -60 0.5 90 -4"
 shot sky-sakura-sunset 4
 
 # ---- the World tab and the Sky settings page
-key Shift_R; sleep 1
-click 320 118          # Mods petal
-click 428 55           # World
+menu Mods
+btn "chip:World"
 shot world-tab 1
-rclick 213 104         # first card: Sky -> its settings
+rbtn "card#0" 30       # first card: Sky -> its settings
 shot sky-settings 1
-click 590 81           # Style: next (Starry Night)
+btn "set:style" -10    # Style: next (Starry Night)
 shot sky-settings-starry 0.8
 key Escape; key Escape; sleep 0.5
 
@@ -58,30 +57,30 @@ shot fireflies 4
 
 # ---- Mist (switched on from the menu), morning light
 find_mod mist
-click 213 104          # Mist on
+btn "card#0" 30        # Mist on
 shot mist-card 0.8
 key Escape; key Escape; sleep 0.5
 cmd "time set 1000"
 cmd "tp $P 0.5 -60 0.5 180 -2"
 shot mist-morning 4
 find_mod mist
-click 213 104          # Mist off again
+btn "card#0" 30        # Mist off again
 key Escape; key Escape; sleep 0.5
 
 # ---- Soft Focus: look at the pink pillar 5 blocks away; the far ones go soft
 cmd "time set 6000"
 find_mod focus
-click 213 104          # Soft Focus on
+btn "card#0" 30        # Soft Focus on
 key Escape; key Escape; sleep 0.5
 cmd "tp $P -1.5 -60 0.5 180 7"
 shot softfocus-depth 3
 find_mod focus
-rclick 213 104         # its settings
-click 590 81           # Focus: dreamy edges
+rbtn "card#0" 30       # its settings
+btn "set:mode" -10     # Focus: dreamy edges
 key Escape; key Escape; key Escape; sleep 0.5
 shot softfocus-edges 3
 find_mod focus
-click 213 104          # Soft Focus off
+btn "card#0" 30        # Soft Focus off
 key Escape; key Escape; sleep 0.5
 
 # ---- Landing Ring: drop from 10 blocks up

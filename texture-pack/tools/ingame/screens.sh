@@ -21,9 +21,7 @@ point() {
 }
 cmd "time set 6000"; cmd "weather clear"
 sleep 2
-key Shift_R; sleep 1
-click 320 118             # Mods petal
-click 135 328             # the Catgirl settings gear
+menu Settings
 shot catgirl-settings 1.2
 key Escape; key Escape; sleep 0.5
 key Escape; sleep 1

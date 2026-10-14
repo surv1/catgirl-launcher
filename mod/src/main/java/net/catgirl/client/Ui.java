@@ -17,6 +17,15 @@ final class Ui {
 
     private Ui() {}
 
+    /**
+     * Glass mode: while a Catgirl screen in the glass style draws, the shared pieces below (rounded
+     * boxes, outlines, buttons, switches, panels) come out smooth and rounded instead of pixel-cut.
+     */
+    static boolean glass = false;
+
+    /** Glass mode is on for the Catgirl screens unless the menu style is "pixel". */
+    static boolean glassStyle() { return Restyle.glass(); }
+
     static Font font() { return Minecraft.getInstance().font; }
 
     static boolean in(double mx, double my, int x, int y, int w, int h) {
@@ -103,6 +112,11 @@ final class Ui {
 
     /** A panel with clipped (pixel-rounded) corners, a hard drop shadow and a light top edge. */
     static void panel(GuiGraphics g, int x, int y, int w, int h, int fill, int edge) {
+        if (glass) {
+            Glass.fill(g, x, y, w, h, 12, fill);
+            Glass.ring(g, x, y, w, h, 10, edge);
+            return;
+        }
         g.fill(x + 2, y + h, x + w + 1, y + h + 2, 0x66000000);   // shadow, bottom
         g.fill(x + w, y + 2, x + w + 2, y + h + 1, 0x66000000);   // shadow, right
         g.fill(x + 1, y, x + w - 1, y + h, fill);
@@ -122,6 +136,7 @@ final class Ui {
 
     /** A rectangle with its four corner pixels cut (soft, pixel-rounded corners). */
     static void round(GuiGraphics g, int x, int y, int w, int h, int color) {
+        if (glass) { Glass.fill(g, x, y, w, h, Math.min(5, Math.min(w, h) / 2), color); return; }
         g.fill(x + 1, y, x + w - 1, y + h, color);
         g.fill(x, y + 1, x + 1, y + h - 1, color);
         g.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
@@ -129,6 +144,7 @@ final class Ui {
 
     /** A 1px outline that follows round(). */
     static void roundFrame(GuiGraphics g, int x, int y, int w, int h, int color) {
+        if (glass) { Glass.ring(g, x, y, w, h, Math.min(5, Math.min(w, h) / 2), color); return; }
         g.fill(x + 1, y, x + w - 1, y + 1, color);
         g.fill(x + 1, y + h - 1, x + w - 1, y + h, color);
         g.fill(x, y + 1, x + 1, y + h - 1, color);
@@ -143,6 +159,14 @@ final class Ui {
     /** The switch part-way between off (0) and on (1), for the sliding animation. */
     static void toggle(GuiGraphics g, int x, int y, float k, int accent, boolean hover) {
         boolean on = k >= 0.5F;
+        if (glass) { // a smooth pill switch with a round knob that slides across
+            int track = mix(hover ? BERRY3 : BERRY2, accent, k);
+            Glass.fill(g, x, y, 18, 10, 5, track);
+            Glass.ring(g, x, y, 18, 10, 5, alpha(MILK, hover ? 0x50 : 0x28));
+            int kx = x + 1 + Math.round(8 * k);
+            Glass.fill(g, kx, y + 1, 8, 8, 4, mix(HAZE, MILK, k));
+            return;
+        }
         int off = hover ? BERRY3 : BERRY2;
         int track = mix(off, accent, k);
         g.fill(x + 1, y, x + 17, y + 10, track);
@@ -162,6 +186,15 @@ final class Ui {
 
     /** A flat button with a 2px "pressed-in" bottom edge. */
     static void button(GuiGraphics g, int x, int y, int w, int h, String label, boolean hover, boolean primary, int accent) {
+        if (glass) {
+            int r = Math.min(h / 2, 10);
+            int face = primary ? alpha(hover ? mix(accent, MILK, 0.2F) : accent, 0xF0) : hover ? Glass.faceHover(accent) : Glass.face(accent);
+            Glass.fill(g, x, y, w, h, r, face);
+            Glass.ring(g, x, y, w, h, r, primary ? alpha(mix(accent, MILK, 0.45F), 0xC0) : hover ? Glass.rimHover(accent) : Glass.rim(accent));
+            Font f = font();
+            g.drawString(f, label, x + (w - f.width(label)) / 2, y + (h - 8) / 2, primary ? INK : MILK, false);
+            return;
+        }
         int face = primary ? (hover ? mix(accent, MILK, 0.2F) : accent) : (hover ? BERRY3 : BERRY2);
         int lip = primary ? mix(accent, INK, 0.35F) : BERRY;
         g.fill(x + 1, y, x + w - 1, y + h, face);
