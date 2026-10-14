@@ -1,0 +1,13 @@
+key_key.catgirl.menu:key.keyboard.right.shift
+key_key.catgirl.zoom:key.keyboard.unknown
+key_key.catgirl.snaplook:key.keyboard.v
+key_key.catgirl.freelook:key.keyboard.left.alt
+key_key.catgirl.waypoint:key.keyboard.b
+key_key.gammautils.gammaToggle:key.keyboard.g
+key_key.gammautils.increaseGamma:key.keyboard.up
+key_key.gammautils.decreaseGamma:key.keyboard.down
+key_key.gammautils.maxGamma:key.keyboard.unknown
+key_key.gammautils.minGamma:key.keyboard.unknown
+key_key.gammautils.nightVisionToggle:key.keyboard.h
+key_key.gammautils.increaseNightVision:key.keyboard.right
+key_key.gammautils.decreaseNightVision:key.keyboard.left

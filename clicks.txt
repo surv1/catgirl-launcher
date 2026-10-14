@@ -1,0 +1,6 @@
+click dial:open at 320 273
+click chip:Visual at 258 88
+click card:fullbright at 81 197
+click card:fullbright at 81 197
+click dial:open at 320 273
+click chip:All at 37 88

@@ -1,0 +1,6 @@
+[17:29:02] [main/WARN]: Reference map 'yet_another_config_lib_v3.refmap.json' for yacl.mixins.json could not be read. If this is a development environment you can ignore this message
+[17:29:02] [main/WARN]: Reference map 'yet_another_config_lib_v3.refmap.json' for yacl-fabric.mixins.json could not be read. If this is a development environment you can ignore this message
+[17:29:02] [main/WARN]: Error loading class: mezz/jei/fabric/platform/RenderHelper (java.lang.ClassNotFoundException: mezz/jei/fabric/platform/RenderHelper)
+[17:29:02] [main/WARN]: @Mixin target mezz.jei.fabric.platform.RenderHelper was not found appleskin.jei.mixins.json:JEIRenderHelperMixin from mod appleskin
+[17:29:23] [Render thread/WARN]: Removed resource pack fabric from options because it doesn't seem to exist anymore
+[17:29:28] [Download-2/ERROR]: Failed to retrieve profile key pair
