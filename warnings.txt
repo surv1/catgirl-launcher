@@ -1,0 +1,8 @@
+[17:29:28] [Render thread/WARN]: Removed resource pack fabric from options because it doesn't seem to exist anymore
+[17:29:33] [Download-1/ERROR]: Failed to retrieve profile key pair
+[17:30:23] [Render thread/ERROR]: ########## GL ERROR ##########
+[17:30:23] [Render thread/ERROR]: @ Render
+[17:30:23] [Render thread/ERROR]: 65547: X11: Standard cursor shape unavailable
+[17:30:46] [Render thread/WARN]: Client disconnected with reason: Back to the menu
+[17:30:50] [Server Pinger #1/ERROR]: Can't ping play.nexusmc.invalid: Unknown host
+[17:30:50] [Server Pinger #2/ERROR]: Can't ping lilac.invalid: Unknown host

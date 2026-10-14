@@ -1,0 +1,307 @@
+widget "Loading Minecraft" 150 116 126 33
+widget "Cancel" 113 192 200 20
+widget "Cancel" 113 192 200 20
+widget "dial:Mods" 303 177 34 34
+widget "dial:Edit HUD" 425 164 30 30
+widget "dial:Cosmetics" 479 132 22 22
+widget "dial:Configs" 431 98 18 18
+widget "dial:Keybinds" 311 83 18 18
+widget "dial:Wardrobe" 191 98 18 18
+widget "dial:Screenshots" 139 132 22 22
+widget "dial:Settings" 185 164 30 30
+widget "dial:open" 294 264 52 18
+widget "dial:Mods" 425 164 30 30
+widget "dial:Edit HUD" 479 132 22 22
+widget "dial:Cosmetics" 431 98 18 18
+widget "dial:Configs" 311 83 18 18
+widget "dial:Keybinds" 191 98 18 18
+widget "dial:Wardrobe" 139 132 22 22
+widget "dial:Screenshots" 185 164 30 30
+widget "dial:Settings" 303 177 34 34
+widget "dial:open" 294 264 52 18
+widget "nav:Mods" 200 17 18 18
+widget "nav:Configs" 222 17 18 18
+widget "nav:Cosmetics" 244 17 18 18
+widget "nav:Edit HUD" 275 17 18 18
+widget "nav:Keybinds" 297 17 18 18
+widget "nav:Wardrobe" 319 17 18 18
+widget "nav:Screenshots" 341 17 18 18
+widget "nav:Settings" 372 17 68 18
+widget "close" 608 20 12 12
+widget "set:close" 486 52 12 12
+widget "set:on" 144 86 352 20
+widget "set:accent" 144 108 352 20
+widget "set:sounds" 144 130 352 20
+widget "set:animations" 144 152 352 20
+widget "set:flower" 144 174 352 20
+widget "set:tooltips" 144 196 352 20
+widget "set:liveMenu" 144 218 352 20
+widget "set:menuTime" 144 240 352 20
+widget "set:menuTrees" 144 262 352 20
+widget "set:menuCamera" 144 284 352 20
+widget "set:screens" 144 306 352 20
+widget "set:menuStyle" 144 328 352 20
+widget "set:reset" 144 354 70 16
+widget "nav:Mods" 208 17 52 18
+widget "nav:Configs" 264 17 18 18
+widget "nav:Cosmetics" 286 17 18 18
+widget "nav:Edit HUD" 317 17 18 18
+widget "nav:Keybinds" 339 17 18 18
+widget "nav:Wardrobe" 361 17 18 18
+widget "nav:Screenshots" 383 17 18 18
+widget "nav:Settings" 414 17 18 18
+widget "close" 608 20 12 12
+widget "chip:All" 24 80 26 16
+widget "chip:On" 54 80 26 16
+widget "chip:Favourites" 84 80 77 16
+widget "chip:HUD" 165 80 32 16
+widget "chip:PvP" 201 80 32 16
+widget "chip:Visual" 237 80 43 16
+widget "chip:World" 284 80 41 16
+widget "chip:Performance" 329 80 79 16
+widget "chip:Utility" 412 80 41 16
+widget "search" 486 80 130 16
+widget "card:fps" 24 102 192 58
+widget "card#0" 24 102 192 58
+widget "heart:fps" 156 111 14 14
+widget "gear:fps" 172 111 14 14
+widget "card:cps" 224 102 192 58
+widget "card#1" 224 102 192 58
+widget "heart:cps" 356 111 14 14
+widget "gear:cps" 372 111 14 14
+widget "card:keys" 424 102 192 58
+widget "card#2" 424 102 192 58
+widget "heart:keys" 556 111 14 14
+widget "gear:keys" 572 111 14 14
+widget "card:coords" 24 168 192 58
+widget "card#3" 24 168 192 58
+widget "heart:coords" 156 177 14 14
+widget "gear:coords" 172 177 14 14
+widget "card:armour" 224 168 192 58
+widget "card#4" 224 168 192 58
+widget "heart:armour" 356 177 14 14
+widget "gear:armour" 372 177 14 14
+widget "card:ping" 424 168 192 58
+widget "card#5" 424 168 192 58
+widget "heart:ping" 556 177 14 14
+widget "gear:ping" 572 177 14 14
+widget "card:clock" 24 234 192 58
+widget "card#6" 24 234 192 58
+widget "heart:clock" 156 243 14 14
+widget "gear:clock" 172 243 14 14
+widget "card:nowplaying" 224 234 192 58
+widget "card#7" 224 234 192 58
+widget "heart:nowplaying" 372 243 14 14
+widget "card:effects" 424 234 192 58
+widget "card#8" 424 234 192 58
+widget "heart:effects" 556 243 14 14
+widget "gear:effects" 572 243 14 14
+widget "card:direction" 24 300 192 58
+widget "card#9" 24 300 192 58
+widget "heart:direction" 156 309 14 14
+widget "gear:direction" 172 309 14 14
+widget "card:day" 224 300 192 58
+widget "card#10" 224 300 192 58
+widget "heart:day" 356 309 14 14
+widget "gear:day" 372 309 14 14
+widget "card:server" 424 300 192 58
+widget "card#11" 424 300 192 58
+widget "heart:server" 556 309 14 14
+widget "gear:server" 572 309 14 14
+widget "Back to Game" 218 98 204 20
+widget "Advancements" 218 122 98 20
+widget "Statistics" 324 122 98 20
+widget "Give Feedback" 218 146 98 20
+widget "Report Bugs" 324 146 98 20
+widget "Options..." 218 170 98 20
+widget "Player Reporting" 324 170 98 20
+widget "Disconnect" 218 194 204 20
+widget "Game Menu" 294 40 52 9
+widget "Options" 302 12 36 9
+widget "FOV: Normal" 166 29 150 20
+widget "Online..." 324 29 150 20
+widget "Skin Customization..." 166 91 150 20
+widget "Music & Sounds..." 324 91 150 20
+widget "Video Settings..." 166 115 150 20
+widget "Controls..." 324 115 150 20
+widget "Language..." 166 139 150 20
+widget "Chat Settings..." 324 139 150 20
+widget "Resource Packs..." 166 163 150 20
+widget "Accessibility Settings..." 324 163 150 20
+widget "Telemetry Data..." 166 187 150 20
+widget "Credits & Attribution..." 324 187 150 20
+widget "Done" 220 334 200 20
+widget "Video Settings" 285 12 70 9
+widget "" 0 33 640 294
+widget "Done" 220 334 200 20
+widget "Options" 302 12 36 9
+widget "FOV: Normal" 166 29 150 20
+widget "Online..." 324 29 150 20
+widget "Skin Customization..." 166 91 150 20
+widget "Music & Sounds..." 324 91 150 20
+widget "Video Settings..." 166 115 150 20
+widget "Controls..." 324 115 150 20
+widget "Language..." 166 139 150 20
+widget "Chat Settings..." 324 139 150 20
+widget "Resource Packs..." 166 163 150 20
+widget "Accessibility Settings..." 324 163 150 20
+widget "Telemetry Data..." 166 187 150 20
+widget "Credits & Attribution..." 324 187 150 20
+widget "Done" 220 334 200 20
+widget "Back to Game" 218 98 204 20
+widget "Advancements" 218 122 98 20
+widget "Statistics" 324 122 98 20
+widget "Give Feedback" 218 146 98 20
+widget "Report Bugs" 324 146 98 20
+widget "Options..." 218 170 98 20
+widget "Player Reporting" 324 170 98 20
+widget "Disconnect" 218 194 204 20
+widget "Game Menu" 294 40 52 9
+widget ">" 403 116 10 12
+widget "<" 393 116 10 12
+widget "Connection Lost" 280 149 80 9
+widget "Back to the menu" 277 178 85 9
+widget "Back to Server List" 220 199 200 20
+widget "Play Multiplayer" 280 12 79 9
+widget "" 0 33 640 267
+widget "Join Server" 166 308 100 20
+widget "Direct Connection" 270 308 100 20
+widget "Add Server" 374 308 100 20
+widget "Edit" 166 332 74 20
+widget "Delete" 244 332 74 20
+widget "Refresh" 322 332 74 20
+widget "Back" 400 332 74 20
+widget "Server Resource Packs: Prompt" 220 162 200 20
+widget "Done" 220 204 200 20
+widget "Cancel" 220 228 200 20
+widget "Play Multiplayer" 280 12 79 9
+widget "" 0 33 640 267
+widget "Join Server" 166 308 100 20
+widget "Direct Connection" 270 308 100 20
+widget "Add Server" 374 308 100 20
+widget "Edit" 166 332 74 20
+widget "Delete" 244 332 74 20
+widget "Refresh" 322 332 74 20
+widget "Back" 400 332 74 20
+widget "Singleplayer" 220 138 200 20
+widget "Multiplayer" 220 162 200 20
+widget "Minecraft Realms" 220 186 200 20
+widget "Language..." 196 222 20 20
+widget "Options..." 220 222 98 20
+widget "Quit Game" 322 222 98 20
+widget "Accessibility Settings..." 424 222 20 20
+widget "Copyright Mojang AB. Do not distribute!" 442 350 196 10
+widget "scene:morning" 462 190 22 22
+widget "scene:day" 496 190 22 22
+widget "scene:sunset" 530 190 22 22
+widget "scene:night" 564 190 22 22
+widget "scene:real time" 598 190 22 22
+widget "scene:cherry" 462 236 22 22
+widget "scene:oak" 496 236 22 22
+widget "scene:birch" 530 236 22 22
+widget "scene:spruce" 564 236 22 22
+widget "scene:mixed" 598 236 22 22
+widget "scene:orbit" 462 282 22 22
+widget "scene:sway" 531 282 22 22
+widget "scene:still" 600 282 22 22
+widget "Scene" 554 324 56 20
+widget "grow" 614 324 20 20
+widget "Preparing for world creation..." 231 176 178 33
+widget "Create New World" 166 334 150 20
+widget "Cancel" 324 334 150 20
+widget "World Name" 216 55 55 9
+widget "World Name" 216 68 208 20
+widget "Game Mode: Survival" 215 96 210 20
+widget "Difficulty: Normal" 215 124 210 20
+widget "Allow Commands: OFF" 215 152 210 20
+widget "Select World" 289 8 62 9
+widget "search for worlds" 220 21 200 20
+widget "" 0 49 640 251
+widget "Play Selected World" 166 308 150 20
+widget "Create New World" 324 308 150 20
+widget "Edit" 166 332 71 20
+widget "Delete" 245 332 71 20
+widget "Re-Create" 324 332 71 20
+widget "Back" 403 332 71 20
+widget "Singleplayer" 220 138 200 20
+widget "Multiplayer" 220 162 200 20
+widget "Minecraft Realms" 220 186 200 20
+widget "Language..." 196 222 20 20
+widget "Options..." 220 222 98 20
+widget "Quit Game" 322 222 98 20
+widget "Accessibility Settings..." 424 222 20 20
+widget "Copyright Mojang AB. Do not distribute!" 442 350 196 10
+widget "scene:morning" 462 190 22 22
+widget "scene:day" 496 190 22 22
+widget "scene:sunset" 530 190 22 22
+widget "scene:night" 564 190 22 22
+widget "scene:real time" 598 190 22 22
+widget "scene:cherry" 462 236 22 22
+widget "scene:oak" 496 236 22 22
+widget "scene:birch" 530 236 22 22
+widget "scene:spruce" 564 236 22 22
+widget "scene:mixed" 598 236 22 22
+widget "scene:orbit" 462 282 22 22
+widget "scene:sway" 531 282 22 22
+widget "scene:still" 600 282 22 22
+widget "Scene" 554 324 56 20
+widget "grow" 614 324 20 20
+widget "Options" 302 12 36 9
+widget "FOV: Normal" 166 29 150 20
+widget "Online..." 324 29 150 20
+widget "Skin Customization..." 166 91 150 20
+widget "Music & Sounds..." 324 91 150 20
+widget "Video Settings..." 166 115 150 20
+widget "Controls..." 324 115 150 20
+widget "Language..." 166 139 150 20
+widget "Chat Settings..." 324 139 150 20
+widget "Resource Packs..." 166 163 150 20
+widget "Accessibility Settings..." 324 163 150 20
+widget "Telemetry Data..." 166 187 150 20
+widget "Credits & Attribution..." 324 187 150 20
+widget "Done" 220 334 200 20
+widget "Language" 296 4 48 9
+widget "" 220 17 200 15
+widget "" 0 36 640 271
+widget "(Language translations may not be 100% accurate)" 191 315 257 9
+widget "Font Settings..." 166 332 150 20
+widget "Done" 324 332 150 20
+widget "Options" 302 12 36 9
+widget "FOV: Normal" 166 29 150 20
+widget "Online..." 324 29 150 20
+widget "Skin Customization..." 166 91 150 20
+widget "Music & Sounds..." 324 91 150 20
+widget "Video Settings..." 166 115 150 20
+widget "Controls..." 324 115 150 20
+widget "Language..." 166 139 150 20
+widget "Chat Settings..." 324 139 150 20
+widget "Resource Packs..." 166 163 150 20
+widget "Accessibility Settings..." 324 163 150 20
+widget "Telemetry Data..." 166 187 150 20
+widget "Credits & Attribution..." 324 187 150 20
+widget "Done" 220 334 200 20
+widget "Tick box" 8 310 62 17
+widget "Empty tick box" 8 332 92 17
+widget "Singleplayer" 220 138 200 20
+widget "Multiplayer" 220 162 200 20
+widget "Minecraft Realms" 220 186 200 20
+widget "Language..." 196 222 20 20
+widget "Options..." 220 222 98 20
+widget "Quit Game" 322 222 98 20
+widget "Accessibility Settings..." 424 222 20 20
+widget "Copyright Mojang AB. Do not distribute!" 442 350 196 10
+widget "scene:morning" 462 190 22 22
+widget "scene:day" 496 190 22 22
+widget "scene:sunset" 530 190 22 22
+widget "scene:night" 564 190 22 22
+widget "scene:real time" 598 190 22 22
+widget "scene:cherry" 462 236 22 22
+widget "scene:oak" 496 236 22 22
+widget "scene:birch" 530 236 22 22
+widget "scene:spruce" 564 236 22 22
+widget "scene:mixed" 598 236 22 22
+widget "scene:orbit" 462 282 22 22
+widget "scene:sway" 531 282 22 22
+widget "scene:still" 600 282 22 22
+widget "Scene" 554 324 56 20
+widget "grow" 614 324 20 20
