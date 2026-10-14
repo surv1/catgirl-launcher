@@ -16,14 +16,17 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.SplashRenderer;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -59,6 +62,7 @@ import org.slf4j.LoggerFactory;
  */
 public class CatgirlClient implements ClientModInitializer {
     static final Logger LOG = LoggerFactory.getLogger("catgirl");
+    static final boolean TESTING = Boolean.getBoolean("catgirl.debugClicks"); // set by the in-game screenshot tests
     private static final int GAP = 4;
     private static final int H = 20;
     private static final int TEXT_W = 120;
@@ -105,6 +109,7 @@ public class CatgirlClient implements ClientModInitializer {
         NowPlaying.setCorner(config.nowPlayingPosition);
         Hud.load(FabricLoader.getInstance().getConfigDir().resolve("catgirl-hud.json").toFile(), config.nowPlaying, config.nowPlayingPosition);
         Compat.stepAside(); // mods you already have for the same job win
+        Configs.load(FabricLoader.getInstance().getConfigDir().resolve("catgirl-configs.json").toFile());
         if (Hud.MODULES.get("nowplaying").on) NowPlaying.start();
         net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
             net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", "hud"),
@@ -120,6 +125,7 @@ public class CatgirlClient implements ClientModInitializer {
         Waypoints.load(FabricLoader.getInstance().getConfigDir().resolve("catgirl-waypoints.json").toFile());
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> { Zoom.stop(client); Features.restoreAll(client); DynamicFps.restore(client); });
         Features.register();
+        net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.END_MAIN.register(WorldFx::render);
         Food.register();
         Addons.load();
         // once every mod has added its keys: don't take a key another mod uses
@@ -145,6 +151,8 @@ public class CatgirlClient implements ClientModInitializer {
             while (waypointKey.consumeClick()) addWaypoint = true;
             Waypoints.tick(client, addWaypoint && client.screen == null);
             HitColor.tick(client);
+            WorldFx.tick(client);
+            SoftFocus.tick(client);
             Cosmetics.tick(tick);
             // Minecraft re-sets its own title now and then; put ours back a few times a second.
             if (tick % 5 == 0 && client.getWindow() != null) client.getWindow().setTitle(title);
@@ -152,15 +160,29 @@ public class CatgirlClient implements ClientModInitializer {
         });
 
         ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
+            if (TESTING) { // the in-game tests find buttons by their label
+                for (var w : Screens.getButtons(screen))
+                    LOG.info("[Catgirl] widget \"{}\" {} {} {} {}", w.getMessage().getString(), w.getX(), w.getY(), w.getWidth(), w.getHeight());
+            }
+            if (TESTING && screen instanceof OptionsScreen && client.level == null) { // the game has no tick boxes we can reach in the test
+                Screens.getButtons(screen).add(Checkbox.builder(Component.literal("Tick box"), client.font).pos(8, height - 50).selected(true).build());
+                Screens.getButtons(screen).add(Checkbox.builder(Component.literal("Empty tick box"), client.font).pos(8, height - 28).build());
+            }
+                        if (screen instanceof PauseScreen pause && pause.showsPauseMenu()) { addPauseCat(screen); return; }
             if (!(screen instanceof TitleScreen)) return;
             client.getWindow().setTitle(title);
             if (config.splashes) applyCatgirlSplash(screen);
+            List<Placed> scene = TitleScene.on() ? addSceneButtons(screen, width, height) : List.of();
             // Place the menu on the first frame, after every mod has added its own buttons.
             Layout[] layout = {null};
             boolean[] placed = {false};
 
             ScreenEvents.afterRender(screen).register((s, g, mouseX, mouseY, delta) -> {
-                if (!placed[0]) { placed[0] = true; layout[0] = addMenu(client, screen, width, height); }
+                if (!placed[0]) {
+                    placed[0] = true;
+                    layout[0] = addMenu(client, screen, width, height);
+                    TitleScene.side = layout[0] != null && layout[0].x + layout[0].w / 2 < width / 2 ? 1 : -1; // the island goes on the other side
+                }
                 int accent = accent();
                 int soft = 0xFF000000 | blend(accent & 0xFFFFFF, 0xFFFFFF, 0.55f);
 
@@ -171,6 +193,7 @@ public class CatgirlClient implements ClientModInitializer {
                 g.drawString(client.font, sub, width - client.font.width(sub) - 8, 20, soft, true);
 
                 if (layout[0] != null) drawMenuDecor(client, g, layout[0], mouseX, mouseY, accent, soft);
+                for (Placed p : scene) g.renderItem(p.icon(), p.button().getX() + 2, p.button().getY() + 2);
             });
         });
     }
@@ -295,6 +318,41 @@ public class CatgirlClient implements ClientModInitializer {
             }
         }
         return null; // no free space at this window size: skip the menu
+    }
+
+    /** Catgirl-style menus: the little cat sits on the pause menu's "Back to Game" button. */
+    private static void addPauseCat(Screen screen) {
+        Button back = null;
+        for (Object o : Screens.getButtons(screen)) {
+            if (o instanceof Button b && b.getMessage().getContents() instanceof TranslatableContents t && t.getKey().equals("menu.returnToGame")) { back = b; break; }
+        }
+        if (back == null) return;
+        Button sitOn = back;
+        ScreenEvents.afterRender(screen).register((s, g, mouseX, mouseY, delta) -> {
+            if (Restyle.on() && sitOn.visible) Ui.cat(g, sitOn.getX() + sitOn.getWidth() - 24, sitOn.getY() - 13, accent(), System.currentTimeMillis());
+        });
+    }
+
+    /** The live main menu's two little buttons, bottom right: time of day, and grow the tree again. */
+    private static List<Placed> addSceneButtons(Screen screen, int width, int height) {
+        List<Placed> out = new ArrayList<>();
+        int y = height - 36;
+        Button time = Button.builder(Component.empty(), b -> {
+                String t = TitleScene.nextTime();
+                b.setTooltip(Tooltip.create(Component.literal("Time of day: " + t)));
+            })
+            .bounds(width - 50, y, 20, 20)
+            .tooltip(Tooltip.create(Component.literal("Time of day: " + Hud.optStr("client", "menuTime"))))
+            .build();
+        Button grow = Button.builder(Component.empty(), b -> { TitleScene.grow(); Ui.sound("bloom"); })
+            .bounds(width - 26, y, 20, 20)
+            .tooltip(Tooltip.create(Component.literal("Grow the tree again")))
+            .build();
+        Screens.getButtons(screen).add(time);
+        Screens.getButtons(screen).add(grow);
+        out.add(new Placed(time, new ItemStack(Items.CLOCK)));
+        out.add(new Placed(grow, new ItemStack(Items.CHERRY_SAPLING)));
+        return out;
     }
 
     private static boolean overlaps(int[] a, int[] b) {

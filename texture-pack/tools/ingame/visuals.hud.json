@@ -1,0 +1,11 @@
+{
+  "modules": {
+    "sky": {"on": true, "opts": {"style": "Sakura"}},
+    "ambience": {"on": true, "opts": {"kind": "Auto", "amount": 7}},
+    "mist": {"on": false, "opts": {"thickness": 6, "when": "always"}},
+    "softfocus": {"on": false, "opts": {"mode": "where you look", "strength": "strong"}},
+    "landing": {"on": true, "opts": {"when": "every jump", "size": 2.5}},
+    "afterglow": {"on": true, "opts": {"style": "Sparkles"}},
+    "fps": {"on": true}
+  }
+}

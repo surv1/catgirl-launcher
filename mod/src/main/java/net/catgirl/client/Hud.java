@@ -31,10 +31,12 @@ import java.util.Map;
  * the HUD editor. Saved in config/catgirl-hud.json (the launcher never touches that file).
  */
 final class Hud {
-    /** A setting on a mod's settings page. type: bool, cycle, slider, color. */
+    /** A setting on a mod's settings page. type: bool, cycle, style, slider, color. */
     record Setting(String key, String label, String type, String[] choices, double min, double max, double step, Object def) {
         static Setting bool(String key, String label, boolean def) { return new Setting(key, label, "bool", null, 0, 0, 0, def); }
         static Setting cycle(String key, String label, String... choices) { return new Setting(key, label, "cycle", choices, 0, 0, 0, choices[0]); }
+        /** Like cycle, with a little colour strip for each choice (skies, particle styles). */
+        static Setting style(String key, String label, String... choices) { return new Setting(key, label, "style", choices, 0, 0, 0, choices[0]); }
         static Setting slider(String key, String label, double min, double max, double step, double def) { return new Setting(key, label, "slider", null, min, max, step, def); }
         static Setting color(String key, String label, String def) { return new Setting(key, label, "color", null, 0, 0, 0, def); }
         /** A small heading between groups of settings (not a setting itself). */
@@ -151,11 +153,32 @@ final class Hud {
             Setting.slider("fps", "FPS when tabbed out", 10, 60, 5, 15), Setting.slider("volume", "Volume when tabbed out", 0, 1, 0.1, 0.3));
         feature("outline", "Block Outline", "your own block outline colour", "Visual", Items.GLASS).with(
             Setting.color("color", "Colour", "#ff7eb6"), Setting.slider("width", "Thickness", 1, 6, 1, 2), Setting.bool("rainbow", "Rainbow", false));
+        // World: how the world around you looks (Sky, WorldFx, SoftFocus)
+        feature("sky", "Sky", "paint the sky your own colours", "World", Items.LIGHT_BLUE_STAINED_GLASS).with(
+            Setting.style("style", "Style", Sky.names()), Setting.slider("strength", "Strength", 0.2, 1, 0.05, 1.0),
+            Setting.bool("clouds", "Colour the clouds", true), Setting.bool("light", "Tint the light", true),
+            Setting.bool("stars", "Brighter stars", true), Setting.bool("shooting", "Shooting stars", true));
+        feature("ambience", "Ambience", "petals, fireflies or snow drifting by", "World", Items.PINK_PETALS).with(
+            Setting.style("kind", "Particles", WorldFx.KINDS), Setting.slider("amount", "Amount", 1, 10, 1, 4),
+            Setting.bool("outside", "Only outside", true), Setting.color("color", "Petal colour", "accent"));
+        feature("mist", "Mist", "soft fog close by", "World", Items.POWDER_SNOW_BUCKET).with(
+            Setting.slider("thickness", "Thickness", 1, 10, 1, 4), Setting.cycle("when", "When", "always", "mornings and nights"),
+            Setting.bool("tint", "Tint the mist", false), Setting.color("color", "Mist colour", "#ffd6e8"));
+        feature("softfocus", "Soft Focus", "sharp where you look, soft everywhere else", "World", Items.SPYGLASS).with(
+            Setting.cycle("mode", "Focus", "where you look", "dreamy edges"), new Setting("strength", "Blur", "cycle", new String[] {"soft", "medium", "strong"}, 0, 0, 0, "medium"));
+        feature("landing", "Landing Ring", "a ripple on the ground when you land", "World", Items.SLIME_BALL).with(
+            Setting.cycle("when", "When", "big falls", "every jump"), Setting.slider("size", "Size", 1, 4, 0.5, 2),
+            Setting.color("color", "Colour", "accent"), Setting.bool("sparkles", "Sparkles", true));
+        feature("afterglow", "Afterglow", "sparkles when something dies", "World", Items.GLOW_INK_SAC).with(
+            Setting.style("style", "Style", WorldFx.GLOWS), Setting.color("color", "Colour", "accent"),
+            Setting.bool("players", "Players only", false));
         // Catgirl's own settings (the gear at the bottom of the menu's sidebar)
         Module client = feature("client", "Catgirl settings", "how the menu looks and feels", "Utility", Items.PINK_DYE).with(
             Setting.color("accent", "Theme colour", "theme"), Setting.bool("sounds", "Menu sounds", true),
             Setting.bool("animations", "Animations", true), Setting.bool("flower", "Open with the flower menu", true),
-            Setting.bool("tooltips", "Tips when you hover a mod", true));
+            Setting.bool("tooltips", "Tips when you hover a mod", true),
+            Setting.bool("liveMenu", "Live main menu", true), Setting.cycle("menuTime", "Main menu time", TitleScene.TIMES),
+            Setting.bool("screens", "Catgirl-style menus", true));
         client.hidden = true;
         client.on = true;
         // Every HUD piece also gets the same "Look" settings (like Lunar's background / text options).
@@ -298,6 +321,50 @@ final class Hud {
         } catch (Exception e) {
             CatgirlClient.LOG.warn("[Catgirl] Couldn't save catgirl-hud.json: {}", e.toString());
         }
+    }
+
+    // ------------------------------------------------------------------ configs (Configs.java)
+
+    /** Every mod's on/off, settings and HUD position, the way configs store them (Catgirl settings left out). */
+    static JsonObject snapshotModules() {
+        JsonObject ms = new JsonObject();
+        for (Module m : MODULES.values()) {
+            if (m.id.equals("client")) continue;
+            JsonObject j = new JsonObject();
+            j.addProperty("on", m.on);
+            if (m.moved()) { j.addProperty("x", m.x); j.addProperty("y", m.y); }
+            if (m.scale != 1F) j.addProperty("scale", m.scale);
+            if (!m.opts.isEmpty()) j.add("opts", m.opts.deepCopy());
+            ms.add(m.id, j);
+        }
+        return ms;
+    }
+
+    /**
+     * Sets every mod from a config. A full config (one you saved) sets everything exactly; a partial
+     * one (the built-in ones) switches on what it lists, with its settings on top of yours, and the
+     * rest off without touching their settings or spots.
+     */
+    static void applyModules(JsonObject ms, boolean partial, net.minecraft.client.Minecraft mc) {
+        for (Module m : MODULES.values()) {
+            if (m.id.equals("client")) continue;
+            JsonObject j = ms.has(m.id) && ms.get(m.id).isJsonObject() ? ms.getAsJsonObject(m.id) : null;
+            boolean on = j != null && j.has("on") && j.get("on").getAsBoolean();
+            if (j != null && !partial) {
+                m.x = j.has("x") ? clamp01(j.get("x").getAsFloat()) : Float.NaN;
+                m.y = j.has("y") ? clamp01(j.get("y").getAsFloat()) : Float.NaN;
+                m.scale = j.has("scale") ? clampScale(j.get("scale").getAsFloat()) : 1F;
+                for (String k : new ArrayList<>(m.opts.keySet())) if (!k.equals("_mine")) m.opts.remove(k);
+            }
+            if (j != null && j.has("opts") && j.get("opts").isJsonObject()) for (var e : j.getAsJsonObject("opts").entrySet()) m.opts.add(e.getKey(), e.getValue());
+            if (m.id.equals("sprint") && mc != null) { mc.options.toggleSprint().set(on); mc.options.save(); }
+            if (m.id.equals("sneak") && mc != null) { mc.options.toggleCrouch().set(on); mc.options.save(); }
+            boolean was = m.on;
+            m.on = on;
+            Compat.chosen(m, on);
+            if (on && !was && m.id.equals("nowplaying")) NowPlaying.start();
+        }
+        save();
     }
 
     static float clamp01(float v) { return Float.isNaN(v) ? 0F : Math.max(0F, Math.min(1F, v)); }
