@@ -1,0 +1,15 @@
+click dial:Configs at 440 107
+click dial:open at 320 273
+click cfg:PvP at 117 168
+click cfg:load at 246 330
+click dial:Configs at 440 107
+click dial:open at 320 273
+click cfg:PvP at 117 168
+click cfg:Cosy at 117 124
+click cfg:load at 246 330
+click cfg:undo at 320 308
+click cfg:save at 80 88
+click cfg:copy at 287 330
+click cfg:paste at 175 88
+click cfg:delete at 422 330
+click cfg:delete at 422 330
