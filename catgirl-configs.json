@@ -1,0 +1,299 @@
+{
+  "configs": [
+    {
+      "name": "My setup 1Night run",
+      "edited": 1791987102844,
+      "modules": {
+        "fps": {
+          "on": true
+        },
+        "cps": {
+          "on": true
+        },
+        "keys": {
+          "on": true
+        },
+        "coords": {
+          "on": false
+        },
+        "armour": {
+          "on": true
+        },
+        "ping": {
+          "on": true
+        },
+        "clock": {
+          "on": false
+        },
+        "nowplaying": {
+          "on": false
+        },
+        "effects": {
+          "on": false
+        },
+        "direction": {
+          "on": false
+        },
+        "day": {
+          "on": false
+        },
+        "server": {
+          "on": false
+        },
+        "speed": {
+          "on": false
+        },
+        "items": {
+          "on": true
+        },
+        "reach": {
+          "on": true
+        },
+        "combo": {
+          "on": true
+        },
+        "memory": {
+          "on": false
+        },
+        "stopwatch": {
+          "on": false
+        },
+        "packs": {
+          "on": false
+        },
+        "saturation": {
+          "on": false
+        },
+        "crosshair": {
+          "on": true
+        },
+        "scoreboard": {
+          "on": false
+        },
+        "bossbar": {
+          "on": false
+        },
+        "fullbright": {
+          "on": false
+        },
+        "time": {
+          "on": false
+        },
+        "weather": {
+          "on": false
+        },
+        "nohurtcam": {
+          "on": false
+        },
+        "particles": {
+          "on": true
+        },
+        "snaplook": {
+          "on": false
+        },
+        "sneak": {
+          "on": false
+        },
+        "sprint": {
+          "on": false
+        },
+        "zoom": {
+          "on": true
+        },
+        "freelook": {
+          "on": false
+        },
+        "minimap": {
+          "on": false
+        },
+        "waypoints": {
+          "on": false
+        },
+        "hitcolor": {
+          "on": true
+        },
+        "shulker": {
+          "on": false
+        },
+        "mousetweaks": {
+          "on": false
+        },
+        "dynamicfps": {
+          "on": false
+        },
+        "outline": {
+          "on": false
+        },
+        "sky": {
+          "on": false,
+          "opts": {
+            "style": "Lilac"
+          }
+        },
+        "ambience": {
+          "on": false
+        },
+        "mist": {
+          "on": false
+        },
+        "softfocus": {
+          "on": false
+        },
+        "landing": {
+          "on": false
+        },
+        "afterglow": {
+          "on": false
+        }
+      }
+    },
+    {
+      "name": "My setup 1Night run 2",
+      "edited": 1791987110391,
+      "modules": {
+        "fps": {
+          "on": true
+        },
+        "cps": {
+          "on": true
+        },
+        "keys": {
+          "on": true
+        },
+        "coords": {
+          "on": false
+        },
+        "armour": {
+          "on": true
+        },
+        "ping": {
+          "on": true
+        },
+        "clock": {
+          "on": false
+        },
+        "nowplaying": {
+          "on": false
+        },
+        "effects": {
+          "on": false
+        },
+        "direction": {
+          "on": false
+        },
+        "day": {
+          "on": false
+        },
+        "server": {
+          "on": false
+        },
+        "speed": {
+          "on": false
+        },
+        "items": {
+          "on": true
+        },
+        "reach": {
+          "on": true
+        },
+        "combo": {
+          "on": true
+        },
+        "memory": {
+          "on": false
+        },
+        "stopwatch": {
+          "on": false
+        },
+        "packs": {
+          "on": false
+        },
+        "saturation": {
+          "on": false
+        },
+        "crosshair": {
+          "on": true
+        },
+        "scoreboard": {
+          "on": false
+        },
+        "bossbar": {
+          "on": false
+        },
+        "fullbright": {
+          "on": false
+        },
+        "time": {
+          "on": false
+        },
+        "weather": {
+          "on": false
+        },
+        "nohurtcam": {
+          "on": false
+        },
+        "particles": {
+          "on": true
+        },
+        "snaplook": {
+          "on": false
+        },
+        "sneak": {
+          "on": false
+        },
+        "sprint": {
+          "on": false
+        },
+        "zoom": {
+          "on": true
+        },
+        "freelook": {
+          "on": false
+        },
+        "minimap": {
+          "on": false
+        },
+        "waypoints": {
+          "on": false
+        },
+        "hitcolor": {
+          "on": true
+        },
+        "shulker": {
+          "on": false
+        },
+        "mousetweaks": {
+          "on": false
+        },
+        "dynamicfps": {
+          "on": false
+        },
+        "outline": {
+          "on": false
+        },
+        "sky": {
+          "on": false,
+          "opts": {
+            "style": "Lilac"
+          }
+        },
+        "ambience": {
+          "on": false
+        },
+        "mist": {
+          "on": false
+        },
+        "softfocus": {
+          "on": false
+        },
+        "landing": {
+          "on": false
+        },
+        "afterglow": {
+          "on": false
+        }
+      }
+    }
+  ],
+  "inUse": "My setup 1Night run"
+}
