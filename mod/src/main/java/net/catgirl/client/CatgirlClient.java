@@ -384,6 +384,22 @@ public class CatgirlClient implements ClientModInitializer {
     private static void drawMenuDecor(Minecraft client, net.minecraft.client.gui.GuiGraphics g, Layout l, int mouseX, int mouseY, int accent, int soft) {
         int panel = 0xC01A0F20;
         int dimAccent = (0x90 << 24) | (accent & 0xFFFFFF);
+        if (Restyle.on() && Restyle.glass()) {
+            // glass menus: just a soft label pill above the buttons, the buttons are glass themselves
+            if (l.vertical) {
+                String head = l.iconsOnly ? "♥" : "♥ CatGirl ♥";
+                int hw = client.font.width(head) + 16, hx = l.x + (l.w - hw) / 2, hy = l.y - 19;
+                Glass.fill(g, hx, hy, hw, 14, 7, Ui.alpha(Glass.base(accent), 0xB0));
+                Glass.ring(g, hx, hy, hw, 14, 7, Glass.rim(accent));
+                g.drawString(client.font, head, hx + 8, hy + 3, soft, true);
+            }
+            for (Placed p : l.placed) {
+                Button b = p.button();
+                int ix = l.iconsOnly ? b.getX() + (b.getWidth() - 16) / 2 : b.getX() + 5;
+                g.renderItem(p.icon(), ix, b.getY() + 2);
+            }
+            return;
+        }
         if (l.vertical) {
             // header tab above the buttons
             int hx1 = l.x - 6, hx2 = l.x + l.w + 6, hy1 = l.y - 22, hy2 = l.y - 5;

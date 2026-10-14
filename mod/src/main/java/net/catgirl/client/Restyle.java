@@ -258,6 +258,7 @@ public final class Restyle {
                 int ex = e.getX(), ey = e.getY(), ew = e.getWidth(), eh = e.getHeight();
                 if (ey + eh < top || ey > bottom || ew < 8 || eh < 8) continue;
                 boolean hover = inList && mouseX >= ex && mouseX < ex + ew && mouseY >= ey && mouseY < ey + eh;
+                if (eh < 24 && !hover) continue; // short rows (languages...) would touch: just light up the one you point at
                 Glass.card(g, ex, ey, ew, eh, hover, accent);
             }
         } catch (Throwable t) {

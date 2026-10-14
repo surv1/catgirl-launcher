@@ -22,8 +22,8 @@ final class Glass {
     // ------------------------------------------------------------------ colours (from your theme colour)
 
     /** The glass itself: a soft violet-plum, nudged towards your colour. */
-    static int base(int accent) { return Ui.mix(0xFF553A80, accent, 0.22F); }
-    static int face(int accent) { return Ui.alpha(base(accent), 0x9C); }
+    static int base(int accent) { return Ui.mix(0xFF4A2F78, accent, 0.2F); }
+    static int face(int accent) { return Ui.alpha(base(accent), 0xB0); }
     static int faceHover(int accent) { return Ui.alpha(Ui.mix(base(accent), accent, 0.5F), 0xD0); }
     static int faceOff(int accent) { return Ui.alpha(Ui.mix(base(accent), Ui.INK, 0.45F), 0x78); }
     static int rim(int accent) { return Ui.alpha(Ui.mix(accent, Ui.MILK, 0.6F), 0x58); }
