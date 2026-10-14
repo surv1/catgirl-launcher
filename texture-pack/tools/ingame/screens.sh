@@ -21,6 +21,11 @@ point() {
 }
 cmd "time set 6000"; cmd "weather clear"
 sleep 2
+key Shift_R; sleep 1
+click 320 118             # Mods petal
+click 135 328             # the Catgirl settings gear
+shot catgirl-settings 1.2
+key Escape; key Escape; sleep 0.5
 key Escape; sleep 1
 shot pause 1.5
 point "Options..."
@@ -61,6 +66,7 @@ shot create-world-tab 0.6
 key Escape
 sleep 2
 btn "Options..."
+hover 16 318              # the test tick box
 shot options-title 1.2
 btn "Language..."
 shot language 1.5

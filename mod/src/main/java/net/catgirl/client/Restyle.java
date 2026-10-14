@@ -176,10 +176,10 @@ public final class Restyle {
         float a = ((color >>> 24) & 255) / 255F;
         try {
             switch (p) {
-                case "textures/gui/menu_background.png" -> g.fill(x, y, x + w, y + h, al(0xA81D1026, a));
-                case "textures/gui/inworld_menu_background.png" -> g.fill(x, y, x + w, y + h, al(0x701D1026, a));
-                case "textures/gui/menu_list_background.png" -> g.fill(x, y, x + w, y + h, al(0x70140A18, a));
-                case "textures/gui/inworld_menu_list_background.png" -> g.fill(x, y, x + w, y + h, al(0x58140A18, a));
+                case "textures/gui/menu_background.png" -> g.fill(x, y, x + w, y + h, al(0x781D1026, a));
+                case "textures/gui/inworld_menu_background.png" -> g.fill(x, y, x + w, y + h, al(0x5C1D1026, a));
+                case "textures/gui/menu_list_background.png" -> g.fill(x, y, x + w, y + h, al(0x48140A18, a));
+                case "textures/gui/inworld_menu_list_background.png" -> g.fill(x, y, x + w, y + h, al(0x40140A18, a));
                 case "textures/gui/header_separator.png", "textures/gui/inworld_header_separator.png" -> {
                     int accent = CatgirlClient.accent();
                     g.fill(x, y, x + w, y + 1, al(Ui.alpha(accent, 0x90), a));

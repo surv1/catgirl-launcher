@@ -128,7 +128,12 @@ final class ConfigsPage {
         int bx = dx + 6;
         for (Btn b : bs) {
             boolean hv = Ui.in(mx, my, bx, by, b.w, 16);
-            Ui.button(g, bx, by, b.w, 16, b.label, hv && b.enabled, b.primary, b.enabled ? accent : Ui.BERRY3);
+            if (!b.enabled && !b.primary) { // greyed out (Update when nothing changed)
+                Ui.round(g, bx, by, b.w, 16, 0xFF26152F);
+                g.drawString(f, b.label, bx + (b.w - f.width(b.label)) / 2, by + 3, Ui.DIM, false);
+            } else {
+                Ui.button(g, bx, by, b.w, 16, b.label, hv && b.enabled, b.primary, b.enabled ? accent : Ui.BERRY3);
+            }
             bx += b.w + 4;
         }
 

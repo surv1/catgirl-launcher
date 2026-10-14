@@ -16,6 +16,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.SplashRenderer;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.PauseScreen;
@@ -163,7 +164,11 @@ public class CatgirlClient implements ClientModInitializer {
                 for (var w : Screens.getButtons(screen))
                     LOG.info("[Catgirl] widget \"{}\" {} {} {} {}", w.getMessage().getString(), w.getX(), w.getY(), w.getWidth(), w.getHeight());
             }
-            if (screen instanceof PauseScreen pause && pause.showsPauseMenu()) { addPauseCat(screen); return; }
+            if (TESTING && screen instanceof OptionsScreen && client.level == null) { // the game has no tick boxes we can reach in the test
+                Screens.getButtons(screen).add(Checkbox.builder(Component.literal("Tick box"), client.font).pos(8, height - 50).selected(true).build());
+                Screens.getButtons(screen).add(Checkbox.builder(Component.literal("Empty tick box"), client.font).pos(8, height - 28).build());
+            }
+                        if (screen instanceof PauseScreen pause && pause.showsPauseMenu()) { addPauseCat(screen); return; }
             if (!(screen instanceof TitleScreen)) return;
             client.getWindow().setTitle(title);
             if (config.splashes) applyCatgirlSplash(screen);
