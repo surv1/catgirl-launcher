@@ -1,0 +1,15 @@
+click dial:open at 320 273
+click chip:World at 304 88
+right-click card#0 at 81 131
+click set:style at 486 138
+click dial:open at 320 273
+click card#0 at 81 131
+click dial:open at 320 273
+click card#0 at 81 131
+click dial:open at 320 273
+click card#0 at 81 131
+click dial:open at 320 273
+right-click card#0 at 81 131
+click set:mode at 486 182
+click dial:open at 320 273
+click card#0 at 81 131

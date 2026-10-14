@@ -1,0 +1,2 @@
+[17:36:55] [Render thread/WARN]: Removed resource pack fabric from options because it doesn't seem to exist anymore
+[17:36:58] [Download-2/ERROR]: Failed to retrieve profile key pair
