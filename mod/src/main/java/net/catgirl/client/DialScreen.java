@@ -217,12 +217,7 @@ public final class DialScreen extends Screen {
         int x = cx() - r, y = cy() - r - 8;
         circle(g, x - 3, y - 3, r * 2 + 6, Ui.alpha(accent, 0x50));
         circle(g, x, y, r * 2, Ui.alpha(Ui.INK, 0xE0));
-        if (open > 0.8F && minecraft.player != null) {
-            PlayerFaceRenderer.draw(g, minecraft.player.getSkin(), cx() - 12, cy() - 20, 24);
-            String name = minecraft.player.getName().getString();
-            if (name.length() > 12) name = name.substring(0, 12);
-            Ui.small(g, name, cx() - Ui.smallWidth(name) / 2, cy() + 7, Ui.HAZE);
-        }
+        if (open > 0.8F && minecraft.player != null) PlayerFaceRenderer.draw(g, minecraft.player.getSkin(), cx() - 14, cy() - 22, 28);
     }
 
     /** A round button or plate: smooth in the glass style, pixel-round otherwise. */

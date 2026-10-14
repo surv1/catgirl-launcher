@@ -732,8 +732,13 @@ public final class CatgirlPanel extends Screen {
     private boolean hudSettings() { return settingsFor != null && Hud.MODULES.get(settingsFor).hud; }
     private int[] modalBox() {
         int w = Math.min(pw - 40, hudSettings() ? 470 : 380);
-        int h = ph - 44;
-        return new int[] {px + (pw - w) / 2, py + 34, w, h};
+        Hud.Module m = settingsFor == null ? null : Hud.MODULES.get(settingsFor);
+        int need = 46 + ((m == null ? 0 : m.settings.size()) + 1) * 22 + (hudSettings() ? 4 : 28) + 12;
+        if (hudSettings()) need = Math.max(need, 46 + 110 + 48 + 12);
+        if (m != null && m.id.equals("waypoints")) need += 34 + Waypoints.here(minecraft).size() * 14;
+        int h = Math.min(ph - 44, need);                       // just as tall as it needs to be
+        int y = Math.max(py + 30, py + (ph - h) / 2);          // in the middle
+        return new int[] {px + (pw - w) / 2, y, w, h};
     }
     private int previewW() { return hudSettings() ? Math.min(140, modalBox()[2] / 3) : 0; }
     private int setX() { return modalBox()[0] + 14; }

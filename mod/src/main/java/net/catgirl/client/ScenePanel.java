@@ -88,7 +88,7 @@ final class ScenePanel {
         if (!open) return;
         int accent = CatgirlClient.accent();
         int[] b = box(sw, sh);
-        Glass.fill(g, b[0], b[1], b[2], b[3], 10, Ui.alpha(Ui.mix(Glass.base(accent), Ui.INK, 0.45F), 0xE0));
+        Glass.fill(g, b[0], b[1], b[2], b[3], 10, Ui.alpha(Ui.mix(Glass.base(accent), Ui.INK, 0.45F), 0xF6));
         Glass.ring(g, b[0], b[1], b[2], b[3], 10, Glass.rim(accent));
         for (int r = 0; r < ROWS.length; r++) {
             int ly = b[1] + 8 + r * 46;
