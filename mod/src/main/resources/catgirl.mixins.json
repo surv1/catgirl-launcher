@@ -4,14 +4,17 @@
   "package": "net.catgirl.client.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "AbstractSelectionListMixin",
     "CameraMixin",
     "ContainerScreenMixin",
     "EntityTurnMixin",
     "EnvironmentAttributeProbeMixin",
     "GameRendererAccessor",
     "GameRendererMixin",
+    "GuiGraphicsMixin",
     "MouseScrollMixin",
-    "PanoramaRendererMixin"
+    "PanoramaRendererMixin",
+    "ScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

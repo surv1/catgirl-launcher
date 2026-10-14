@@ -84,4 +84,5 @@ jobs:
           cd shots
           git init -q -b ci-shots && git add -A
           git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "Screenshots for ${GITHUB_SHA::7} ${{ inputs.note }}"
-          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ci-shots
+          # one branch per test (ci-shots-<scenario>), so tests can run side by side
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" "ci-shots:ci-shots-${{ inputs.scenario }}"

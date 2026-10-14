@@ -19,6 +19,7 @@ final class ConfigsPage {
     private int selected = 0;
     private double scroll = 0, shownScroll = 0;
     private String renaming = null;            // the name being typed, while renaming
+    private boolean renameFresh = false;       // the old name is "selected": typing replaces it
     private String toast = null;
     private long toastUntil = 0;
     private long deleteArmedUntil = 0;
@@ -49,9 +50,9 @@ final class ConfigsPage {
         boolean hSave = Ui.in(mx, my, x, y, 112, 16), hPaste = Ui.in(mx, my, x + 116, y, 70, 16);
         Ui.button(g, x, y, 112, 16, "Save current setup", hSave, true, accent);
         Ui.button(g, x + 116, y, 70, 16, "Paste code", hPaste, false, accent);
-        String using = currentName();
-        if (using != null) {
-            String s = "In use: " + using;
+        Configs.Config current = Configs.current();
+        if (current != null) {
+            String s = "In use: " + current.name();
             Ui.small(g, s, x + w - Ui.smallWidth(s), y + 6, Ui.HAZE);
         }
 
@@ -69,16 +70,20 @@ final class ConfigsPage {
             float hk = Anim.to("cfg.h" + i, hover || pick ? 1 : 0, 18);
             Ui.round(g, x, cy, listW(), cardH(), pick ? Ui.mix(accent, Ui.PLUM, 0.78F) : Ui.mix(Ui.BERRY, Ui.BERRY2, hk));
             if (pick) g.fill(x, cy + 6, x + 2, cy + cardH() - 6, accent);
-            String name = c.name();
-            while (f.width(name) > listW() - 60 && name.length() > 3) name = name.substring(0, name.length() - 2) + "…";
-            g.drawString(f, Component.literal(name).withStyle(ChatFormatting.BOLD), x + 8, y0(cy), Ui.MILK, false);
-            Ui.small(g, c.onCount() + " mods on · " + (c.builtIn() ? "built in" : ago(c.edited())), x + 8, cy + 17, Ui.DIM);
+            boolean inUse = c == current;
+            int room = listW() - 16 - (inUse ? Ui.smallWidth("IN USE") + 14 : 0);
+            g.drawString(f, Component.literal(fit(f, c.name(), room)).withStyle(ChatFormatting.BOLD), x + 8, y0(cy), Ui.MILK, false);
+            int n = c.onCount();
+            Ui.small(g, n + (n == 1 ? " mod on · " : " mods on · ") + (c.builtIn() ? "built in" : ago(c.edited())), x + 8, cy + 17, Ui.DIM);
             List<String> ids = c.onIds();
-            for (int k = 0; k < Math.min(8, ids.size()); k++) {
+            int icons = Math.min(ids.size(), (listW() - 34) / 13);
+            if (icons < ids.size()) icons--; // room for "+N"
+            for (int k = 0; k < icons; k++) {
                 Hud.Module m = Hud.MODULES.get(ids.get(k));
                 Ui.modIcon(g, Ui.iconPath(m.id), m.icon, x + 8 + k * 13, cy + 25, 11);
             }
-            if (Configs.matches(c)) {
+            if (icons < ids.size()) Ui.small(g, "+" + (ids.size() - icons), x + 10 + icons * 13, cy + 28, Ui.DIM);
+            if (inUse) {
                 String t = "IN USE";
                 int tw = Ui.smallWidth(t) + 8;
                 Ui.round(g, x + listW() - tw - 6, cy + 6, tw, 10, accent);
@@ -96,12 +101,14 @@ final class ConfigsPage {
         if (renaming != null) {
             Ui.round(g, dx + 6, ty - 3, dw - 12, 16, 0xFF140A18);
             Ui.roundFrame(g, dx + 6, ty - 3, dw - 12, 16, accent);
-            String shown = renaming + ((now / 500) % 2 == 0 ? "_" : "");
-            while (f.width(shown) > dw - 24 && shown.length() > 1) shown = shown.substring(1);
+            String shown = renaming;
+            while (f.width(shown + "_") > dw - 24 && shown.length() > 1) shown = shown.substring(1);
+            if (renameFresh && !shown.isEmpty()) g.fill(dx + 10, ty, dx + 12 + f.width(shown), ty + 10, Ui.mix(accent, Ui.PLUM, 0.45F)); // "selected"
             g.drawString(f, shown, dx + 11, ty + 1, Ui.MILK, false);
-            Ui.small(g, "Enter to save · Esc to cancel", dx + 8, ty + 17, Ui.DIM);
+            if ((now / 500) % 2 == 0) g.drawString(f, "_", dx + 11 + f.width(shown), ty + 1, Ui.MILK, false);
+            Ui.small(g, renameFresh ? "Type a name · Enter to save · Esc to keep this one" : "Enter to save · Esc to cancel", dx + 8, ty + 17, Ui.DIM);
         } else {
-            g.drawString(f, Component.literal(c.name()).withStyle(ChatFormatting.BOLD), dx + 8, ty, Ui.MILK, false);
+            g.drawString(f, Component.literal(fit(f, c.name(), dw - 16)).withStyle(ChatFormatting.BOLD), dx + 8, ty, Ui.MILK, false);
             Ui.small(g, c.builtIn() ? "built in · switches on just these, keeps your settings" : "yours · saved " + ago(c.edited()), dx + 8, ty + 12, Ui.DIM);
         }
         int ly = ty + 30;
@@ -139,6 +146,14 @@ final class ConfigsPage {
 
     private static int y0(int cy) { return cy + 6; }
 
+    /** The name in bold, cut short with "…" if it's wider than room. */
+    private static String fit(Font f, String name, int room) {
+        if (f.width(Component.literal(name).withStyle(ChatFormatting.BOLD)) <= room) return name;
+        String s = name;
+        while (s.length() > 1 && f.width(Component.literal(s + "…").withStyle(ChatFormatting.BOLD)) > room) s = s.substring(0, s.length() - 1);
+        return s.strip() + "…";
+    }
+
     /** Pills with mod names, wrapped; returns the y below them. */
     private static int chips(GuiGraphics g, Font f, List<Hud.Module> mods, String sign, int color, int x, int y, int w, int maxRows) {
         if (mods.isEmpty()) return y;
@@ -146,7 +161,9 @@ final class ConfigsPage {
         for (int i = 0; i < mods.size(); i++) {
             String t = sign + mods.get(i).name;
             int cw = Ui.smallWidth(t) + 10;
-            if (cx + cw > x + w) {
+            // on the last row, leave room for "+N more" after this chip if more are still to come
+            int reserve = rows >= maxRows && i < mods.size() - 1 ? Ui.smallWidth("+" + (mods.size() - i - 1) + " more") + 4 : 0;
+            if (cx + cw + reserve > x + w) {
                 if (rows >= maxRows) {
                     String more = "+" + (mods.size() - i) + " more";
                     Ui.small(g, more, cx, y + 3, Ui.DIM);
@@ -165,7 +182,7 @@ final class ConfigsPage {
 
     private List<Btn> buttons(Configs.Config c) {
         List<Btn> out = new ArrayList<>();
-        boolean using = Configs.matches(c);
+        boolean same = Configs.matches(c), using = same && c == Configs.current();
         if (renaming != null) {
             out.add(new Btn("rename-ok", "Save name", 62, true, true));
             out.add(new Btn("rename-cancel", "Cancel", 48, false, true));
@@ -174,7 +191,7 @@ final class ConfigsPage {
         out.add(new Btn("load", using ? "In use" : "Load", 40, true, !using));
         out.add(new Btn("copy", "Copy", 34, false, true));
         if (!c.builtIn()) {
-            out.add(new Btn("update", "Update", 42, false, !using));
+            out.add(new Btn("update", "Update", 42, false, !same));
             out.add(new Btn("rename", "Rename", 44, false, true));
             boolean armed = System.currentTimeMillis() < deleteArmedUntil;
             out.add(new Btn("delete", armed ? "Sure?" : "Delete", 40, false, true));
@@ -183,11 +200,6 @@ final class ConfigsPage {
         int total = 0, keep = 0;
         for (Btn b : out) { if (total + b.w > detailW() - 12) break; total += b.w + 4; keep++; }
         return out.subList(0, keep);
-    }
-
-    private String currentName() {
-        for (Configs.Config c : Configs.LIST) if (Configs.matches(c)) return c.name();
-        return null;
     }
 
     private static String ago(long t) {
@@ -209,6 +221,7 @@ final class ConfigsPage {
             Configs.Config c = Configs.saveCurrent(Configs.nextName());
             selected = Configs.LIST.indexOf(c);
             renaming = c.name();
+            renameFresh = true;
             Ui.sound("on");
             return true;
         }
@@ -248,7 +261,7 @@ final class ConfigsPage {
             case "load" -> { Configs.use(c, mc); Ui.sound("on"); }
             case "copy" -> { mc.keyboardHandler.setClipboard(Configs.code(c)); say("Code copied. Paste it in Configs to share it."); Ui.click(); }
             case "update" -> { Configs.Config n = Configs.update(c); selected = Configs.LIST.indexOf(n); say("Saved how everything is now into " + n.name() + "."); Ui.click(); }
-            case "rename" -> { renaming = c.name(); Ui.click(); }
+            case "rename" -> { renaming = c.name(); renameFresh = true; Ui.click(); }
             case "rename-ok" -> finishRename();
             case "rename-cancel" -> { renaming = null; Ui.click(); }
             case "delete" -> {
@@ -259,7 +272,7 @@ final class ConfigsPage {
                     say("Deleted " + c.name() + ".");
                     Ui.sound("off");
                 } else {
-                    deleteArmedUntil = System.currentTimeMillis() + 3000;
+                    deleteArmedUntil = System.currentTimeMillis() + 6000;
                     Ui.click();
                 }
             }
@@ -286,6 +299,7 @@ final class ConfigsPage {
     /** Typing while renaming. */
     boolean charTyped(String ch) {
         if (renaming == null || ch.isEmpty() || Character.isISOControl(ch.charAt(0))) return renaming != null;
+        if (renameFresh) { renaming = ""; renameFresh = false; }
         if (renaming.length() < 24) renaming += ch;
         return true;
     }
@@ -296,7 +310,12 @@ final class ConfigsPage {
         switch (key) {
             case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> finishRename();
             case GLFW.GLFW_KEY_ESCAPE -> renaming = null;
-            case GLFW.GLFW_KEY_BACKSPACE -> { if (!renaming.isEmpty()) renaming = renaming.substring(0, renaming.length() - 1); }
+            case GLFW.GLFW_KEY_BACKSPACE -> {
+                if (renameFresh) renaming = "";
+                else if (!renaming.isEmpty()) renaming = renaming.substring(0, renaming.length() - 1);
+                renameFresh = false;
+            }
+            case GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_END, GLFW.GLFW_KEY_HOME -> renameFresh = false;
             default -> { return true; }
         }
         return true;

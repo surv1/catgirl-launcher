@@ -213,6 +213,16 @@ final class Configs {
         return Hud.snapshotModules().equals(c.modules());
     }
 
+    /**
+     * The config you're on: the one you loaded or saved last if nothing changed since, otherwise the
+     * first one that matches how things are now (or null). Only this one gets the "In use" badge.
+     */
+    static Config current() {
+        for (Config c : LIST) if (c.name().equals(inUse) && matches(c)) return c;
+        for (Config c : LIST) if (matches(c)) return c;
+        return null;
+    }
+
     /** What loading this config would switch on and off, from how things are now. */
     static List<List<Hud.Module>> diff(Config c) {
         List<Hud.Module> on = new ArrayList<>(), off = new ArrayList<>();

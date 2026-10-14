@@ -1,0 +1,6 @@
+{
+  "modules": {
+    "sky": {"on": true, "opts": {"style": "Sakura"}},
+    "client": {"on": true, "opts": {"liveMenu": true, "menuTime": "real time", "screens": true}}
+  }
+}

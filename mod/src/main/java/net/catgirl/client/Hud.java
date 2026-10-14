@@ -177,7 +177,8 @@ final class Hud {
             Setting.color("accent", "Theme colour", "theme"), Setting.bool("sounds", "Menu sounds", true),
             Setting.bool("animations", "Animations", true), Setting.bool("flower", "Open with the flower menu", true),
             Setting.bool("tooltips", "Tips when you hover a mod", true),
-            Setting.bool("liveMenu", "Live main menu", true), Setting.cycle("menuTime", "Main menu time", TitleScene.TIMES));
+            Setting.bool("liveMenu", "Live main menu", true), Setting.cycle("menuTime", "Main menu time", TitleScene.TIMES),
+            Setting.bool("screens", "Catgirl-style menus", true));
         client.hidden = true;
         client.on = true;
         // Every HUD piece also gets the same "Look" settings (like Lunar's background / text options).

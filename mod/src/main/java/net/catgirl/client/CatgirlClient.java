@@ -18,12 +18,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.SplashRenderer;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -59,6 +61,7 @@ import org.slf4j.LoggerFactory;
  */
 public class CatgirlClient implements ClientModInitializer {
     static final Logger LOG = LoggerFactory.getLogger("catgirl");
+    static final boolean TESTING = Boolean.getBoolean("catgirl.debugClicks"); // set by the in-game screenshot tests
     private static final int GAP = 4;
     private static final int H = 20;
     private static final int TEXT_W = 120;
@@ -156,6 +159,11 @@ public class CatgirlClient implements ClientModInitializer {
         });
 
         ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
+            if (TESTING) { // the in-game tests find buttons by their label
+                for (var w : Screens.getButtons(screen))
+                    LOG.info("[Catgirl] widget \"{}\" {} {} {} {}", w.getMessage().getString(), w.getX(), w.getY(), w.getWidth(), w.getHeight());
+            }
+            if (screen instanceof PauseScreen pause && pause.showsPauseMenu()) { addPauseCat(screen); return; }
             if (!(screen instanceof TitleScreen)) return;
             client.getWindow().setTitle(title);
             if (config.splashes) applyCatgirlSplash(screen);
@@ -305,6 +313,19 @@ public class CatgirlClient implements ClientModInitializer {
             }
         }
         return null; // no free space at this window size: skip the menu
+    }
+
+    /** Catgirl-style menus: the little cat sits on the pause menu's "Back to Game" button. */
+    private static void addPauseCat(Screen screen) {
+        Button back = null;
+        for (Object o : Screens.getButtons(screen)) {
+            if (o instanceof Button b && b.getMessage().getContents() instanceof TranslatableContents t && t.getKey().equals("menu.returnToGame")) { back = b; break; }
+        }
+        if (back == null) return;
+        Button sitOn = back;
+        ScreenEvents.afterRender(screen).register((s, g, mouseX, mouseY, delta) -> {
+            if (Restyle.on() && sitOn.visible) Ui.cat(g, sitOn.getX() + sitOn.getWidth() - 24, sitOn.getY() - 13, accent(), System.currentTimeMillis());
+        });
     }
 
     /** The live main menu's two little buttons, bottom right: time of day, and grow the tree again. */
