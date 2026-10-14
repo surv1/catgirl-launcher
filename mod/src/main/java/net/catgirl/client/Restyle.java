@@ -1,6 +1,5 @@
 package net.catgirl.client;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.Identifier;
 
@@ -11,36 +10,23 @@ import net.minecraft.resources.Identifier;
  *
  * The game asks GuiGraphics to draw a sprite (say "widget/button_highlighted") or a texture (say
  * "textures/gui/menu_background.png"); GuiGraphicsMixin asks us first, and we draw our own and say
- * "done", or say nothing and the game draws its own. Off with Catgirl settings > "Catgirl-style
- * menus", and stepped aside on its own when a resource pack brings its own buttons.
+ * "done", or say nothing and the game draws its own. It's drawn over a resource pack's buttons
+ * too (they come through the same calls); switch it off in Catgirl settings > "Catgirl-style menus"
+ * to see your pack's buttons instead.
  */
 public final class Restyle {
     private Restyle() {}
 
     private static boolean broken = false;     // something went wrong once: the game draws its own from then on
-    private static long checkedAt = 0;
-    private static boolean vanillaLook = true; // no resource pack changes the buttons
     private static int tx, ty, tw, th;         // the slider track just drawn (its handle comes next)
 
+    /** On unless switched off in Catgirl settings. It also wins over a resource pack's own buttons. */
     static boolean on() {
         if (broken) return false;
         try {
-            if (!Hud.optBool("client", "screens")) return false;
-            long now = System.currentTimeMillis();
-            if (now - checkedAt > 2000) { checkedAt = now; vanillaLook = buttonsAreVanilla(); }
-            return vanillaLook;
+            return Hud.optBool("client", "screens");
         } catch (Throwable t) {
             return false;
-        }
-    }
-
-    /** A resource pack with its own buttons wins: we only restyle the game's own look. */
-    private static boolean buttonsAreVanilla() {
-        try {
-            var r = Minecraft.getInstance().getResourceManager().getResource(Identifier.withDefaultNamespace("textures/gui/sprites/widget/button.png"));
-            return r.isEmpty() || "vanilla".equals(r.get().sourcePackId());
-        } catch (Throwable t) {
-            return true;
         }
     }
 

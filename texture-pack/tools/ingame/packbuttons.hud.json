@@ -1,0 +1,5 @@
+{
+  "modules": {
+    "client": {"on": true, "opts": {"liveMenu": true, "menuTime": "real time"}}
+  }
+}

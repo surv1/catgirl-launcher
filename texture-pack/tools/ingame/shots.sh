@@ -69,6 +69,7 @@ narrator:0
 realmsNotifications:false
 EOF
 [ -f "$HERE/$SCENARIO.options" ] && cat "$HERE/$SCENARIO.options" >> options.txt
+[ -f "$HERE/$SCENARIO.pre.sh" ] && source "$HERE/$SCENARIO.pre.sh"   # anything a test needs in the game folder first
 export LIBGL_ALWAYS_SOFTWARE=1
 Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 &
 XVFB=$!
