@@ -322,6 +322,50 @@ final class Hud {
         }
     }
 
+    // ------------------------------------------------------------------ configs (Configs.java)
+
+    /** Every mod's on/off, settings and HUD position, the way configs store them (Catgirl settings left out). */
+    static JsonObject snapshotModules() {
+        JsonObject ms = new JsonObject();
+        for (Module m : MODULES.values()) {
+            if (m.id.equals("client")) continue;
+            JsonObject j = new JsonObject();
+            j.addProperty("on", m.on);
+            if (m.moved()) { j.addProperty("x", m.x); j.addProperty("y", m.y); }
+            if (m.scale != 1F) j.addProperty("scale", m.scale);
+            if (!m.opts.isEmpty()) j.add("opts", m.opts.deepCopy());
+            ms.add(m.id, j);
+        }
+        return ms;
+    }
+
+    /**
+     * Sets every mod from a config. A full config (one you saved) sets everything exactly; a partial
+     * one (the built-in ones) switches on what it lists, with its settings on top of yours, and the
+     * rest off without touching their settings or spots.
+     */
+    static void applyModules(JsonObject ms, boolean partial, net.minecraft.client.Minecraft mc) {
+        for (Module m : MODULES.values()) {
+            if (m.id.equals("client")) continue;
+            JsonObject j = ms.has(m.id) && ms.get(m.id).isJsonObject() ? ms.getAsJsonObject(m.id) : null;
+            boolean on = j != null && j.has("on") && j.get("on").getAsBoolean();
+            if (j != null && !partial) {
+                m.x = j.has("x") ? clamp01(j.get("x").getAsFloat()) : Float.NaN;
+                m.y = j.has("y") ? clamp01(j.get("y").getAsFloat()) : Float.NaN;
+                m.scale = j.has("scale") ? clampScale(j.get("scale").getAsFloat()) : 1F;
+                for (String k : new ArrayList<>(m.opts.keySet())) if (!k.equals("_mine")) m.opts.remove(k);
+            }
+            if (j != null && j.has("opts") && j.get("opts").isJsonObject()) for (var e : j.getAsJsonObject("opts").entrySet()) m.opts.add(e.getKey(), e.getValue());
+            if (m.id.equals("sprint") && mc != null) { mc.options.toggleSprint().set(on); mc.options.save(); }
+            if (m.id.equals("sneak") && mc != null) { mc.options.toggleCrouch().set(on); mc.options.save(); }
+            boolean was = m.on;
+            m.on = on;
+            Compat.chosen(m, on);
+            if (on && !was && m.id.equals("nowplaying")) NowPlaying.start();
+        }
+        save();
+    }
+
     static float clamp01(float v) { return Float.isNaN(v) ? 0F : Math.max(0F, Math.min(1F, v)); }
     static float clampScale(float v) { return Float.isNaN(v) ? 1F : Math.max(0.5F, Math.min(2F, Math.round(v * 20F) / 20F)); }
 

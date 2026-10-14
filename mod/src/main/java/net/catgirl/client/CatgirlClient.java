@@ -105,6 +105,7 @@ public class CatgirlClient implements ClientModInitializer {
         NowPlaying.setCorner(config.nowPlayingPosition);
         Hud.load(FabricLoader.getInstance().getConfigDir().resolve("catgirl-hud.json").toFile(), config.nowPlaying, config.nowPlayingPosition);
         Compat.stepAside(); // mods you already have for the same job win
+        Configs.load(FabricLoader.getInstance().getConfigDir().resolve("catgirl-configs.json").toFile());
         if (Hud.MODULES.get("nowplaying").on) NowPlaying.start();
         net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
             net.minecraft.resources.Identifier.fromNamespaceAndPath("catgirl", "hud"),

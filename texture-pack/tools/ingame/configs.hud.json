@@ -1,0 +1,7 @@
+{
+  "modules": {
+    "fps": {"on": true},
+    "coords": {"on": true},
+    "sky": {"on": true, "opts": {"style": "Lilac"}}
+  }
+}

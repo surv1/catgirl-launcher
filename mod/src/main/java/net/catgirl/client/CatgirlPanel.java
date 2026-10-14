@@ -31,7 +31,7 @@ import java.util.Set;
  * Everything eases in and slides (Catgirl settings > Animations turns that off).
  */
 public final class CatgirlPanel extends Screen {
-    enum Page { MODS, COSMETICS, SETTINGS }
+    enum Page { MODS, COSMETICS, SETTINGS, CONFIGS }
 
     private static final String[] CATEGORIES = {"All", "On", "Favourites", "HUD", "PvP", "Visual", "World", "Performance", "Utility"};
     private static int lastCategory = 0;
@@ -50,6 +50,7 @@ public final class CatgirlPanel extends Screen {
     private double setScroll = 0, shownSetScroll = 0;
     private String draggingSlider = null;
     private final ColorPicker picker = new ColorPicker();
+    private final ConfigsPage configs = new ConfigsPage();
     private String hoverKey = null;            // card under the mouse, for the tooltip
     private long hoverSince = 0;
 
@@ -256,6 +257,7 @@ public final class CatgirlPanel extends Screen {
         new Side("Edit HUD", Ui.G_HUD, "hud"),
         null,
         new Side("Mods", Ui.G_MODS, "mods"),
+        new Side("Configs", Ui.G_CONFIGS, "configs"),
         new Side("Cosmetics", Ui.G_HEART, "cosmetics"),
         new Side("Keybinds", Ui.G_KEYS, "keys"),
         null,
@@ -265,7 +267,7 @@ public final class CatgirlPanel extends Screen {
     private static final String[] SECTIONS = {"MODS & LOOKS", "YOU"};
 
     /** y of each sidebar row (and of the section labels, for the nulls). */
-    private int sideY(int i) { return py + 36 + i * 18 + (i >= 1 ? 2 : 0) + (i >= 5 ? 2 : 0); }
+    private int sideY(int i) { return py + 36 + i * 18 + (i >= 1 ? 2 : 0) + (i >= 6 ? 2 : 0); }
     private int[] gearBox() { return new int[] {px + sb - 20, py + ph - 24, 14, 14}; }
 
     // ------------------------------------------------------------------ drawing
@@ -300,6 +302,9 @@ public final class CatgirlPanel extends Screen {
         } else if (page == Page.COSMETICS) {
             title = "Cosmetics";
             sub = "what everyone sees on you";
+        } else if (page == Page.CONFIGS) {
+            title = "Configs";
+            sub = "save your setups and switch in one click";
         } else {
             Hud.Module m = Hud.MODULES.get(settingsFor);
             title = m.name;
@@ -322,6 +327,7 @@ public final class CatgirlPanel extends Screen {
         g.pose().translate(slide, 0);
         if (page == Page.MODS) renderMods(g, f, mx - slide, my, now);
         else if (page == Page.SETTINGS) renderSettings(g, f, mx - slide, my);
+        else if (page == Page.CONFIGS) { configs.layout(mainX() + 12, py + 34, mainW() - 24, ph - 34 - 8); configs.render(g, f, mx - slide, my, accent, now); }
         else renderCosmetics(g, f, mx - slide, my);
         g.pose().popMatrix();
         g.pose().popMatrix();
@@ -343,7 +349,8 @@ public final class CatgirlPanel extends Screen {
             if (SIDE[i] == null) continue;
             String a = SIDE[i].action();
             boolean settingsFromMods = page == Page.SETTINGS && !"client".equals(settingsFor) && settingsFrom == Page.MODS;
-            if ((a.equals("mods") && (page == Page.MODS || settingsFromMods)) || (a.equals("cosmetics") && page == Page.COSMETICS)) activeRow = i;
+            if ((a.equals("mods") && (page == Page.MODS || settingsFromMods)) || (a.equals("cosmetics") && page == Page.COSMETICS)
+                || (a.equals("configs") && page == Page.CONFIGS)) activeRow = i;
         }
         if (activeRow >= 0) {
             float ay = Anim.to("side.y", sideY(activeRow), 16);
@@ -961,6 +968,7 @@ public final class CatgirlPanel extends Screen {
             switch (SIDE[i].action()) {
                 case "hud" -> minecraft.setScreen(new HudEditorScreen(this, accent));
                 case "mods" -> { go(Page.MODS); }
+                case "configs" -> go(Page.CONFIGS);
                 case "cosmetics" -> go(Page.COSMETICS);
                 case "keys" -> minecraft.setScreen(new KeyBindsScreen(this, minecraft.options));
                 case "wardrobe" -> { CatgirlClient.openWardrobe(); minecraft.setScreen(null); }
@@ -972,6 +980,8 @@ public final class CatgirlPanel extends Screen {
 
         if (page == Page.SETTINGS) {
             if (settingsClick(mx, my, e.button())) return true;
+        } else if (page == Page.CONFIGS) {
+            if (configs.click(mx, my, e.button(), minecraft)) return true;
         } else if (page == Page.MODS) {
             if (e.button() == 0 && pending() && CatgirlClient.canRestart()) {
                 int[] r = restartBox();
@@ -1061,6 +1071,7 @@ public final class CatgirlPanel extends Screen {
     @Override
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
         if (picker.isOpen() || sy == 0) return true;
+        if (page == Page.CONFIGS) return configs.scrolled(mx, my, sy);
         if (page == Page.MODS) {
             if (my < gridTop() && my >= py + 30) { // over the categories: flick between them
                 int n = chipsShown();
@@ -1085,6 +1096,7 @@ public final class CatgirlPanel extends Screen {
     public boolean charTyped(CharacterEvent e) {
         String ch = e.codepointAsString();
         if (picker.charTyped(ch)) return true;
+        if (page == Page.CONFIGS && configs.charTyped(ch)) return true;
         if (page != Page.MODS) return super.charTyped(e);
         if (ch.isEmpty() || Character.isISOControl(ch.charAt(0)) || search.length() >= 24) return true;
         if (!searchFocused && ch.equals(" ")) return true;
@@ -1098,6 +1110,7 @@ public final class CatgirlPanel extends Screen {
     public boolean keyPressed(KeyEvent e) {
         int key = e.key();
         if (picker.keyPressed(key)) return true;
+        if (page == Page.CONFIGS && configs.keyPressed(key)) return true;
         boolean ctrl = (e.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0;
         if (page == Page.MODS) {
             if (ctrl && key == GLFW.GLFW_KEY_F) { searchFocused = true; return true; }
@@ -1123,7 +1136,7 @@ public final class CatgirlPanel extends Screen {
             }
         }
         if (page == Page.SETTINGS && (key == GLFW.GLFW_KEY_ESCAPE || key == GLFW.GLFW_KEY_BACKSPACE)) { back(); return true; }
-        if (page == Page.COSMETICS && key == GLFW.GLFW_KEY_ESCAPE) { go(Page.MODS); Ui.click(); return true; }
+        if ((page == Page.COSMETICS || page == Page.CONFIGS) && key == GLFW.GLFW_KEY_ESCAPE) { go(Page.MODS); Ui.click(); return true; }
         if (CatgirlClient.isMenuKey(key)) { Ui.sound("close"); minecraft.setScreen(null); return true; }
         return super.keyPressed(e);
     }
