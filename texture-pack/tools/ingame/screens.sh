@@ -45,8 +45,9 @@ cmd "kick $P Back to the menu"
 sleep 3
 key Tab; key Return       # "Back to server list"
 sleep 2
-click 320 52              # the "Scanning for games" row
-shot server-list 1.5
+click 320 52              # the first server
+hover 320 92              # pointing at the second
+shot server-list 2
 btn "Add Server"
 shot add-server 1.2
 xdotool type --delay 60 "Catgirl Island"; sleep 0.3

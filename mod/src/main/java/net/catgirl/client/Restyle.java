@@ -30,6 +30,15 @@ public final class Restyle {
         }
     }
 
+    /** "glass" (soft and see-through, like the main menu island) or "pixel" (flat Catgirl panels). */
+    static boolean glass() {
+        try {
+            return !"pixel".equals(Hud.optStr("client", "menuStyle"));
+        } catch (Throwable t) {
+            return true;
+        }
+    }
+
     private static void fail(Throwable t) {
         if (!broken) CatgirlClient.LOG.warn("[Catgirl] Catgirl-style menus switched off (the game's own look is back): {}", t.toString());
         broken = true;
@@ -46,6 +55,7 @@ public final class Restyle {
         if (a <= 0.01F) return true;
         try {
             int accent = CatgirlClient.accent();
+            if (glass()) return glassSprite(g, p, x, y, w, h, accent, a);
             switch (p) {
                 case "widget/button" -> button(g, x, y, w, h, 0, accent, a);
                 case "widget/button_highlighted" -> button(g, x, y, w, h, 1, accent, a);
@@ -66,6 +76,26 @@ public final class Restyle {
             fail(t);
             return false;
         }
+    }
+
+    private static boolean glassSprite(GuiGraphics g, String p, int x, int y, int w, int h, int accent, float a) {
+        boolean hl = p.endsWith("highlighted");
+        switch (p) {
+            case "widget/button" -> Glass.button(g, x, y, w, h, 0, accent, a);
+            case "widget/button_highlighted" -> Glass.button(g, x, y, w, h, 1, accent, a);
+            case "widget/button_disabled" -> Glass.button(g, x, y, w, h, 2, accent, a);
+            case "widget/slider", "widget/slider_highlighted" -> Glass.track(g, x, y, w, h, hl, accent, a);
+            case "widget/slider_handle", "widget/slider_handle_highlighted" -> Glass.handle(g, x, y, w, h, hl, accent, a);
+            case "widget/text_field", "widget/text_field_highlighted" -> Glass.field(g, x, y, w, h, hl, accent, a);
+            case "widget/checkbox", "widget/checkbox_highlighted", "widget/checkbox_selected", "widget/checkbox_selected_highlighted" ->
+                Glass.checkbox(g, x, y, w, h, p.contains("selected"), hl, accent, a, TICK, light(accent));
+            case "widget/scroller" -> Glass.scroller(g, x, y, w, h, accent, a);
+            case "widget/scroller_background" -> Glass.scrollTrack(g, x, y, w, h, a);
+            case "widget/tab", "widget/tab_highlighted", "widget/tab_selected", "widget/tab_selected_highlighted" ->
+                Glass.tab(g, x, y, w, h, p.contains("selected"), hl, accent, a);
+            default -> { return false; }
+        }
+        return true;
     }
 
     /** A button: flat, pixel-rounded corners, a 2px lip at the bottom; your colour when you point at it. */
@@ -159,6 +189,18 @@ public final class Restyle {
         if (!p.startsWith("textures/gui/") || !"minecraft".equals(id.getNamespace()) || !on()) return false;
         float a = ((color >>> 24) & 255) / 255F;
         try {
+            if (glass()) {
+                switch (p) {
+                    // a light violet veil over the blur; no list panel and no lines, the rows have their own cards
+                    case "textures/gui/menu_background.png" -> g.fill(x, y, x + w, y + h, al(0x5A2A1640, a));
+                    case "textures/gui/inworld_menu_background.png" -> g.fill(x, y, x + w, y + h, al(0x442A1640, a));
+                    case "textures/gui/menu_list_background.png", "textures/gui/inworld_menu_list_background.png",
+                         "textures/gui/header_separator.png", "textures/gui/inworld_header_separator.png",
+                         "textures/gui/footer_separator.png", "textures/gui/inworld_footer_separator.png" -> {}
+                    default -> { return false; }
+                }
+                return true;
+            }
             switch (p) {
                 case "textures/gui/menu_background.png" -> g.fill(x, y, x + w, y + h, al(0x781D1026, a));
                 case "textures/gui/inworld_menu_background.png" -> g.fill(x, y, x + w, y + h, al(0x5C1D1026, a));
@@ -191,6 +233,7 @@ public final class Restyle {
         try {
             int accent = CatgirlClient.accent();
             boolean focused = color == -1;
+            if (glass()) { Glass.picked(g, x, y, w, h, focused, accent); return true; }
             Ui.round(g, x, y, w, h, focused ? accent : Ui.mix(accent, Ui.BERRY3, 0.55F));
             g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xF0170B1D);
             g.fill(x + 1, y + 1, x + 3, y + h - 1, focused ? accent : Ui.mix(accent, Ui.BERRY3, 0.55F)); // a bar on the left, like the Catgirl menu
@@ -198,6 +241,27 @@ public final class Restyle {
         } catch (Throwable t) {
             fail(t);
             return false;
+        }
+    }
+
+    /** Glass style: a soft card behind every row of a list where you pick one (servers, worlds, packs, languages). */
+    public static void cards(GuiGraphics g, net.minecraft.client.gui.components.AbstractSelectionList<?> list, int mouseX, int mouseY) {
+        if (!on() || !glass() || !(list instanceof net.minecraft.client.gui.components.ObjectSelectionList<?>)) return;
+        try {
+            int accent = CatgirlClient.accent();
+            int top = list.getY(), bottom = list.getBottom();
+            boolean inList = mouseY >= top && mouseY < bottom && mouseX >= list.getX() && mouseX < list.getRight();
+            Object picked = list.getSelected();
+            for (Object o : list.children()) {
+                if (!(o instanceof net.minecraft.client.gui.layouts.LayoutElement e) || o == picked) continue;
+                if (o instanceof net.minecraft.client.gui.screens.multiplayer.ServerSelectionList.LANHeader) continue; // "Scanning for games..."
+                int ex = e.getX(), ey = e.getY(), ew = e.getWidth(), eh = e.getHeight();
+                if (ey + eh < top || ey > bottom || ew < 8 || eh < 8) continue;
+                boolean hover = inList && mouseX >= ex && mouseX < ex + ew && mouseY >= ey && mouseY < ey + eh;
+                Glass.card(g, ex, ey, ew, eh, hover, accent);
+            }
+        } catch (Throwable t) {
+            fail(t);
         }
     }
 
