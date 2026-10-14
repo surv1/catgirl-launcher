@@ -52,11 +52,15 @@ public final class TitleScene {
     private TitleScene() {}
 
     static final String[] TIMES = {"real time", "morning", "day", "sunset", "night"};
+    static final String[] TREES = {"cherry", "oak", "birch", "spruce", "mixed"};
+    static final String[] CAMERAS = {"orbit", "sway", "still"};
     private static final int N = 16;
     private static final BlockState AIR = Blocks.AIR.defaultBlockState();
 
     private static BlockState[] blocks;           // the island, x/y/z in 0..15
-    private static List<BlockPos> tree;           // the cherry tree, in the order it grows
+    private static List<BlockPos> tree;           // the trees, in the order they grow
+    private static java.util.Map<BlockPos, Integer> treeOrder = new java.util.HashMap<>();
+    private static String builtTrees = null;      // which trees the island was built with
     private static final List<BlockPos> LANTERNS = new ArrayList<>();
     private static long growStart = 0;            // when the tree started growing (0 = fully grown)
     private static boolean failed = false;        // something went wrong once: use the panorama
@@ -71,11 +75,19 @@ public final class TitleScene {
     /** Which side of the screen the island sits on: -1 left, 1 right (away from the Catgirl menu). */
     static int side = -1;
 
-    /** Regrows the cherry tree from a sapling (the little seedling button). */
+    /** Regrows the trees from saplings (the little seedling button). */
     static void grow() {
         growStart = System.nanoTime();
-        CatgirlClient.LOG.info("[Catgirl] The menu's cherry tree is growing again");
+        CatgirlClient.LOG.info("[Catgirl] The menu's trees are growing again");
     }
+
+    static String time() { return Hud.optStr("client", "menuTime"); }
+    static String trees() { return Hud.optStr("client", "menuTrees"); }
+    static String camera() { return Hud.optStr("client", "menuCamera"); }
+    static void setTime(String t) { Hud.setOpt("client", "menuTime", t); }
+    static void setCamera(String c) { Hud.setOpt("client", "menuCamera", c); }
+    /** New trees: the island is rebuilt with them on the next frame, and they grow in. */
+    static void setTrees(String t) { if (!t.equals(trees())) Hud.setOpt("client", "menuTrees", t); }
 
     /** Next time of day (the sun / moon button), and the name to show. */
     static String nextTime() {
@@ -94,7 +106,12 @@ public final class TitleScene {
         if (!on()) return false;
         Minecraft mc = Minecraft.getInstance();
         try {
-            if (blocks == null) build();
+            String want = trees();
+            if (blocks == null || !want.equals(builtTrees)) {
+                boolean regrow = builtTrees != null;
+                build(want);
+                if (regrow) grow();
+            }
             if (projection == null) projection = new CachedPerspectiveProjectionMatrixBuffer("Catgirl menu scene", 0.05F, 600F);
             if (buffers == null) buffers = MultiBufferSource.immediate(new ByteBufferBuilder(1 << 21));
             draw(mc);
@@ -123,7 +140,7 @@ public final class TitleScene {
         // island so it sits to one side of the screen and a little low, clear of the menu buttons.
         var win = mc.getWindow();
         float aspect = win.getWidth() / (float) Math.max(1, win.getHeight());
-        float orbit = Anim.on() ? secs * 0.045F : 0.6F;
+        float orbit = cameraAngle(secs);
         float dist = 36F, elev = 0.3F;
         float halfH = dist * (float) Math.tan(Math.toRadians(25)), halfW = halfH * aspect;
         Vector3f center = new Vector3f(8F, 8F, 8F);
@@ -160,6 +177,27 @@ public final class TitleScene {
             RenderSystem.restoreProjectionMatrix();
             RenderSystem.setShaderFog(oldFog);
         }
+    }
+
+    private static float camAngle = 0.6F, swayFrom = 0.6F, swayStartSecs = -1, lastSecs = -1;
+    private static String lastCamera = null;
+
+    /** Orbit: a slow circle. Sway: gently back and forth from where it is. Still: stays where it is. */
+    private static float cameraAngle(float secs) {
+        float dt = lastSecs < 0 ? 0 : Math.min(0.1F, Math.max(0, secs - lastSecs));
+        lastSecs = secs;
+        if (!Anim.on()) return camAngle;
+        String mode = camera();
+        if (!mode.equals(lastCamera)) { lastCamera = mode; swayFrom = camAngle; swayStartSecs = secs; }
+        switch (mode) {
+            case "sway" -> {
+                float target = swayFrom + Mth.sin((secs - swayStartSecs) * 0.22F) * 0.38F;
+                camAngle = Mth.lerp(Math.min(1F, dt * 3F), camAngle, target);
+            }
+            case "still" -> {}
+            default -> camAngle += dt * 0.045F;
+        }
+        return camAngle;
     }
 
     /** {sun height, warmth} for the chosen time (or the real clock). */
@@ -404,9 +442,9 @@ public final class TitleScene {
         BlockState state(int x, int y, int z) {
             if (x < 0 || y < 0 || z < 0 || x >= N || y >= N || z >= N) return AIR;
             BlockState s = blocks[(y * N + z) * N + x];
-            if (growStart != 0 && s.is(Blocks.CHERRY_LEAVES) || growStart != 0 && s.is(Blocks.CHERRY_LOG)) {
-                int i = tree.indexOf(new BlockPos(x, y, z));
-                if (i >= grownBlocks) return AIR;
+            if (growStart != 0 && !s.isAir()) {
+                Integer i = treeOrder.get(new BlockPos(x, y, z));
+                if (i != null && i >= grownBlocks) return AIR;
             }
             return s;
         }
@@ -436,6 +474,14 @@ public final class TitleScene {
         Random rnd = new Random(11);
         float fall = Anim.on() ? secs : 0;
         VertexConsumer vc = buffers.getBuffer(RenderTypes.debugQuads());
+        String kind = builtTrees == null ? "cherry" : builtTrees;
+        int[] cols = switch (kind) {
+            case "oak" -> new int[] {0x7DB04A, 0xA4C964};       // a few green leaves
+            case "birch" -> new int[] {0xC9D86A, 0xE8D46A};     // yellow-green
+            case "spruce" -> null;                              // needles don't fall like that
+            default -> new int[] {0xFFE3EE, 0xFFB0D2};          // blossom
+        };
+        int falling = cols == null ? 0 : kind.equals("cherry") || kind.equals("mixed") ? 34 : 16;
         for (int i = 0; i < 34; i++) {
             float sx = 7F + rnd.nextFloat() * 7F, sz = 5F + rnd.nextFloat() * 7F, speed = 0.55F + rnd.nextFloat() * 0.5F, off = rnd.nextFloat() * 20F;
             float t = (fall * speed + off) % 20F;              // 20 blocks of falling, then again from the tree
@@ -445,7 +491,8 @@ public final class TitleScene {
             float spin = fall * 2.2F + i;
             Vector3f side = new Vector3f(Mth.cos(spin), 0.3F, Mth.sin(spin)).normalize();
             Vector3f up = new Vector3f(-Mth.sin(spin) * 0.5F, 1, Mth.cos(spin) * 0.5F).normalize();
-            int c = i % 3 == 0 ? 0xFFE3EE : 0xFFB0D2;
+            if (i >= falling) continue;
+            int c = i % 3 == 0 ? cols[0] : cols[1];
             int k = Math.round(Mth.lerp(day, 0.45F, 1F) * 255) ;
             quadAt(vc, m, new Vector3f(x, y, z), side, up, 0.11F, ((c >> 16) & 255) * k / 255, ((c >> 8) & 255) * k / 255, (c & 255) * k / 255, Math.round(a), Math.round(a));
         }
@@ -465,7 +512,7 @@ public final class TitleScene {
 
     // ------------------------------------------------------------------ building the island
 
-    private static void build() {
+    private static void build(String kinds) {
         blocks = new BlockState[N * N * N];
         java.util.Arrays.fill(blocks, AIR);
         Random rnd = new Random(20261014L);
@@ -487,33 +534,137 @@ public final class TitleScene {
         int[][] pond = {{5, 4}, {6, 4}, {4, 5}, {5, 5}, {6, 5}, {5, 6}};
         for (int[] p : pond) set(p[0], top, p[1], Blocks.WATER.defaultBlockState());
         set(5, top + 1, 5, Blocks.LILY_PAD.defaultBlockState());
-        // the cherry tree, trunk first, then the blossom from the middle out (the order it grows in)
-        tree = new ArrayList<>();
-        int tx = 10, tz = 9;
-        for (int y = top + 1; y <= top + 4; y++) { set(tx, y, tz, Blocks.CHERRY_LOG.defaultBlockState()); tree.add(new BlockPos(tx, y, tz)); }
-        List<BlockPos> leaves = new ArrayList<>();
-        for (int y = top + 3; y <= top + 7 && y < N; y++) for (int z = tz - 3; z <= tz + 3; z++) for (int x = tx - 3; x <= tx + 3; x++) {
-            float dx = x - tx, dy = (y - (top + 5)) * 1.3F, dz = z - tz;
-            float d = Mth.sqrt(dx * dx + dy * dy + dz * dz);
-            if (d > 3.1F + rnd.nextFloat() * 0.5F || x < 0 || z < 0 || x >= N || z >= N) continue;
-            if (!get(x, y, z).isAir()) continue;
-            set(x, y, z, Blocks.CHERRY_LEAVES.defaultBlockState());
-            leaves.add(new BlockPos(x, y, z));
+        // the trees: each grows trunk first, then its leaves from the middle out
+        builtTrees = kinds;
+        Random trnd = new Random(77);
+        List<List<BlockPos>> grown = new ArrayList<>();
+        switch (kinds) {
+            case "oak" -> grown.add(oak(10, 9, top, 5, trnd));
+            case "birch" -> grown.add(birch(10, 9, top, trnd));
+            case "spruce" -> grown.add(spruce(10, 9, top, 6));
+            case "mixed" -> {
+                grown.add(cherry(10, 10, top, 2.6F, trnd));
+                grown.add(birch(11, 4, top, trnd));
+                grown.add(spruce(3, 7, top, 6));
+            }
+            default -> grown.add(cherry(10, 9, top, 3.1F, trnd));
         }
-        leaves.sort((a, b) -> Double.compare(a.distSqr(new BlockPos(tx, top + 5, tz)), b.distSqr(new BlockPos(tx, top + 5, tz))));
-        tree.addAll(leaves);
+        // all trees grow together: merge them by how far along each one is
+        tree = new ArrayList<>();
+        List<float[]> keyed = new ArrayList<>();
+        for (int t = 0; t < grown.size(); t++)
+            for (int i = 0; i < grown.get(t).size(); i++) keyed.add(new float[] {i / (float) grown.get(t).size(), t, i});
+        keyed.sort((a, b) -> Float.compare(a[0], b[0]));
+        treeOrder = new java.util.HashMap<>();
+        for (float[] k : keyed) {
+            BlockPos p = grown.get((int) k[1]).get((int) k[2]);
+            treeOrder.put(p, tree.size());
+            tree.add(p);
+        }
         // flowers, grass and a lantern on a post
         BlockState[] flowers = {Blocks.PINK_TULIP.defaultBlockState(), Blocks.ALLIUM.defaultBlockState(), Blocks.OXEYE_DAISY.defaultBlockState(),
             Blocks.CORNFLOWER.defaultBlockState(), Blocks.LILY_OF_THE_VALLEY.defaultBlockState(), Blocks.SHORT_GRASS.defaultBlockState(),
             Blocks.SHORT_GRASS.defaultBlockState(), Blocks.PINK_PETALS.defaultBlockState()};
+        Random frnd = new Random(5150);
         for (int z = 0; z < N; z++) for (int x = 0; x < N; x++) {
+            float roll = frnd.nextFloat();
+            int pick = frnd.nextInt(flowers.length);
             if (!get(x, top, z).is(Blocks.GRASS_BLOCK) || !get(x, top + 1, z).isAir()) continue;
-            if (rnd.nextFloat() < 0.34F) set(x, top + 1, z, flowers[rnd.nextInt(flowers.length)]);
+            if (roll < 0.34F) set(x, top + 1, z, flowers[pick]);
         }
         set(4, top + 1, 10, Blocks.OAK_FENCE.defaultBlockState());
         set(4, top + 2, 10, Blocks.LANTERN.defaultBlockState());
         LANTERNS.clear();
         LANTERNS.add(new BlockPos(4, top + 2, 10));
+    }
+
+
+    // ------------------------------------------------------------------ trees (each returns its blocks in growing order)
+
+    private static List<BlockPos> trunk(int x, int z, int top, int height, BlockState log) {
+        List<BlockPos> out = new ArrayList<>();
+        for (int y = top + 1; y <= top + height && y < N; y++) { set(x, y, z, log); out.add(new BlockPos(x, y, z)); }
+        return out;
+    }
+
+    private static List<BlockPos> leaves(List<BlockPos> into, List<BlockPos> ls, int cx, int cy, int cz) {
+        ls.sort((a, b) -> Double.compare(a.distSqr(new BlockPos(cx, cy, cz)), b.distSqr(new BlockPos(cx, cy, cz))));
+        into.addAll(ls);
+        return into;
+    }
+
+    private static boolean leaf(List<BlockPos> ls, int x, int y, int z, BlockState s) {
+        if (x < 0 || z < 0 || y < 0 || x >= N || z >= N || y >= N || !get(x, y, z).isAir()) return false;
+        set(x, y, z, s);
+        ls.add(new BlockPos(x, y, z));
+        return true;
+    }
+
+    /** The cherry tree: a round cloud of blossom. */
+    private static List<BlockPos> cherry(int tx, int tz, int top, float radius, Random rnd) {
+        List<BlockPos> out = trunk(tx, tz, top, 4, Blocks.CHERRY_LOG.defaultBlockState());
+        List<BlockPos> ls = new ArrayList<>();
+        int r = (int) Math.ceil(radius);
+        for (int y = top + 3; y <= top + 7; y++) for (int z = tz - r; z <= tz + r; z++) for (int x = tx - r; x <= tx + r; x++) {
+            float dx = x - tx, dy = (y - (top + 5)) * 1.3F, dz = z - tz;
+            if (Mth.sqrt(dx * dx + dy * dy + dz * dz) > radius + rnd.nextFloat() * 0.5F) continue;
+            leaf(ls, x, y, z, Blocks.CHERRY_LEAVES.defaultBlockState());
+        }
+        return leaves(out, ls, tx, top + 5, tz);
+    }
+
+    /** An oak: the classic block of leaves with nibbled corners. */
+    private static List<BlockPos> oak(int tx, int tz, int top, int h, Random rnd) {
+        List<BlockPos> out = trunk(tx, tz, top, h, Blocks.OAK_LOG.defaultBlockState());
+        List<BlockPos> ls = new ArrayList<>();
+        BlockState l = Blocks.OAK_LEAVES.defaultBlockState();
+        int crown = top + h;
+        for (int y = crown - 2; y <= crown + 1; y++) {
+            int r = y >= crown ? 1 : 2;
+            for (int z = tz - r; z <= tz + r; z++) for (int x = tx - r; x <= tx + r; x++) {
+                boolean corner = Math.abs(x - tx) == r && Math.abs(z - tz) == r;
+                if (corner && (y == crown + 1 || rnd.nextFloat() < 0.5F)) continue;
+                leaf(ls, x, y, z, l);
+            }
+        }
+        return leaves(out, ls, tx, crown, tz);
+    }
+
+    /** A birch: a tall white trunk with a slim crown. */
+    private static List<BlockPos> birch(int tx, int tz, int top, Random rnd) {
+        int h = 6;
+        List<BlockPos> out = trunk(tx, tz, top, h, Blocks.BIRCH_LOG.defaultBlockState());
+        List<BlockPos> ls = new ArrayList<>();
+        BlockState l = Blocks.BIRCH_LEAVES.defaultBlockState();
+        int crown = top + h;
+        for (int y = crown - 2; y <= crown + 1; y++) {
+            int r = y >= crown ? 1 : 2;
+            for (int z = tz - r; z <= tz + r; z++) for (int x = tx - r; x <= tx + r; x++) {
+                boolean corner = Math.abs(x - tx) == r && Math.abs(z - tz) == r;
+                if (corner && (r == 1 || rnd.nextFloat() < 0.7F)) continue;
+                leaf(ls, x, y, z, l);
+            }
+        }
+        return leaves(out, ls, tx, crown, tz);
+    }
+
+    /** A spruce: a dark cone, wide at the bottom, to a point. */
+    private static List<BlockPos> spruce(int tx, int tz, int top, int h) {
+        List<BlockPos> out = trunk(tx, tz, top, h - 1, Blocks.SPRUCE_LOG.defaultBlockState());
+        List<BlockPos> ls = new ArrayList<>();
+        BlockState l = Blocks.SPRUCE_LEAVES.defaultBlockState();
+        int tip = top + h + 1;
+        for (int y = top + 3; y <= tip && y < N; y++) {
+            int fromTip = tip - y;
+            int r = fromTip == 0 ? 0 : fromTip <= 2 ? 1 : (fromTip % 2 == 1 || y == top + 3) ? 2 : 1;
+            for (int z = tz - r; z <= tz + r; z++) for (int x = tx - r; x <= tx + r; x++) {
+                if (r >= 2 && Math.abs(x - tx) == r && Math.abs(z - tz) == r) continue;
+                leaf(ls, x, y, z, l);
+            }
+        }
+        ls.sort((a, b) -> Integer.compare(a.getY(), b.getY())); // grows up from the bottom
+        out.addAll(ls);
+        return out;
     }
 
     private static void set(int x, int y, int z, BlockState s) { if (x >= 0 && y >= 0 && z >= 0 && x < N && y < N && z < N) blocks[(y * N + z) * N + x] = s; }

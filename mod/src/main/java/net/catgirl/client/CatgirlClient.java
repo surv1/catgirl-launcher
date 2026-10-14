@@ -193,7 +193,8 @@ public class CatgirlClient implements ClientModInitializer {
                 g.drawString(client.font, sub, width - client.font.width(sub) - 8, 20, soft, true);
 
                 if (layout[0] != null) drawMenuDecor(client, g, layout[0], mouseX, mouseY, accent, soft);
-                for (Placed p : scene) g.renderItem(p.icon(), p.button().getX() + 2, p.button().getY() + 2);
+                for (Placed p : scene) g.renderItem(ScenePanel.sapling(), p.button().getX() + 2, p.button().getY() + 2);
+                ScenePanel.render(g, width, height, mouseX, mouseY);
             });
         });
     }
@@ -333,25 +334,28 @@ public class CatgirlClient implements ClientModInitializer {
         });
     }
 
-    /** The live main menu's two little buttons, bottom right: time of day, and grow the tree again. */
+    /** The live main menu's buttons, bottom right: "Scene" (time of day, trees, camera) and grow the trees again. */
     private static List<Placed> addSceneButtons(Screen screen, int width, int height) {
         List<Placed> out = new ArrayList<>();
         int y = height - 36;
-        Button time = Button.builder(Component.empty(), b -> {
-                String t = TitleScene.nextTime();
-                b.setTooltip(Tooltip.create(Component.literal("Time of day: " + t)));
-            })
-            .bounds(width - 50, y, 20, 20)
-            .tooltip(Tooltip.create(Component.literal("Time of day: " + Hud.optStr("client", "menuTime"))))
+        ScenePanel.open = false;
+        ScenePanel.Clicks clicks = new ScenePanel.Clicks(width, height);
+        Button scene = Button.builder(Component.literal("Scene"), b -> { ScenePanel.open = !ScenePanel.open; })
+            .bounds(width - 26 - 4 - 56, y, 56, 20)
+            .tooltip(Tooltip.create(Component.literal("Time of day, trees and camera")))
             .build();
         Button grow = Button.builder(Component.empty(), b -> { TitleScene.grow(); Ui.sound("bloom"); })
             .bounds(width - 26, y, 20, 20)
-            .tooltip(Tooltip.create(Component.literal("Grow the tree again")))
+            .tooltip(Tooltip.create(Component.literal("Grow the trees again")))
             .build();
-        Screens.getButtons(screen).add(time);
+        Screens.getButtons(screen).add(clicks);   // first, so the open panel gets clicks before buttons under it
+        Screens.getButtons(screen).add(scene);
         Screens.getButtons(screen).add(grow);
-        out.add(new Placed(time, new ItemStack(Items.CLOCK)));
-        out.add(new Placed(grow, new ItemStack(Items.CHERRY_SAPLING)));
+        out.add(new Placed(grow, ItemStack.EMPTY));
+        if (TESTING) {
+            ScenePanel.logSpots(width, height);
+            for (Button b : List.of(scene, grow)) LOG.info("[Catgirl] widget \"{}\" {} {} {} {}", b == grow ? "grow" : "Scene", b.getX(), b.getY(), b.getWidth(), b.getHeight());
+        }
         return out;
     }
 
