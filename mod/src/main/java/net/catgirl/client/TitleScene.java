@@ -68,8 +68,14 @@ public final class TitleScene {
 
     static boolean on() { return !failed && Hud.optBool("client", "liveMenu"); }
 
+    /** Which side of the screen the island sits on: -1 left, 1 right (away from the Catgirl menu). */
+    static int side = -1;
+
     /** Regrows the cherry tree from a sapling (the little seedling button). */
-    static void grow() { growStart = System.nanoTime(); }
+    static void grow() {
+        growStart = System.nanoTime();
+        CatgirlClient.LOG.info("[Catgirl] The menu's cherry tree is growing again");
+    }
 
     /** Next time of day (the sun / moon button), and the name to show. */
     static String nextTime() {
@@ -113,14 +119,22 @@ public final class TitleScene {
         float day = Sky.smooth(-0.22F, 0.28F, shownSun);
         Sky.Style style = Sky.style();
 
-        // ---- camera: a slow orbit around the island, a little above it
+        // ---- camera: a slow orbit around the island, a little above it. The camera looks past the
+        // island so it sits to one side of the screen and a little low, clear of the menu buttons.
+        var win = mc.getWindow();
+        float aspect = win.getWidth() / (float) Math.max(1, win.getHeight());
         float orbit = Anim.on() ? secs * 0.045F : 0.6F;
-        float dist = 23F, elev = 0.32F;
-        Vector3f target = new Vector3f(8F, 10.5F, 8F);
+        float dist = 36F, elev = 0.3F;
+        float halfH = dist * (float) Math.tan(Math.toRadians(25)), halfW = halfH * aspect;
+        Vector3f center = new Vector3f(8F, 8F, 8F);
         Vector3f eye = new Vector3f(8F + Mth.sin(orbit) * dist * Mth.cos(elev), 8F + dist * Mth.sin(elev), 8F + Mth.cos(orbit) * dist * Mth.cos(elev));
+        Vector3f fwd = new Vector3f(center).sub(eye).normalize();
+        Vector3f right = new Vector3f(fwd).cross(0, 1, 0).normalize();
+        Vector3f target = new Vector3f(center)
+            .add(new Vector3f(right).mul(-side * halfW * 0.5F))   // island at about a quarter of the width from its side
+            .add(0, halfH * 0.22F, 0);                            // and a little below the middle
         Matrix4f view = new Matrix4f().lookAt(eye, target, new Vector3f(0, 1, 0));
 
-        var win = mc.getWindow();
         GpuBufferSlice oldFog = RenderSystem.getShaderFog();
         RenderSystem.backupProjectionMatrix();
         Matrix4fStack mv = RenderSystem.getModelViewStack();

@@ -18,11 +18,10 @@ in vec2 texCoord;
 
 out vec4 fragColor;
 
+// distance in blocks from the 0..1 depth (the game's near plane is 0.05; its far plane is far
+// enough away that treating it as infinitely far is accurate for what we need)
 float linearDepth(float d) {
-    float near = 0.05;
-    float far = 1024.0;
-    float z = d * 2.0 - 1.0;
-    return (2.0 * near * far) / (far + near - z * (far - near));
+    return 0.05 / max(1.0 - d, 0.00002);
 }
 
 float focusDepth() {

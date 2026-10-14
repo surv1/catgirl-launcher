@@ -32,8 +32,7 @@ shot title-night 4
 click 600 334             # back to real time
 sleep 3
 click 624 334             # grow the tree again
-sleep 0.3
-burst title-grow 5 0.6
+burst title-grow 6 0.45
 xdotool mousemove --window "$WID" 1200 668; sleep 1.2
 shot title-tooltip 0.3
 grep -iE 'catgirl|live main menu' "$G/logs/latest.log" | grep -iE 'warn|error|exception|couldn' | head -20 > "$OUT/title-errors.txt"

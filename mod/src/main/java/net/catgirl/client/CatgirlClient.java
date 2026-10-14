@@ -164,7 +164,11 @@ public class CatgirlClient implements ClientModInitializer {
             boolean[] placed = {false};
 
             ScreenEvents.afterRender(screen).register((s, g, mouseX, mouseY, delta) -> {
-                if (!placed[0]) { placed[0] = true; layout[0] = addMenu(client, screen, width, height); }
+                if (!placed[0]) {
+                    placed[0] = true;
+                    layout[0] = addMenu(client, screen, width, height);
+                    TitleScene.side = layout[0] != null && layout[0].x + layout[0].w / 2 < width / 2 ? 1 : -1; // the island goes on the other side
+                }
                 int accent = accent();
                 int soft = 0xFF000000 | blend(accent & 0xFFFFFF, 0xFFFFFF, 0.55f);
 

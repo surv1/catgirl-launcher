@@ -9,6 +9,7 @@
     "EntityTurnMixin",
     "EnvironmentAttributeProbeMixin",
     "GameRendererAccessor",
+    "GameRendererMixin",
     "MouseScrollMixin",
     "PanoramaRendererMixin"
   ],
