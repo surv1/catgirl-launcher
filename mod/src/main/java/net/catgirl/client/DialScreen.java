@@ -191,10 +191,10 @@ public final class DialScreen extends Screen {
         int base = Glass.base(accent);
         int face = picked ? Ui.alpha(Ui.mix(base, accent, 0.75F), Math.round(0xF0 * open))
             : Ui.alpha(Ui.mix(Ui.mix(base, Ui.INK, 0.4F), base, front), Math.round((hover ? 0xE0 : 0xB0) * fade));
-        Ui.round(g, x, y, size, size, face);
+        circle(g, x, y, size, face);
         if (Ui.glass) Glass.ring(g, x, y, size, size, size / 2, Ui.alpha(picked ? Ui.mix(accent, Ui.MILK, 0.45F) : Ui.mix(accent, Ui.MILK, 0.6F), Math.round((picked ? 0xD0 : hover ? 0xA0 : 0x50) * fade)));
         if (picked) { // a soft glow under the picked one
-            for (int k = 1; k <= 3; k++) Ui.round(g, x - k * 2, y - k * 2, size + k * 4, size + k * 4, Ui.alpha(accent, Math.round(18 * open)));
+            for (int k = 1; k <= 3; k++) circle(g, x - k * 2, y - k * 2, size + k * 4, Ui.alpha(accent, Math.round(18 * open)));
         }
         if (fade > 0.3F) {
             float s = Math.min(1.5F, size / 22F);
@@ -215,14 +215,20 @@ public final class DialScreen extends Screen {
         int r = Math.round(24 * open);
         if (r < 3) return;
         int x = cx() - r, y = cy() - r - 8;
-        Ui.round(g, x - 3, y - 3, r * 2 + 6, r * 2 + 6, Ui.alpha(accent, 0x50));
-        Ui.round(g, x, y, r * 2, r * 2, Ui.alpha(Ui.INK, 0xE0));
+        circle(g, x - 3, y - 3, r * 2 + 6, Ui.alpha(accent, 0x50));
+        circle(g, x, y, r * 2, Ui.alpha(Ui.INK, 0xE0));
         if (open > 0.8F && minecraft.player != null) {
             PlayerFaceRenderer.draw(g, minecraft.player.getSkin(), cx() - 12, cy() - 20, 24);
             String name = minecraft.player.getName().getString();
             if (name.length() > 12) name = name.substring(0, 12);
             Ui.small(g, name, cx() - Ui.smallWidth(name) / 2, cy() + 7, Ui.HAZE);
         }
+    }
+
+    /** A round button or plate: smooth in the glass style, pixel-round otherwise. */
+    private static void circle(GuiGraphics g, int x, int y, int size, int color) {
+        if (Ui.glass) Glass.fill(g, x, y, size, size, size / 2, color);
+        else Ui.disc(g, x + size / 2, y + size / 2, size / 2, color);
     }
 
     /** A little fact for the picked item. */

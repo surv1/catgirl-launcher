@@ -14,9 +14,10 @@ final class Glass {
     private Glass() {}
 
     private static final Identifier CIRCLE = Identifier.fromNamespaceAndPath("catgirl", "textures/gui/glass/circle.png");
-    private static final Identifier[] RINGS = new Identifier[11];
+    private static final int MAX_RING = 24;
+    private static final Identifier[] RINGS = new Identifier[MAX_RING + 1];
     static {
-        for (int r = 2; r <= 10; r++) RINGS[r] = Identifier.fromNamespaceAndPath("catgirl", "textures/gui/glass/ring" + r + ".png");
+        for (int r = 2; r <= MAX_RING; r++) RINGS[r] = Identifier.fromNamespaceAndPath("catgirl", "textures/gui/glass/ring" + r + ".png");
     }
 
     // ------------------------------------------------------------------ colours (from your theme colour)
@@ -49,7 +50,7 @@ final class Glass {
     /** A 1px outline that follows fill() with the same radius. */
     static void ring(GuiGraphics g, int x, int y, int w, int h, int r, int argb) {
         if (w <= 1 || h <= 1 || (argb >>> 24) == 0) return;
-        r = Math.min(Math.min(r, 10), Math.min(w, h) / 2);
+        r = Math.min(Math.min(r, MAX_RING), Math.min(w, h) / 2);
         if (r < 2) {
             g.fill(x, y, x + w, y + 1, argb);
             g.fill(x, y + h - 1, x + w, y + h, argb);

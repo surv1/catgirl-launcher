@@ -106,13 +106,15 @@ else
   where() { grep -a '\[Catgirl\] widget "' "$G/logs/latest.log" | grep -aF "widget \"$1\"" | tail -1 | sed -E 's/.*" (-?[0-9]+) (-?[0-9]+) ([0-9]+) ([0-9]+).*/\1 \2 \3 \4/'; }
   # at NAME [X]: a point on it; X is a percent across (default 50), or pixels from its right edge if negative
   at() {
-    local r; r=$(where "$1"); [ -z "$r" ] && { log "no \"$1\" on screen" >&2; return 1; }
+    local r="" i
+    for i in 1 2 3 4; do r=$(where "$1"); [ -n "$r" ] && break; sleep 0.4; done   # (the log can lag a moment)
+    [ -z "$r" ] && { log "no \"$1\" on screen" >&2; echo "missing $1" >> "$OUT/clicks.txt"; return 1; }
     local x y w h p="${2:-50}"; read -r x y w h <<< "$r"
     if [ "$p" -lt 0 ]; then echo "$(( x + w + p )) $(( y + h / 2 ))"; else echo "$(( x + w * p / 100 )) $(( y + h / 2 ))"; fi
   }
-  btn() { local p; p=$(at "$1" "$2") || return 1; click $p; }
-  rbtn() { local p; p=$(at "$1" "$2") || return 1; rclick $p; }
-  point() { local p; p=$(at "$1" "$2") || return 1; hover $p; }
+  btn() { local p; p=$(at "$1" "${2:-}") || return 1; echo "click $1 at $p" >> "$OUT/clicks.txt"; click $p; }
+  rbtn() { local p; p=$(at "$1" "${2:-}") || return 1; echo "right-click $1 at $p" >> "$OUT/clicks.txt"; rclick $p; }
+  point() { local p; p=$(at "$1" "${2:-}") || return 1; hover $p; }
   # menu PAGE: Right Shift, turn the dial to PAGE (Mods is at the front) and open it
   menu() { key Shift_R; sleep 1.2; if [ "${1:-Mods}" != "Mods" ]; then btn "dial:$1"; sleep 0.9; fi; btn "dial:open"; sleep 1; }
   source "$HERE/$SCENARIO.sh"

@@ -82,7 +82,7 @@ for i in 0 1 2 3 4 5 6; do btn "card#$i" 30; done
 shot panel-mods-on 1
 xdotool type --delay 80 apple
 shot panel-search 1
-btn "card#0" 30   # Food Info, the only card left
+btn "card:saturation" 30   # Food Info
 sleep 8
 shot panel-addon 1
 ls -la "$G/mods" > "$OUT/mods-after.txt"
