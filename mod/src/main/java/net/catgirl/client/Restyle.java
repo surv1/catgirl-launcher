@@ -84,21 +84,19 @@ public final class Restyle {
 
     /** A button: flat, pixel-rounded corners, a 2px lip at the bottom; your colour when you point at it. */
     private static void button(GuiGraphics g, int x, int y, int w, int h, int state, int accent, float a) {
-        int face, lip;
+        int face, lip, edge;
         switch (state) {
-            case 1 -> { face = Ui.mix(Ui.BERRY3, accent, 0.32F); lip = Ui.mix(accent, Ui.INK, 0.45F); }
-            case 2 -> { face = 0xFF26152F; lip = Ui.PLUM; }
-            default -> { face = Ui.BERRY2; lip = Ui.BERRY; }
+            case 1 -> { face = Ui.mix(Ui.BERRY3, accent, 0.32F); lip = Ui.mix(accent, Ui.INK, 0.45F); edge = accent; }
+            case 2 -> { face = 0xFF26152F; lip = Ui.PLUM; edge = 0xFF35213F; }
+            default -> { face = Ui.BERRY2; lip = Ui.BERRY; edge = Ui.mix(Ui.BERRY3, Ui.HAZE, 0.22F); } // a soft edge, so it shows on a dark sky too
         }
         body(g, x, y, w, h, al(face, a));
         g.fill(x, y + h - 2, x + w, y + h - 1, al(lip, a));
         g.fill(x + 1, y + h - 1, x + w - 1, y + h, al(lip, a));
         if (state != 2) g.fill(x + 2, y + 1, x + w - 2, y + 2, al(0x1EFFFFFF, a));
-        if (state == 1) {
-            g.fill(x + 1, y, x + w - 1, y + 1, al(accent, a));
-            g.fill(x, y + 1, x + 1, y + h - 2, al(accent, a));
-            g.fill(x + w - 1, y + 1, x + w, y + h - 2, al(accent, a));
-        }
+        g.fill(x + 1, y, x + w - 1, y + 1, al(edge, a));
+        g.fill(x, y + 1, x + 1, y + h - 2, al(edge, a));
+        g.fill(x + w - 1, y + 1, x + w, y + h - 2, al(edge, a));
     }
 
     /** A slider's track: a dark groove; the handle fills it in your colour up to where it sits. */
