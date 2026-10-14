@@ -1,0 +1,12 @@
+click dial:open at 320 273
+click card#0 at 81 131
+click card#1 at 281 131
+click card#2 at 481 131
+click card#3 at 81 197
+click card#4 at 281 197
+click card#5 at 481 197
+click card#6 at 81 263
+click card:saturation at 281 131
+click chip:HUD at 181 88
+click nav:Cosmetics at 295 26
+click nav:Edit HUD at 338 26

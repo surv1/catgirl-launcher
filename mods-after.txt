@@ -1,0 +1,5 @@
+total 3828
+drwxr-xr-x  2 runner runner    4096 Oct 14 17:36 .
+drwxr-xr-x 16 runner runner    4096 Oct 14 17:37 ..
+-rw-r--r--  1 runner runner 1480850 Oct 14 17:36 catgirl.jar
+-rw-r--r--  1 runner runner 2426039 Oct 14 17:36 fabric-api.jar
